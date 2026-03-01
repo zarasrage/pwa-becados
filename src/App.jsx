@@ -4,13 +4,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbyOunqjO7j6sfa6wXxGMcPa
 const API_TOKEN = "queseyo_calendriobecados2026";
 
 const ROTATION_COLORS = {
-  H:   { bg: "#EFF6FF", accent: "#3B82F6", dot: "#93C5FD" },
-  M:   { bg: "#F0FDF4", accent: "#16A34A", dot: "#86EFAC" },
-  CyP: { bg: "#FFF7ED", accent: "#EA580C", dot: "#FDC08A" },
-  R:   { bg: "#FDF4FF", accent: "#9333EA", dot: "#D8B4FE" },
-  TyP: { bg: "#FFF1F2", accent: "#E11D48", dot: "#FDA4AF" },
-  Col: { bg: "#F0FDFA", accent: "#0D9488", dot: "#5EEAD4" },
-  default: { bg: "#F8FAFC", accent: "#64748B", dot: "#CBD5E1" },
+  H:   { bg: "#EFF6FF", accent: "#3B82F6", light: "#DBEAFE" },
+  M:   { bg: "#F0FDF4", accent: "#16A34A", light: "#DCFCE7" },
+  CyP: { bg: "#FFF7ED", accent: "#EA580C", light: "#FFEDD5" },
+  R:   { bg: "#FDF4FF", accent: "#9333EA", light: "#F3E8FF" },
+  TyP: { bg: "#FFF1F2", accent: "#E11D48", light: "#FFE4E6" },
+  Col: { bg: "#F0FDFA", accent: "#0D9488", light: "#CCFBF1" },
+  default: { bg: "#F8FAFC", accent: "#64748B", light: "#E2E8F0" },
 };
 
 function getColors(code) {
@@ -19,104 +19,218 @@ function getColors(code) {
 
 function todayISO() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
 function formatDateDisplay(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString("es-CL", { weekday:"long", day:"numeric", month:"long" });
 }
 
 function offsetDate(iso, days) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(y, m - 1, d + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y,m-1,d+days);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
 }
 
 async function apiGet(params) {
   const url = new URL(API_URL);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
   const res = await fetch(url.toString());
   return res.json();
 }
 
-// ── Spinner ──────────────────────────────────────────────────────────────────
-function Spinner() {
+function timeToMinutes(t) {
+  if (!t) return 0;
+  const [h,m] = t.split(":").map(Number);
+  return h*60 + (m||0);
+}
+
+function minutesToTime(mins) {
+  const h = Math.floor(mins/60);
+  const m = mins%60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+}
+
+// Agrupa actividades consecutivas con el mismo nombre, cada bloque dura 1h (fin = inicio+59)
+function groupItems(items) {
+  if (!items?.length) return [];
+  const groups = [];
+  let current = null;
+  for (const item of items) {
+    if (current && current.activity === item.activity) {
+      current.endMins = timeToMinutes(item.time) + 59;
+    } else {
+      if (current) groups.push(current);
+      current = {
+        activity: item.activity,
+        startMins: timeToMinutes(item.time),
+        endMins: timeToMinutes(item.time) + 59,
+      };
+    }
+  }
+  if (current) groups.push(current);
+  return groups.map(g => ({
+    activity: g.activity,
+    range: `${minutesToTime(g.startMins)} – ${minutesToTime(g.endMins)}`,
+  }));
+}
+
+// ── Spinner ───────────────────────────────────────────────────────────────────
+function Spinner({ accent = "#64748B" }) {
   return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+    <div style={{ display:"flex", justifyContent:"center", padding:"48px 0" }}>
       <div style={{
-        width: 28, height: 28,
-        border: "3px solid #E2E8F0",
-        borderTopColor: "#64748B",
-        borderRadius: "50%",
-        animation: "spin 0.7s linear infinite"
-      }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        width:26, height:26,
+        border:"3px solid #E2E8F0",
+        borderTopColor: accent,
+        borderRadius:"50%",
+        animation:"spin 0.7s linear infinite"
+      }}/>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
 
-// ── Onboarding ────────────────────────────────────────────────────────────────
-function Onboarding({ becados, onSelect, error }) {
-  const [val, setVal] = useState("");
+// ── Pantalla de selección de becado ──────────────────────────────────────────
+const YEAR_LABELS = ["1er año", "2do año", "3er año"];
+const YEAR_COLORS = ["#3B82F6", "#9333EA", "#0D9488"];
+
+function BecadoScreen({ becados, onSelect, error }) {
+  const groups = [
+    becados.slice(0, 5),
+    becados.slice(5, 10),
+    becados.slice(10, 15),
+  ].filter(g => g.length > 0);
+
   return (
-    <div style={s.page}>
-      <div style={s.onboardCard}>
-        <div style={s.onboardIcon}>🏥</div>
-        <h1 style={s.onboardTitle}>Becados</h1>
-        <p style={s.onboardSub}>Selecciona tu nombre para ver tu horario diario.</p>
+    <div style={sc.page}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap');
+        *{box-sizing:border-box} body{margin:0;background:#F8FAFC}
+        .becado-btn:active{transform:scale(0.97)!important;background:#F8FAFC!important}
+      `}</style>
 
-        {error && <div style={s.errorBox}>{error}</div>}
+      <div style={{ padding:"40px 20px 16px", textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:12 }}>🏥</div>
+        <h1 style={{ fontFamily:"'DM Serif Display',serif", fontSize:30, margin:"0 0 6px", color:"#0F172A" }}>
+          Becados
+        </h1>
+        <p style={{ fontSize:14, color:"#64748B", margin:0 }}>
+          Toca tu nombre para ver tu horario.
+        </p>
+      </div>
 
-        <div style={s.selectWrap}>
-          <select
-            style={{ ...s.select, color: val ? "#0F172A" : "#94A3B8" }}
-            value={val}
-            onChange={e => setVal(e.target.value)}
-          >
-            <option value="" disabled>Elige tu nombre…</option>
-            {becados.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-          <span style={s.selectChevron}>›</span>
-        </div>
+      {error && <div style={{ ...sc.errorBox, margin:"0 20px 16px" }}>{error}</div>}
 
-        <button
-          style={{ ...s.btn, opacity: val ? 1 : 0.4, cursor: val ? "pointer" : "default" }}
-          disabled={!val}
-          onClick={() => onSelect(val)}
-        >
-          Continuar
-        </button>
+      <div style={{ padding:"8px 16px 40px" }}>
+        {groups.map((group, gi) => (
+          <div key={gi} style={{ marginBottom:24 }}>
+            <div style={{
+              fontSize:11, fontWeight:700, letterSpacing:"0.08em",
+              textTransform:"uppercase", color: YEAR_COLORS[gi],
+              marginBottom:10, display:"flex", alignItems:"center", gap:6
+            }}>
+              <span style={{
+                width:6, height:6, borderRadius:"50%",
+                background: YEAR_COLORS[gi], display:"inline-block"
+              }}/>
+              {YEAR_LABELS[gi]}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {group.map(name => (
+                <button
+                  key={name}
+                  className="becado-btn"
+                  style={{
+                    display:"flex", alignItems:"center", gap:12,
+                    background:"#fff", border:"1.5px solid #F1F5F9",
+                    borderRadius:14, padding:"12px 16px", cursor:"pointer",
+                    textAlign:"left", width:"100%",
+                    fontFamily:"'DM Sans',sans-serif",
+                    boxShadow:"0 1px 3px rgba(0,0,0,0.05)",
+                    transition:"transform 0.15s",
+                  }}
+                  onClick={() => onSelect(name)}
+                >
+                  <span style={{
+                    width:36, height:36, borderRadius:10,
+                    background: YEAR_COLORS[gi] + "18",
+                    color: YEAR_COLORS[gi],
+                    fontWeight:700, fontSize:15,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    flexShrink:0,
+                  }}>
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                  <span style={{ fontSize:15, fontWeight:500, color:"#1E293B" }}>
+                    {name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ── Schedule Item ─────────────────────────────────────────────────────────────
-function ScheduleItem({ time, activity, accent, dot, index }) {
+// ── Tarjeta de actividad ──────────────────────────────────────────────────────
+function ActivityCard({ range, activity, accent, light, index }) {
+  const [pressed, setPressed] = useState(false);
+  const [start, end] = range.split("–").map(s => s.trim());
   return (
-    <div style={{
-      display: "flex", gap: 14, alignItems: "flex-start",
-      animation: `fadeUp 0.3s ease both`,
-      animationDelay: `${index * 40}ms`
-    }}>
-      <style>{`@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }`}</style>
-      <div style={{ paddingTop: 6, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-        <div style={{ width: 1, flex: 1, background: "#E2E8F0", minHeight: 16 }} />
-      </div>
-      <div style={{ flex: 1, paddingBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", color: accent, fontFamily: "'DM Mono', monospace", marginBottom: 2 }}>
-          {time}
+    <div
+      style={{
+        background: pressed ? light : "#fff",
+        border: `1.5px solid ${pressed ? accent : "#F1F5F9"}`,
+        borderRadius:14,
+        padding:"14px 16px",
+        display:"flex", alignItems:"center", gap:14,
+        cursor:"pointer",
+        transition:"all 0.12s ease",
+        animation:`fadeUp 0.25s ease both`,
+        animationDelay:`${index*50}ms`,
+        userSelect:"none",
+        boxShadow: pressed ? `0 0 0 3px ${light}` : "0 1px 3px rgba(0,0,0,0.05)",
+      }}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+    >
+      {/* Bloque de hora */}
+      <div style={{
+        background: pressed ? "#fff" : light,
+        borderRadius:10,
+        padding:"8px 10px",
+        minWidth:64,
+        textAlign:"center",
+        flexShrink:0,
+        transition:"background 0.12s",
+      }}>
+        <div style={{
+          fontFamily:"'DM Mono',monospace",
+          fontSize:13, color: accent, fontWeight:600, lineHeight:1.3
+        }}>
+          {start}
         </div>
-        <div style={{ fontSize: 15, color: "#1E293B", lineHeight: 1.4 }}>{activity}</div>
+        <div style={{
+          fontFamily:"'DM Mono',monospace",
+          fontSize:10, color: accent, opacity:0.65, lineHeight:1.3
+        }}>
+          {end}
+        </div>
+      </div>
+      {/* Actividad */}
+      <div style={{ fontSize:14, color:"#1E293B", lineHeight:1.4, fontWeight:500 }}>
+        {activity}
       </div>
     </div>
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────────
+// ── App principal ─────────────────────────────────────────────────────────────
 export default function App() {
   const today = useMemo(() => todayISO(), []);
   const [becado, setBecado] = useState(() => localStorage.getItem("selectedBecado") || "");
@@ -128,14 +242,13 @@ export default function App() {
   const [error, setError] = useState("");
   const [initError, setInitError] = useState("");
 
-  // Load becados list
   useEffect(() => {
     (async () => {
       try {
-        const data = await apiGet({ route: "becados", token: API_TOKEN });
+        const data = await apiGet({ route:"becados", token:API_TOKEN });
         if (!data.ok) throw new Error(data.error || "Error cargando becados");
         setBecados(data.becados);
-      } catch (e) {
+      } catch(e) {
         setInitError(String(e.message || e));
       } finally {
         setLoadingBecados(false);
@@ -143,7 +256,6 @@ export default function App() {
     })();
   }, []);
 
-  // Load daily schedule
   useEffect(() => {
     if (!becado) return;
     (async () => {
@@ -151,10 +263,10 @@ export default function App() {
       setError("");
       setDaily(null);
       try {
-        const data = await apiGet({ route: "daily", becado, date, token: API_TOKEN });
+        const data = await apiGet({ route:"daily", becado, date, token:API_TOKEN });
         if (data.ok === false) throw new Error(data.error || "No se pudo obtener horario");
         setDaily(data);
-      } catch (e) {
+      } catch(e) {
         setError(String(e.message || e));
       } finally {
         setLoading(false);
@@ -174,268 +286,111 @@ export default function App() {
     setDate(today);
   };
 
-  if (loadingBecados) return <div style={s.page}><Spinner /></div>;
-  if (!becado) return <Onboarding becados={becados} onSelect={handleSelect} error={initError} />;
+  if (loadingBecados) return <div style={sc.page}><Spinner /></div>;
+  if (!becado) return <BecadoScreen becados={becados} onSelect={handleSelect} error={initError} />;
 
   const colors = daily ? getColors(daily.rotationCode) : getColors("default");
   const isToday = date === today;
+  const grouped = groupItems(daily?.items);
 
   return (
-    <div style={{ ...s.page, background: "#F8FAFC" }}>
+    <div style={{ ...sc.page, paddingBottom:40 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap');
-        * { box-sizing: border-box; }
-        body { margin: 0; }
+        *{box-sizing:border-box} body{margin:0;background:#F8FAFC}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
       `}</style>
 
       {/* Header */}
-      <div style={s.header}>
+      <div style={{ padding:"24px 16px 0", display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12 }}>
         <div>
-          <button style={s.nameBtn} onClick={handleChangeBecado} title="Cambiar becado">
-            {becado}
-            <span style={s.nameBtnIcon}>⌄</span>
+          <button style={{
+            background:"none", border:"none", padding:0, cursor:"pointer",
+            fontFamily:"'DM Serif Display',serif", fontSize:24, color:"#0F172A",
+            display:"flex", alignItems:"center", gap:4,
+          }} onClick={handleChangeBecado}>
+            {becado} <span style={{ fontSize:14, color:"#94A3B8" }}>⌄</span>
           </button>
-          <div style={s.dateLabel}>
-            {formatDateDisplay(date)}
-            {isToday && <span style={s.todayPill}>Hoy</span>}
+          <div style={{ fontSize:13, color:"#64748B", marginTop:2, display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ textTransform:"capitalize" }}>{formatDateDisplay(date)}</span>
+            {isToday && (
+              <span style={{
+                fontSize:11, fontWeight:700, background:"#0F172A", color:"#fff",
+                borderRadius:99, padding:"1px 8px", letterSpacing:"0.05em"
+              }}>Hoy</span>
+            )}
           </div>
         </div>
+        {daily?.rotationCode && (
+          <div style={{
+            fontSize:12, fontWeight:700, borderRadius:99,
+            padding:"5px 12px", background: colors.light, color: colors.accent,
+            flexShrink:0, alignSelf:"flex-start", marginTop:4,
+            letterSpacing:"0.04em",
+          }}>
+            {daily.rotationName}
+          </div>
+        )}
       </div>
 
-      {/* Date navigation */}
-      <div style={s.datePicker}>
-        <button style={s.navBtn} onClick={() => setDate(d => offsetDate(d, -1))}>‹</button>
+      {/* Navegación de fechas */}
+      <div style={{ display:"flex", gap:8, padding:"12px 16px" }}>
+        <button style={sc.navBtn} onClick={() => setDate(d => offsetDate(d,-1))}>‹</button>
         <button
-          style={{ ...s.navBtn, ...s.todayBtn, opacity: isToday ? 0.4 : 1, cursor: isToday ? "default" : "pointer" }}
+          style={{ ...sc.navBtn, fontSize:13, fontWeight:600, width:"auto", padding:"0 14px", color:"#0F172A", opacity: isToday ? 0.35 : 1 }}
           disabled={isToday}
           onClick={() => setDate(today)}
-        >
-          Hoy
-        </button>
-        <button style={s.navBtn} onClick={() => setDate(d => offsetDate(d, 1))}>›</button>
+        >Hoy</button>
+        <button style={sc.navBtn} onClick={() => setDate(d => offsetDate(d,1))}>›</button>
       </div>
 
-      {/* Rotation badge */}
-      {daily && daily.rotationCode && (
-        <div style={{ ...s.rotBadge, background: colors.bg, border: `1px solid ${colors.dot}` }}>
-          <div style={{ ...s.rotDot, background: colors.accent }} />
-          <span style={{ ...s.rotName, color: colors.accent }}>{daily.rotationName}</span>
-        </div>
-      )}
-
-      {/* Content */}
-      <div style={s.content}>
-        {error && <div style={s.errorBox}>{error}</div>}
-
-        {loading ? <Spinner /> : daily ? (
-          daily.items?.length ? (
-            <div style={s.scheduleCard}>
-              {daily.items.map((it, i) => (
-                <ScheduleItem
-                  key={i}
-                  index={i}
-                  time={it.time}
-                  activity={it.activity}
-                  accent={colors.accent}
-                  dot={colors.dot}
-                />
-              ))}
-            </div>
-          ) : (
-            <div style={s.emptyState}>
-              <div style={s.emptyIcon}>🗓</div>
-              <div style={s.emptyText}>Sin actividades para este día</div>
-            </div>
-          )
-        ) : !error ? (
-          <div style={s.emptyState}>
-            <div style={s.emptyIcon}>–</div>
-            <div style={s.emptyText}>Sin datos</div>
+      {/* Contenido */}
+      <div style={{ padding:"0 16px" }}>
+        {error && <div style={sc.errorBox}>{error}</div>}
+        {loading ? (
+          <Spinner accent={colors.accent} />
+        ) : grouped.length ? (
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {grouped.map((it, i) => (
+              <ActivityCard
+                key={i} index={i}
+                range={it.range}
+                activity={it.activity}
+                accent={colors.accent}
+                light={colors.light}
+              />
+            ))}
           </div>
-        ) : null}
+        ) : !error && (
+          <div style={{ textAlign:"center", padding:"60px 20px" }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>📭</div>
+            <div style={{ fontSize:15, color:"#94A3B8" }}>Sin actividades para este día</div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const s = {
+// ── Estilos compartidos ───────────────────────────────────────────────────────
+const sc = {
   page: {
-    minHeight: "100vh",
-    fontFamily: "'DM Sans', sans-serif",
-    maxWidth: 480,
-    margin: "0 auto",
-    background: "#F8FAFC",
-  },
-  header: {
-    padding: "24px 20px 0",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  nameBtn: {
-    background: "none",
-    border: "none",
-    padding: 0,
-    cursor: "pointer",
-    fontFamily: "'DM Serif Display', serif",
-    fontSize: 26,
-    color: "#0F172A",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-  },
-  nameBtnIcon: {
-    fontSize: 18,
-    color: "#94A3B8",
-    marginTop: 2,
-  },
-  dateLabel: {
-    fontSize: 13,
-    color: "#64748B",
-    marginTop: 2,
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    textTransform: "capitalize",
-  },
-  todayPill: {
-    fontSize: 11,
-    fontWeight: 600,
-    background: "#0F172A",
-    color: "#fff",
-    borderRadius: 99,
-    padding: "1px 8px",
-    letterSpacing: "0.04em",
-  },
-  datePicker: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    padding: "16px 20px 8px",
+    minHeight:"100vh",
+    fontFamily:"'DM Sans',sans-serif",
+    maxWidth:480,
+    margin:"0 auto",
+    background:"#F8FAFC",
   },
   navBtn: {
-    background: "#fff",
-    border: "1px solid #E2E8F0",
-    borderRadius: 10,
-    width: 38,
-    height: 38,
-    fontSize: 20,
-    cursor: "pointer",
-    color: "#475569",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  },
-  todayBtn: {
-    fontSize: 13,
-    fontWeight: 600,
-    width: "auto",
-    padding: "0 14px",
-    color: "#0F172A",
-    letterSpacing: "0.01em",
-  },
-  rotBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 7,
-    borderRadius: 99,
-    padding: "6px 14px",
-    marginLeft: 20,
-    marginBottom: 4,
-  },
-  rotDot: {
-    width: 7,
-    height: 7,
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  rotName: {
-    fontSize: 13,
-    fontWeight: 600,
-    letterSpacing: "0.03em",
-  },
-  content: {
-    padding: "8px 20px 40px",
-  },
-  scheduleCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "20px 18px 4px",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)",
+    background:"#fff", border:"1.5px solid #E2E8F0",
+    borderRadius:10, width:38, height:38,
+    fontSize:20, cursor:"pointer", color:"#475569",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    boxShadow:"0 1px 2px rgba(0,0,0,0.04)",
   },
   errorBox: {
-    background: "#FFF1F2",
-    border: "1px solid #FECDD3",
-    borderRadius: 12,
-    padding: "12px 14px",
-    fontSize: 14,
-    color: "#BE123C",
-    marginBottom: 12,
-  },
-  emptyState: {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: "#94A3B8",
-  },
-  emptyIcon: { fontSize: 32, marginBottom: 10 },
-  emptyText: { fontSize: 15 },
-
-  // Onboarding
-  onboardCard: {
-    padding: "48px 28px 36px",
-    maxWidth: 400,
-    margin: "0 auto",
-  },
-  onboardIcon: { fontSize: 36, marginBottom: 16 },
-  onboardTitle: {
-    fontFamily: "'DM Serif Display', serif",
-    fontSize: 32,
-    margin: "0 0 8px",
-    color: "#0F172A",
-  },
-  onboardSub: {
-    fontSize: 15,
-    color: "#64748B",
-    marginBottom: 28,
-    lineHeight: 1.5,
-  },
-  selectWrap: {
-    position: "relative",
-    marginBottom: 14,
-  },
-  select: {
-    width: "100%",
-    padding: "14px 16px",
-    borderRadius: 12,
-    border: "1.5px solid #E2E8F0",
-    fontSize: 16,
-    background: "#fff",
-    appearance: "none",
-    fontFamily: "'DM Sans', sans-serif",
-    outline: "none",
-  },
-  selectChevron: {
-    position: "absolute",
-    right: 16,
-    top: "50%",
-    transform: "translateY(-50%) rotate(90deg)",
-    color: "#94A3B8",
-    fontSize: 20,
-    pointerEvents: "none",
-  },
-  btn: {
-    width: "100%",
-    padding: "14px",
-    borderRadius: 12,
-    border: "none",
-    background: "#0F172A",
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    fontFamily: "'DM Sans', sans-serif",
-    letterSpacing: "0.02em",
-    transition: "opacity 0.15s",
+    background:"#FFF1F2", border:"1px solid #FECDD3",
+    borderRadius:12, padding:"12px 14px",
+    fontSize:14, color:"#BE123C", marginBottom:12,
   },
 };
