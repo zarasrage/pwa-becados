@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-const API_URL = "https://script.google.com/macros/s/AKfycbyOunqjO7j6sfa6wXxGMcPabeu9a__sVWynew0UuLF_HSHypkfHKZ81tyYt1DNYo-nC/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz9Zme-RquoB2GVh6yj9v9Yl2xFAq2JKO5RnM_Cm5-EYgEQV6CWsD5H4ai3ZtmKiq4U/exec";
 const API_TOKEN = "queseyo_calendriobecados2026";
 
 const ROTATION_COLORS = {
