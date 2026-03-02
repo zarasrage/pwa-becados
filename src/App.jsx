@@ -101,7 +101,7 @@ function SettingsPanel({ theme, onToggle, onClose, T }) {
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
       {/* Panel */}
       <div style={{
-        position:"fixed",top:52,right:16,zIndex:100,
+        position:"fixed",top:44,right:12,zIndex:100,
         background:T.surface,border:`1px solid ${T.border}`,
         borderRadius:14,padding:"14px 16px",width:200,
         boxShadow:"0 8px 32px rgba(0,0,0,0.25)",
@@ -132,7 +132,7 @@ function SettingsPanel({ theme, onToggle, onClose, T }) {
 function GearBtn({ onClick, T }) {
   return (
     <button className="press" onClick={onClick}
-      style={{position:"fixed",top:14,right:16,zIndex:80,width:36,height:36,borderRadius:10,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+      style={{position:"fixed",top:6,right:12,zIndex:80,width:32,height:32,borderRadius:9,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
       ⚙️
     </button>
   );
