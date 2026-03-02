@@ -402,10 +402,139 @@ function TabRotaciones({ T }) {
   );
 }
 
-// ── Tab Bar ───────────────────────────────────────────────────────────────────
+// ── Tab: Mi semana ────────────────────────────────────────────────────────────
+function getWeekDates(refISO) {
+  const [y,m,d] = refISO.split("-").map(Number);
+  const ref = new Date(y,m-1,d);
+  const day = ref.getDay();
+  const monday = new Date(ref);
+  monday.setDate(ref.getDate() - (day === 0 ? 6 : day - 1));
+  return Array.from({length:7},(_,i)=>{
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate()+i);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  });
+}
+function weekLabel(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString("es-CL",{weekday:"short",day:"numeric"});
+}
+function weekRangeLabel(dates) {
+  const [y1,m1,d1] = dates[0].split("-").map(Number);
+  const [y2,m2,d2] = dates[6].split("-").map(Number);
+  const from = new Date(y1,m1-1,d1).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
+  const to   = new Date(y2,m2-1,d2).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
+  return `${from} – ${to}`;
+}
+
+function TabSemana({ becado, T }) {
+  const today = useMemo(()=>todayISO(),[]);
+  const [refDate, setRefDate] = useState(today);
+  const [days, setDays] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
+
+  useEffect(()=>{
+    (async()=>{
+      setLoading(true); setDays([]);
+      const results = await Promise.all(
+        weekDates.map(date =>
+          apiGet({route:"daily",becado,date,token:API_TOKEN})
+            .then(d=>({date, ok:d.ok!==false, rotationCode:d.rotationCode||"", rotationName:d.rotationName||"", items:d.items||[]}))
+            .catch(()=>({date, ok:false, rotationCode:"", rotationName:"", items:[]}))
+        )
+      );
+      setDays(results);
+      setLoading(false);
+    })();
+  },[becado, weekDates]);
+
+  const prevWeek = () => setRefDate(d=>offsetDate(d,-7));
+  const nextWeek = () => setRefDate(d=>offsetDate(d,7));
+  const thisWeek = () => setRefDate(today);
+  const isThisWeek = weekDates.includes(today);
+
+  return (
+    <>
+      <div style={{padding:"20px 16px 0"}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
+        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>{becado}</div>
+
+        {/* Nav semana */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+          <button className="press" onClick={prevWeek}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+          <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text}}>{weekRangeLabel(weekDates)}</div>
+          <button className="press" onClick={nextWeek}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+          {!isThisWeek && (
+            <button className="press" onClick={thisWeek}
+              style={{height:32,padding:"0 11px",borderRadius:8,border:"1px solid #348FFF60",background:"#348FFF14",fontSize:11,fontWeight:700,color:"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              HOY
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{padding:"0 16px"}}>
+        {loading ? <Spinner/> : (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {days.map((day,i)=>{
+              const c = rot(day.rotationCode);
+              const grouped = groupItems(day.items);
+              const isToday = day.date === today;
+              return (
+                <div key={day.date} className="anim"
+                  style={{animationDelay:`${i*35}ms`,background:T.surface,border:`1px solid ${isToday ? c.accent+"60" : T.border}`,borderLeft:`3px solid ${day.rotationCode ? c.accent : T.border}`,borderRadius:12,overflow:"hidden",boxShadow:isToday?`0 0 0 1px ${c.accent}30`:"none"}}>
+                  {/* Header del día */}
+                  <div style={{padding:"9px 13px",display:"flex",alignItems:"center",justifyContent:"space-between",background: isToday ? c.light : "transparent", borderBottom:`1px solid ${T.border}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:12,fontWeight:700,color: isToday ? c.accent : T.sub,textTransform:"capitalize",fontFamily:"'Bricolage Grotesque',sans-serif"}}>
+                        {weekLabel(day.date)}
+                      </span>
+                      {isToday && <span style={{fontSize:9,fontWeight:700,background:c.accent,color:"#fff",borderRadius:99,padding:"1px 6px",letterSpacing:"0.05em"}}>HOY</span>}
+                    </div>
+                    {day.rotationCode ? (
+                      <div style={{display:"flex",alignItems:"center",gap:5}}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 5px ${c.accent}`}}/>
+                        <span style={{fontSize:11,fontWeight:600,color:c.accent}}>{c.name}</span>
+                      </div>
+                    ) : (
+                      <span style={{fontSize:11,color:T.muted}}>Sin rotación</span>
+                    )}
+                  </div>
+
+                  {/* Actividades compactas */}
+                  {grouped.length > 0 ? (
+                    <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:4}}>
+                      {grouped.map((it,gi)=>(
+                        <div key={gi} style={{display:"flex",alignItems:"baseline",gap:8}}>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:c.accent,opacity:0.7,flexShrink:0,minWidth:40}}>{it.from}</span>
+                          <span style={{fontSize:12,color:T.sub,lineHeight:1.3}}>{it.activity}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{padding:"7px 13px 9px"}}>
+                      <span style={{fontSize:12,color:T.muted}}>Sin actividades</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+
 function TabBar({ active, onChange, T }) {
   const tabs = [
     { id:"horario",    icon:"◑", label:"Mi Horario" },
+    { id:"semana",     icon:"▦", label:"Semana" },
     { id:"rotaciones", icon:"⊞", label:"Rotaciones" },
   ];
   return (
@@ -502,6 +631,7 @@ export default function App() {
        ) : (
          <>
            {activeTab==="horario" && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
+           {activeTab==="semana" && <TabSemana becado={becado} T={T}/>}
            {activeTab==="rotaciones" && <TabRotaciones T={T}/>}
            <TabBar active={activeTab} onChange={setActiveTab} T={T}/>
          </>
