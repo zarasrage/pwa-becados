@@ -79,7 +79,7 @@ function groupItems(items) {
 
 // ── CSS global ────────────────────────────────────────────────────────────────
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
   @keyframes fadeUp   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
@@ -249,7 +249,7 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
                   style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif"}}
                   onClick={() => onSelect(name)}
                 >
-                  <span style={{width:32,height:32,borderRadius:8,background:`${YEAR_COLORS[gi]}18`,color:YEAR_COLORS[gi],fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Syne',sans-serif"}}>
+                  <span style={{width:32,height:32,borderRadius:8,background:`${YEAR_COLORS[gi]}18`,color:YEAR_COLORS[gi],fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Bricolage Grotesque',sans-serif"}}>
                     {name.charAt(0).toUpperCase()}
                   </span>
                   <span style={{fontSize:14,fontWeight:500,color:T.text,flex:1}}>{name}</span>
@@ -297,7 +297,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi horario</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
-            <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
             <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
           {daily?.rotationCode && (
@@ -357,7 +357,7 @@ function TabRotaciones({ T }) {
     <>
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
-        <div style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>Rotaciones</div>
+        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>Rotaciones</div>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
 
@@ -373,7 +373,7 @@ function TabRotaciones({ T }) {
                   <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",background:c.light,borderBottom:`1px solid ${c.accent}18`}}>
                     <div style={{display:"flex",alignItems:"center",gap:7}}>
                       <span style={{width:7,height:7,borderRadius:"50%",background:c.accent,boxShadow:`0 0 6px ${c.accent}`,display:"inline-block"}}/>
-                      <span style={{fontFamily:"'Syne',sans-serif",fontSize:13,fontWeight:700,color:c.accent}}>{c.name}</span>
+                      <span style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:13,fontWeight:700,color:c.accent}}>{c.name}</span>
                     </div>
                     <span style={{fontSize:11,fontWeight:700,color:c.accent,background:`${c.accent}18`,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"2px 9px"}}>
                       {names.length} becado{names.length!==1?"s":""}
@@ -428,7 +428,7 @@ function TabBar({ active, onChange, T }) {
             onClick={()=>onChange(tab.id)}
           >
             <span style={{fontSize:18,lineHeight:1}}>{tab.icon}</span>
-            <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:"0.04em",fontFamily:"'Syne',sans-serif"}}>{tab.label}</span>
+            <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
             <span style={{width:isActive?18:0,height:2,borderRadius:99,background:"#348FFF",transition:"width 0.22s ease",marginTop:1}}/>
           </button>
         );
