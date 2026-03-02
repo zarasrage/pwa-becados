@@ -663,7 +663,16 @@ export default function App() {
     const next = theme==="dark" ? "light" : "dark";
     setTheme(next);
     localStorage.setItem("theme", next);
+    // Actualizar barra superior de la PWA
+    const meta = document.querySelector("meta[name='theme-color']");
+    if (meta) meta.setAttribute("content", next==="dark" ? "#0D1117" : "#F4F7FB");
   };
+
+  // Aplicar color correcto al montar
+  useEffect(()=>{
+    const meta = document.querySelector("meta[name='theme-color']");
+    if (meta) meta.setAttribute("content", theme==="dark" ? "#0D1117" : "#F4F7FB");
+  },[]);
 
   useEffect(()=>{
     (async()=>{
