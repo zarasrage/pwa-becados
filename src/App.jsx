@@ -296,22 +296,22 @@ return (
 function TabHorario({ becado, onChangeBecado, T }) {
 const today = useMemo(()=>todayISO(),[]);
 const [date, setDate] = useState(today);
-const [daily, setDaily] = useState(null);
+// Leer caché síncronamente al inicializar — evita el flash de spinner
+const [daily, setDaily] = useState(()=> cacheGet({route:“daily”,becado,date:todayISO(),token:API_TOKEN}));
 const [loading, setLoading] = useState(false);
-const [stale, setStale] = useState(false); // tiene datos viejos mientras actualiza
+const [stale, setStale] = useState(()=> !!cacheGet({route:“daily”,becado,date:todayISO(),token:API_TOKEN}));
 const [error, setError] = useState(””);
 
 useEffect(()=>{
-(async()=>{
-setError(””);
 const params = {route:“daily”,becado,date,token:API_TOKEN};
-// Mostrar caché inmediatamente si existe
 const cached = cacheGet(params);
 if (cached && cached.ok !== false) {
 setDaily(cached); setStale(true); setLoading(false);
 } else {
-setLoading(true); setDaily(null);
+setLoading(true); setDaily(null); setStale(false);
 }
+setError(””);
+(async()=>{
 try{
 const d = await apiGet(params);
 if(d.ok===false) throw new Error(d.error||“Error”);
