@@ -5,12 +5,12 @@ const API_TOKEN = "queseyo_calendriobecados2026";
 
 // ── Paleta clínica refinada ───────────────────────────────────────────────────
 const ROT = {
-  H:   { accent:"#2563EB", light:"#EFF6FF", pill:"#BFDBFE", name:"Hombro" },
-  M:   { accent:"#059669", light:"#ECFDF5", pill:"#A7F3D0", name:"Mano" },
-  CyP: { accent:"#D97706", light:"#FFFBEB", pill:"#FDE68A", name:"Cadera" },
-  R:   { accent:"#7C3AED", light:"#F5F3FF", pill:"#DDD6FE", name:"Rodilla" },
-  TyP: { accent:"#DC2626", light:"#FEF2F2", pill:"#FECACA", name:"Tobillo y Pie" },
-  Col: { accent:"#0891B2", light:"#ECFEFF", pill:"#A5F3FC", name:"Columna" },
+  H:   { accent:"#EA580C", light:"#FFF7ED", pill:"#FED7AA", name:"Hombro" },
+  M:   { accent:"#DC2626", light:"#FEF2F2", pill:"#FECACA", name:"Mano" },
+  CyP: { accent:"#2563EB", light:"#EFF6FF", pill:"#BFDBFE", name:"Cadera" },
+  R:   { accent:"#CA8A04", light:"#FEFCE8", pill:"#FEF08A", name:"Rodilla" },
+  TyP: { accent:"#16A34A", light:"#F0FDF4", pill:"#BBF7D0", name:"Tobillo y Pie" },
+  Col: { accent:"#7C3AED", light:"#F5F3FF", pill:"#DDD6FE", name:"Columna" },
   "":  { accent:"#64748B", light:"#F8FAFC", pill:"#E2E8F0", name:"Sin rotación" },
 };
 const ROT_ORDER = ["H","M","CyP","R","TyP","Col",""];
