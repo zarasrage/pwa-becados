@@ -39,9 +39,10 @@ const ROT = {
   R:   { accent:"#FBBF24", glow:"#FBBF2428", light:"#FBBF2412", dark:"#FBBF2422", name:"Rodilla" },
   TyP: { accent:"#13C045", glow:"#13C04528", light:"#13C04512", dark:"#13C04522", name:"Tobillo y Pie" },
   Col: { accent:"#8B73FF", glow:"#8B73FF28", light:"#8B73FF12", dark:"#8B73FF22", name:"Columna" },
+  I:   { accent:"#F472B6", glow:"#F472B628", light:"#F472B612", dark:"#F472B622", name:"Infantil" },
   "":  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Sin rotación" },
 };
-const ROT_ORDER = ["H","M","CyP","R","TyP","Col",""];
+const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I",""];
 
 const YEAR_COLORS = ["#348FFF","#13C045","#8B73FF"];
 const YEAR_LABELS = ["1er año","2do año","3er año"];
@@ -129,45 +130,6 @@ async function apiGet(params) {
   return res.json();
 }
 
-<<<<<<< HEAD
-// ── Sistema de caché ──────────────────────────────────────────────────────────
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
-
-function cacheKey(params) {
-  return "cache:" + Object.entries(params).sort().map(([k,v])=>`${k}=${v}`).join("&");
-}
-
-function cacheGet(params) {
-  try {
-    const key = cacheKey(params);
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
-    return data;
-  } catch { return null; }
-}
-
-function cacheSet(params, data) {
-  try {
-    localStorage.setItem(cacheKey(params), JSON.stringify({ data, ts: Date.now() }));
-  } catch {}
-}
-
-// Versión con caché: muestra datos guardados de inmediato, actualiza en background
-async function apiGetCached(params, onCached) {
-  const cached = cacheGet(params);
-  if (cached && onCached) onCached(cached); // mostrar inmediatamente
-  try {
-    const fresh = await apiGet(params);
-    cacheSet(params, fresh);
-    return fresh;
-  } catch(e) {
-    if (cached) return cached; // fallback al caché si falla la red
-    throw e;
-  }
-}
-=======
 // Stale-while-revalidate: muestra caché inmediatamente, actualiza en background
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
@@ -197,7 +159,6 @@ function prefetch(params) {
 }
 
 // ── Agrupar items por actividad contigua ──────────────────────────────────────
->>>>>>> 2598be0 (rediseño 2.0)
 function t2m(t) { if(!t)return 0; const[h,m]=t.split(":").map(Number); return h*60+(m||0); }
 function m2t(m) { return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`; }
 function groupItems(items) {
@@ -209,6 +170,22 @@ function groupItems(items) {
   }
   if(cur)out.push(cur);
   return out.map(g=>({activity:g.activity,from:m2t(g.start),to:m2t(g.end)}));
+}
+
+const INFANTIL_ITEMS = [
+  { time:"08:00", activity:"Infantilizado" },
+  { time:"09:00", activity:"Infantilizado" },
+  { time:"10:00", activity:"Infantilizado" },
+  { time:"11:00", activity:"Infantilizado" },
+];
+
+function resolveItems(rotationCode, items, dateISO) {
+  if (rotationCode === "I" && !items?.length) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const dow = new Date(y,m-1,d).getDay();
+    return (dow === 0 || dow === 6) ? [] : INFANTIL_ITEMS;
+  }
+  return items || [];
 }
 
 // ── CSS global ────────────────────────────────────────────────────────────────
@@ -570,40 +547,12 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
 function TabHorario({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
-<<<<<<< HEAD
-  // Leer caché síncronamente al inicializar — evita el flash de spinner
-  const [daily, setDaily] = useState(()=> cacheGet({route:"daily",becado,date:todayISO(),token:API_TOKEN}));
-  const [loading, setLoading] = useState(false);
-  const [stale, setStale] = useState(()=> !!cacheGet({route:"daily",becado,date:todayISO(),token:API_TOKEN}));
-=======
   const [daily, setDaily] = useState(null);
   const [isStale, setIsStale] = useState(false);
->>>>>>> 2598be0 (rediseño 2.0)
   const [error, setError] = useState("");
   const isOnline = useOnline();
   const scrollRef = useRef(null);
 
-<<<<<<< HEAD
-  useEffect(()=>{
-    const params = {route:"daily",becado,date,token:API_TOKEN};
-    const cached = cacheGet(params);
-    if (cached && cached.ok !== false) {
-      setDaily(cached); setStale(true); setLoading(false);
-    } else {
-      setLoading(true); setDaily(null); setStale(false);
-    }
-    setError("");
-    (async()=>{
-      try{
-        const d = await apiGet(params);
-        if(d.ok===false) throw new Error(d.error||"Error");
-        cacheSet(params, d);
-        setDaily(d);
-      }catch(e){ if(!cached) setError(String(e.message||e)); }
-      finally{ setLoading(false); setStale(false); }
-    })();
-  },[becado,date]);
-=======
   const load = useCallback((targetDate) => {
     const params = {route:"daily",becado,date:targetDate,token:API_TOKEN};
     setError("");
@@ -630,21 +579,9 @@ function TabHorario({ becado, onChangeBecado, T }) {
     safeStorage.remove(cacheKey(params));
     load(date);
   }, scrollRef);
->>>>>>> 2598be0 (rediseño 2.0)
-
-  // Precargar semana en background al montar
-  useEffect(()=>{
-    const weekDates = getWeekDates(today);
-    weekDates.forEach(d => {
-      const params = {route:"daily",becado,date:d,token:API_TOKEN};
-      if (!cacheGet(params)) {
-        apiGet(params).then(res => { if(res.ok!==false) cacheSet(params,res); }).catch(()=>{});
-      }
-    });
-  },[becado]);
 
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
-  const grouped = daily ? groupItems(daily.items) : null;
+  const grouped = daily ? groupItems(resolveItems(daily.rotationCode, daily.items, date)) : null;
 
   return (
     <div
@@ -678,16 +615,6 @@ function TabHorario({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
-<<<<<<< HEAD
-        {stale && (
-          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,opacity:0.5}}>
-            <div style={{width:8,height:8,border:`1.5px solid ${c.accent}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-            <span style={{fontSize:11,color:T.muted}}>Actualizando…</span>
-          </div>
-        )}
-        <ErrorBox msg={error} T={T}/>
-        {loading && !daily ? <Spinner color={c.accent}/> : grouped.length ? (
-=======
         <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {grouped === null ? (
@@ -695,7 +622,6 @@ function TabHorario({ becado, onChangeBecado, T }) {
             {[0,1,2,3].map(i => <SkeletonCard key={i} index={i} T={T}/>)}
           </div>
         ) : grouped.length ? (
->>>>>>> 2598be0 (rediseño 2.0)
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {grouped.map((it,i)=>(
               <ActivityCard key={i} index={i} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>
@@ -832,38 +758,6 @@ function TabSemana({ becado, T }) {
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
-<<<<<<< HEAD
-  useEffect(()=>{
-    (async()=>{
-      setLoading(true);
-      // Mostrar datos cacheados inmediatamente
-      const cached = weekDates.map(date=>{
-        const p = {route:"daily",becado,date,token:API_TOKEN};
-        return cacheGet(p) || null;
-      });
-      const hasCached = cached.some(Boolean);
-      if(hasCached){
-        setDays(weekDates.map((date,i)=> cached[i]
-          ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",rotationName:cached[i].rotationName||"",items:cached[i].items||[]}
-          : {date,ok:false,rotationCode:"",rotationName:"",items:[]}
-        ));
-        setLoading(false);
-      }
-      // Actualizar en background
-      const results = await Promise.all(
-        weekDates.map(date =>
-          apiGet({route:"daily",becado,date,token:API_TOKEN})
-            .then(d=>{ cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",rotationName:d.rotationName||"",items:d.items||[]}; })
-            .catch(()=> cached[weekDates.indexOf(date)]
-              ? {date,ok:true,rotationCode:cached[weekDates.indexOf(date)].rotationCode||"",rotationName:cached[weekDates.indexOf(date)].rotationName||"",items:cached[weekDates.indexOf(date)].items||[]}
-              : {date,ok:false,rotationCode:"",rotationName:"",items:[]})
-        )
-      );
-      setDays(results);
-      setLoading(false);
-    })();
-  },[becado, weekDates]);
-=======
   const load = useCallback(() => {
     const cached = weekDates.map(date => cacheGet({route:"daily",becado,date,token:API_TOKEN}));
     const hasCached = cached.some(Boolean);
@@ -879,10 +773,10 @@ function TabSemana({ becado, T }) {
     Promise.all(
       weekDates.map(date =>
         apiGet({route:"daily",becado,date,token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:d.items||[]}; })
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date)}; })
           .catch(() => {
             const c = cacheGet({route:"daily",becado,date,token:API_TOKEN});
-            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:c.items||[]} : {date,ok:false,rotationCode:"",items:[]};
+            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date)} : {date,ok:false,rotationCode:"",items:[]};
           })
       )
     ).then(results => { setDays(results); setIsStale(false); });
@@ -896,7 +790,6 @@ function TabSemana({ becado, T }) {
     });
     load();
   }, scrollRef);
->>>>>>> 2598be0 (rediseño 2.0)
 
   const isThisWeek = weekDates.includes(today);
 
@@ -1031,33 +924,6 @@ export default function App() {
 
   const T = THEMES[theme];
 
-<<<<<<< HEAD
-  const toggleTheme = () => {
-    const next = theme==="dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    // Actualizar barra superior de la PWA
-    const meta = document.querySelector("meta[name='theme-color']");
-    if (meta) meta.setAttribute("content", next==="dark" ? "#0D1117" : "#F4F7FB");
-  };
-
-  // Aplicar color correcto al montar
-  useEffect(()=>{
-    const meta = document.querySelector("meta[name='theme-color']");
-    if (meta) meta.setAttribute("content", theme==="dark" ? "#0D1117" : "#F4F7FB");
-  },[]);
-
-  useEffect(()=>{
-    (async()=>{
-      try{
-        const d = await apiGet({route:"becados",token:API_TOKEN});
-        if(!d.ok) throw new Error(d.error||"Error");
-        setBecados(d.becados);
-      }catch(e){ setInitError(String(e.message||e)); }
-      finally{ setLoadingInit(false); }
-    })();
-  },[]);
-=======
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     safeStorage.set("activeTab", tab);
@@ -1070,7 +936,6 @@ export default function App() {
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", next === "dark" ? "#0D1117" : "#F4F7FB");
   };
->>>>>>> 2598be0 (rediseño 2.0)
 
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']");
