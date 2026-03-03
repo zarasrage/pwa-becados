@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz9Zme-RquoB2GVh6yj9v9Yl2xFAq2JKO5RnM_Cm5-EYgEQV6CWsD5H4ai3ZtmKiq4U/exec";
 const API_TOKEN = "queseyo_calendriobecados2026";
@@ -14,6 +14,8 @@ const THEMES = {
     sub:      "#8B949E",
     muted:    "#484F58",
     tabBg:    "rgba(13,17,23,0.88)",
+    skeleton: "#1C2333",
+    skeletonShine: "#2D3748",
   },
   light: {
     bg:       "#F4F7FB",
@@ -24,6 +26,8 @@ const THEMES = {
     sub:      "#4A5568",
     muted:    "#94A3B8",
     tabBg:    "rgba(244,247,251,0.92)",
+    skeleton: "#E8EDF5",
+    skeletonShine: "#F4F7FB",
   },
 };
 
@@ -39,13 +43,12 @@ const ROT = {
 };
 const ROT_ORDER = ["H","M","CyP","R","TyP","Col",""];
 
-// Año: azul institucional, verde, morado
 const YEAR_COLORS = ["#348FFF","#13C045","#8B73FF"];
 const YEAR_LABELS = ["1er año","2do año","3er año"];
 
 function rot(code) { return ROT[code] || ROT[""]; }
 
-// ── Utilidades ────────────────────────────────────────────────────────────────
+// ── Utilidades de fecha ───────────────────────────────────────────────────────
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -59,12 +62,74 @@ function formatDate(iso) {
   const [y,m,d] = iso.split("-").map(Number);
   return new Date(y,m-1,d).toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long"});
 }
+function getWeekDates(refISO) {
+  const [y,m,d] = refISO.split("-").map(Number);
+  const ref = new Date(y,m-1,d);
+  const day = ref.getDay();
+  const monday = new Date(ref);
+  monday.setDate(ref.getDate() - (day === 0 ? 6 : day - 1));
+  return Array.from({length:7},(_,i)=>{
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate()+i);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+  });
+}
+function weekLabel(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y,m-1,d).toLocaleDateString("es-CL",{weekday:"short",day:"numeric"});
+}
+function weekRangeLabel(dates) {
+  const [y1,m1,d1] = dates[0].split("-").map(Number);
+  const [y2,m2,d2] = dates[6].split("-").map(Number);
+  const from = new Date(y1,m1-1,d1).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
+  const to   = new Date(y2,m2-1,d2).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
+  return `${from} – ${to}`;
+}
+
+// ── safeStorage — wrapper seguro para localStorage ───────────────────────────
+const safeStorage = {
+  get(key) {
+    try { return localStorage.getItem(key); } catch { return null; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, value); } catch {}
+  },
+  remove(key) {
+    try { localStorage.removeItem(key); } catch {}
+  },
+};
+
+// ── Sistema de caché ──────────────────────────────────────────────────────────
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+
+function cacheKey(params) {
+  return "cache:" + Object.entries(params).sort().map(([k,v])=>`${k}=${v}`).join("&");
+}
+function cacheGet(params) {
+  try {
+    const raw = safeStorage.get(cacheKey(params));
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { safeStorage.remove(cacheKey(params)); return null; }
+    return data;
+  } catch { return null; }
+}
+function cacheSet(params, data) {
+  try {
+    safeStorage.set(cacheKey(params), JSON.stringify({ data, ts: Date.now() }));
+  } catch {}
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
 async function apiGet(params) {
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
-  return (await fetch(url.toString())).json();
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
+<<<<<<< HEAD
 // ── Sistema de caché ──────────────────────────────────────────────────────────
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
 
@@ -102,6 +167,37 @@ async function apiGetCached(params, onCached) {
     throw e;
   }
 }
+=======
+// Stale-while-revalidate: muestra caché inmediatamente, actualiza en background
+async function apiSWR(params, onImmediate, onFresh) {
+  const cached = cacheGet(params);
+  if (cached) {
+    onImmediate(cached, true); // inmediato desde caché
+  }
+  try {
+    const fresh = await apiGet(params);
+    cacheSet(params, fresh);
+    onFresh(fresh, false);
+    return fresh;
+  } catch(e) {
+    if (cached) {
+      onFresh(cached, false); // deja de parpadear aunque no haya red
+      return cached;
+    }
+    throw e;
+  }
+}
+
+// Prefetch silencioso
+function prefetch(params) {
+  if (cacheGet(params)) return;
+  apiGet(params)
+    .then(d => { if (d.ok !== false) cacheSet(params, d); })
+    .catch(() => {});
+}
+
+// ── Agrupar items por actividad contigua ──────────────────────────────────────
+>>>>>>> 2598be0 (rediseño 2.0)
 function t2m(t) { if(!t)return 0; const[h,m]=t.split(":").map(Number); return h*60+(m||0); }
 function m2t(m) { return `${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`; }
 function groupItems(items) {
@@ -120,24 +216,185 @@ const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
-  @keyframes fadeUp   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
-  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
-  @keyframes spin     { to{transform:rotate(360deg)} }
+  body { overscroll-behavior-y: contain; }
+  @keyframes fadeUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+  @keyframes spin      { to{transform:rotate(360deg)} }
   @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
+  @keyframes shimmer   { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
   .anim  { animation: fadeUp 0.28s ease both; }
   .fade  { animation: fadeIn 0.2s ease both; }
-  .press { transition: transform 0.1s, opacity 0.1s; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+  .press { transition: transform 0.1s, opacity 0.1s; -webkit-tap-highlight-color: transparent; cursor: pointer; user-select: none; }
   .press:active { transform: scale(0.96); opacity: 0.82; }
   ::-webkit-scrollbar { width: 0; }
 `;
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function SkeletonLine({ width = "100%", height = 14, radius = 6, T, style = {} }) {
+  return (
+    <div style={{
+      width, height, borderRadius: radius,
+      background: `linear-gradient(90deg, ${T.skeleton} 25%, ${T.skeletonShine} 50%, ${T.skeleton} 75%)`,
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.4s ease-in-out infinite",
+      ...style,
+    }}/>
+  );
+}
+function SkeletonCard({ T, index = 0 }) {
+  return (
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderLeft: `3px solid ${T.border}`,
+      borderRadius: 12,
+      padding: "12px 14px",
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      animationDelay: `${index * 40}ms`,
+    }} className="fade">
+      <div style={{flexShrink:0,minWidth:48,display:"flex",flexDirection:"column",gap:5,alignItems:"center"}}>
+        <SkeletonLine width={36} height={13} T={T}/>
+        <SkeletonLine width={28} height={10} T={T}/>
+      </div>
+      <div style={{width:1,height:28,background:T.border,flexShrink:0}}/>
+      <div style={{flex:1,display:"flex",flexDirection:"column",gap:5}}>
+        <SkeletonLine width="85%" height={13} T={T}/>
+        <SkeletonLine width="55%" height={11} T={T}/>
+      </div>
+    </div>
+  );
+}
+function SkeletonWeekCard({ T, index = 0 }) {
+  return (
+    <div style={{
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      borderLeft: `3px solid ${T.border}`,
+      borderRadius: 12,
+      overflow: "hidden",
+      animationDelay: `${index * 35}ms`,
+    }} className="fade">
+      <div style={{padding:"9px 13px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`}}>
+        <SkeletonLine width={60} height={12} T={T}/>
+        <SkeletonLine width={70} height={12} T={T}/>
+      </div>
+      <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:5}}>
+        <SkeletonLine width="70%" height={11} T={T}/>
+        <SkeletonLine width="50%" height={11} T={T}/>
+      </div>
+    </div>
+  );
+}
+
+// ── Banner offline / stale ────────────────────────────────────────────────────
+function OfflineBanner({ isOnline, isStale, T }) {
+  if (isOnline && !isStale) return null;
+  const offline = !isOnline;
+  return (
+    <div className="fade" style={{
+      marginBottom: 10,
+      padding: "8px 12px",
+      borderRadius: 10,
+      background: offline ? "#2D1515" : T.surface2,
+      border: `1px solid ${offline ? "#F8717140" : T.border}`,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      fontSize: 12,
+      color: offline ? "#F87171" : T.muted,
+    }}>
+      {offline ? (
+        <>
+          <span>📵</span>
+          <span>Sin conexión — mostrando datos guardados</span>
+        </>
+      ) : (
+        <>
+          <div style={{width:10,height:10,border:`1.5px solid ${T.muted}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite",flexShrink:0}}/>
+          <span>Actualizando…</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Pull-to-refresh ───────────────────────────────────────────────────────────
+const PTR_THRESHOLD = 72;
+
+function usePullToRefresh(onRefresh, scrollRef) {
+  const [pullY, setPullY] = useState(0);
+  const [triggered, setTriggered] = useState(false);
+  const startY = useRef(null);
+  const pulling = useRef(false);
+
+  const onTouchStart = useCallback((e) => {
+    const el = scrollRef?.current;
+    if (el && el.scrollTop > 0) return;
+    startY.current = e.touches[0].clientY;
+    pulling.current = true;
+  }, [scrollRef]);
+
+  const onTouchMove = useCallback((e) => {
+    if (!pulling.current || startY.current === null) return;
+    const el = scrollRef?.current;
+    if (el && el.scrollTop > 0) { pulling.current = false; startY.current = null; return; }
+    const delta = e.touches[0].clientY - startY.current;
+    if (delta < 0) return;
+    const y = Math.min(delta * 0.45, PTR_THRESHOLD + 20);
+    setPullY(y);
+    if (y >= PTR_THRESHOLD && !triggered) setTriggered(true);
+    if (y < PTR_THRESHOLD && triggered) setTriggered(false);
+  }, [triggered, scrollRef]);
+
+  const onTouchEnd = useCallback(() => {
+    if (triggered) onRefresh();
+    setPullY(0);
+    setTriggered(false);
+    pulling.current = false;
+    startY.current = null;
+  }, [triggered, onRefresh]);
+
+  return { pullY, triggered, onTouchStart, onTouchMove, onTouchEnd };
+}
+
+function PullIndicator({ pullY, triggered, T }) {
+  if (pullY <= 4) return null;
+  const progress = Math.min(pullY / PTR_THRESHOLD, 1);
+  return (
+    <div style={{
+      position: "absolute",
+      top: Math.max(-40, pullY - 52),
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: 36,
+      height: 36,
+      borderRadius: "50%",
+      background: T.surface,
+      border: `1px solid ${T.border}`,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      opacity: progress,
+      transition: "top 0.05s",
+      zIndex: 10,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    }}>
+      {triggered ? (
+        <div style={{width:16,height:16,border:"2px solid #348FFF",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.6s linear infinite"}}/>
+      ) : (
+        <span style={{fontSize:16,transform:`rotate(${progress*180}deg)`,transition:"transform 0.1s",display:"block"}}>↓</span>
+      )}
+    </div>
+  );
+}
 
 // ── Settings panel ────────────────────────────────────────────────────────────
 function SettingsPanel({ theme, onToggle, onClose, T }) {
   return (
     <>
-      {/* Overlay */}
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
-      {/* Panel */}
       <div style={{
         position:"fixed",top:44,right:12,zIndex:100,
         background:T.surface,border:`1px solid ${T.border}`,
@@ -149,14 +406,12 @@ function SettingsPanel({ theme, onToggle, onClose, T }) {
         <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:12}}>
           Apariencia
         </div>
-        <button className="press"
-          onClick={onToggle}
+        <button className="press" onClick={onToggle}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
           <div style={{display:"flex",alignItems:"center",gap:9}}>
             <span style={{fontSize:16}}>{theme==="dark" ? "🌙" : "☀️"}</span>
             <span style={{fontSize:13,fontWeight:500,color:T.text}}>{theme==="dark" ? "Dark" : "Light"}</span>
           </div>
-          {/* Toggle pill */}
           <div style={{width:36,height:20,borderRadius:99,background:theme==="dark"?"#348FFF":T.border,position:"relative",transition:"background 0.2s",flexShrink:0}}>
             <div style={{position:"absolute",top:2,left:theme==="dark"?18:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
           </div>
@@ -166,7 +421,7 @@ function SettingsPanel({ theme, onToggle, onClose, T }) {
   );
 }
 
-// ── Gear button (esquina sup derecha) ─────────────────────────────────────────
+// ── Gear button ───────────────────────────────────────────────────────────────
 function GearBtn({ onClick, T }) {
   return (
     <button className="press" onClick={onClick}
@@ -251,14 +506,25 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
   );
 }
 
-// ── Select screen ─────────────────────────────────────────────────────────────
+// ── useOnline hook ────────────────────────────────────────────────────────────
+function useOnline() {
+  const [online, setOnline] = useState(() => typeof navigator !== "undefined" ? (navigator.onLine ?? true) : true);
+  useEffect(() => {
+    const on  = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+  return online;
+}
+
+// ── SelectScreen ──────────────────────────────────────────────────────────────
 function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
   const groups = [becados.slice(0,5),becados.slice(5,10),becados.slice(10,15)].filter(g=>g.length>0);
   return (
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40}}>
-      {/* Glow decorativo */}
       <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"#348FFF08",filter:"blur(50px)",pointerEvents:"none",zIndex:0}}/>
-
       <div style={{padding:"56px 16px 16px",position:"relative",zIndex:1}}>
         <div style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T.muted,textTransform:"uppercase",marginBottom:6}}>
           Traumatología · Becados
@@ -271,9 +537,7 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
           <span>⊞</span> Ver rotaciones de hoy
         </button>
       </div>
-
       {error && <div style={{margin:"0 16px 12px",position:"relative",zIndex:1}}><ErrorBox msg={error} T={T}/></div>}
-
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
         {groups.map((group,gi) => (
           <div key={gi} className="anim" style={{marginBottom:20,animationDelay:`${gi*70+120}ms`}}>
@@ -306,12 +570,20 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
 function TabHorario({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
+<<<<<<< HEAD
   // Leer caché síncronamente al inicializar — evita el flash de spinner
   const [daily, setDaily] = useState(()=> cacheGet({route:"daily",becado,date:todayISO(),token:API_TOKEN}));
   const [loading, setLoading] = useState(false);
   const [stale, setStale] = useState(()=> !!cacheGet({route:"daily",becado,date:todayISO(),token:API_TOKEN}));
+=======
+  const [daily, setDaily] = useState(null);
+  const [isStale, setIsStale] = useState(false);
+>>>>>>> 2598be0 (rediseño 2.0)
   const [error, setError] = useState("");
+  const isOnline = useOnline();
+  const scrollRef = useRef(null);
 
+<<<<<<< HEAD
   useEffect(()=>{
     const params = {route:"daily",becado,date,token:API_TOKEN};
     const cached = cacheGet(params);
@@ -331,6 +603,34 @@ function TabHorario({ becado, onChangeBecado, T }) {
       finally{ setLoading(false); setStale(false); }
     })();
   },[becado,date]);
+=======
+  const load = useCallback((targetDate) => {
+    const params = {route:"daily",becado,date:targetDate,token:API_TOKEN};
+    setError("");
+    apiSWR(
+      params,
+      (data) => { setDaily(data); setIsStale(true); },
+      (data, stale) => { setDaily(data); setIsStale(stale); }
+    ).catch(e => setError(String(e.message||e)));
+  }, [becado]);
+
+  useEffect(() => { load(date); }, [date, load]);
+
+  // Prefetch semana + día siguiente si es tarde
+  useEffect(() => {
+    const weekDates = getWeekDates(today);
+    weekDates.forEach(d => prefetch({route:"daily",becado,date:d,token:API_TOKEN}));
+    if (new Date().getHours() >= 18) {
+      prefetch({route:"daily",becado,date:offsetDate(today,1),token:API_TOKEN});
+    }
+  }, [becado, today]);
+
+  const ptr = usePullToRefresh(() => {
+    const params = {route:"daily",becado,date,token:API_TOKEN};
+    safeStorage.remove(cacheKey(params));
+    load(date);
+  }, scrollRef);
+>>>>>>> 2598be0 (rediseño 2.0)
 
   // Precargar semana en background al montar
   useEffect(()=>{
@@ -344,14 +644,22 @@ function TabHorario({ becado, onChangeBecado, T }) {
   },[becado]);
 
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
-  const grouped = groupItems(daily?.items);
+  const grouped = daily ? groupItems(daily.items) : null;
 
   return (
-    <>
-      {/* Glow de rotación */}
+    <div
+      ref={scrollRef}
+      style={{position:"relative",overflowY:"auto",minHeight:"100vh"}}
+      onTouchStart={ptr.onTouchStart}
+      onTouchMove={ptr.onTouchMove}
+      onTouchEnd={ptr.onTouchEnd}
+    >
+      <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
+
       {daily?.rotationCode && (
         <div style={{position:"fixed",top:0,right:0,width:240,height:240,borderRadius:"50%",background:c.glow,filter:"blur(70px)",pointerEvents:"none",zIndex:0}}/>
       )}
+
       <div style={{padding:"20px 16px 0",position:"relative",zIndex:1}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi horario</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
@@ -370,6 +678,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
+<<<<<<< HEAD
         {stale && (
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,opacity:0.5}}>
             <div style={{width:8,height:8,border:`1.5px solid ${c.accent}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
@@ -378,6 +687,15 @@ function TabHorario({ becado, onChangeBecado, T }) {
         )}
         <ErrorBox msg={error} T={T}/>
         {loading && !daily ? <Spinner color={c.accent}/> : grouped.length ? (
+=======
+        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
+        <ErrorBox msg={error} T={T}/>
+        {grouped === null ? (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {[0,1,2,3].map(i => <SkeletonCard key={i} index={i} T={T}/>)}
+          </div>
+        ) : grouped.length ? (
+>>>>>>> 2598be0 (rediseño 2.0)
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {grouped.map((it,i)=>(
               <ActivityCard key={i} index={i} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>
@@ -390,7 +708,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -399,27 +717,47 @@ function TabRotaciones({ T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [error, setError] = useState("");
+  const isOnline = useOnline();
+  const scrollRef = useRef(null);
 
-  useEffect(()=>{
-    (async()=>{
-      setLoading(true); setError(""); setSummary(null);
-      try{
-        const d = await apiGet({route:"summary",date,token:API_TOKEN});
-        if(d.ok===false) throw new Error(d.error||"Error");
-        setSummary(d);
-      }catch(e){ setError(String(e.message||e)); }
-      finally{ setLoading(false); }
-    })();
-  },[date]);
+  const load = useCallback((targetDate) => {
+    const params = {route:"summary",date:targetDate,token:API_TOKEN};
+    setError("");
+    apiSWR(
+      params,
+      (data) => { setSummary(data); setIsStale(true); },
+      (data, stale) => { setSummary(data); setIsStale(stale); }
+    ).catch(e => setError(String(e.message||e)));
+  }, []);
+
+  useEffect(() => { load(date); }, [date, load]);
+
+  useEffect(() => {
+    [-1, 1].forEach(offset => prefetch({route:"summary",date:offsetDate(today,offset),token:API_TOKEN}));
+  }, [today]);
+
+  const ptr = usePullToRefresh(() => {
+    const params = {route:"summary",date,token:API_TOKEN};
+    safeStorage.remove(cacheKey(params));
+    load(date);
+  }, scrollRef);
 
   const entries = summary?.groups
     ? ROT_ORDER.filter(k=>summary.groups[k]).map(k=>[k,summary.groups[k]])
     : [];
 
   return (
-    <>
+    <div
+      ref={scrollRef}
+      style={{position:"relative",overflowY:"auto",minHeight:"100vh"}}
+      onTouchStart={ptr.onTouchStart}
+      onTouchMove={ptr.onTouchMove}
+      onTouchEnd={ptr.onTouchEnd}
+    >
+      <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
+
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>Rotaciones</div>
@@ -427,8 +765,24 @@ function TabRotaciones({ T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
+        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
         <ErrorBox msg={error} T={T}/>
-        {loading ? <Spinner/> : entries.length ? (
+        {summary === null && !error ? (
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {[0,1,2,3,4,5].map(i=>(
+              <div key={i} className="fade" style={{animationDelay:`${i*45}ms`,background:T.surface,border:`1px solid ${T.border}`,borderTop:`3px solid ${T.border}`,borderRadius:12,overflow:"hidden"}}>
+                <div style={{padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:`1px solid ${T.border}`}}>
+                  <SkeletonLine width={80} height={13} T={T}/>
+                  <SkeletonLine width={60} height={12} T={T}/>
+                </div>
+                <div style={{padding:"9px 14px 11px",display:"flex",flexDirection:"column",gap:6}}>
+                  <SkeletonLine width="60%" height={12} T={T}/>
+                  <SkeletonLine width="45%" height={12} T={T}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : entries.length ? (
           <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {entries.map(([code,names],i)=>{
               const c = rot(code);
@@ -463,43 +817,22 @@ function TabRotaciones({ T }) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
 // ── Tab: Mi semana ────────────────────────────────────────────────────────────
-function getWeekDates(refISO) {
-  const [y,m,d] = refISO.split("-").map(Number);
-  const ref = new Date(y,m-1,d);
-  const day = ref.getDay();
-  const monday = new Date(ref);
-  monday.setDate(ref.getDate() - (day === 0 ? 6 : day - 1));
-  return Array.from({length:7},(_,i)=>{
-    const dt = new Date(monday);
-    dt.setDate(monday.getDate()+i);
-    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
-  });
-}
-function weekLabel(iso) {
-  const [y,m,d] = iso.split("-").map(Number);
-  return new Date(y,m-1,d).toLocaleDateString("es-CL",{weekday:"short",day:"numeric"});
-}
-function weekRangeLabel(dates) {
-  const [y1,m1,d1] = dates[0].split("-").map(Number);
-  const [y2,m2,d2] = dates[6].split("-").map(Number);
-  const from = new Date(y1,m1-1,d1).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
-  const to   = new Date(y2,m2-1,d2).toLocaleDateString("es-CL",{day:"numeric",month:"short"});
-  return `${from} – ${to}`;
-}
-
 function TabSemana({ becado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(today);
-  const [days, setDays] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [days, setDays] = useState(null);
+  const [isStale, setIsStale] = useState(false);
+  const isOnline = useOnline();
+  const scrollRef = useRef(null);
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
+<<<<<<< HEAD
   useEffect(()=>{
     (async()=>{
       setLoading(true);
@@ -530,27 +863,64 @@ function TabSemana({ becado, T }) {
       setLoading(false);
     })();
   },[becado, weekDates]);
+=======
+  const load = useCallback(() => {
+    const cached = weekDates.map(date => cacheGet({route:"daily",becado,date,token:API_TOKEN}));
+    const hasCached = cached.some(Boolean);
+    if (hasCached) {
+      setDays(weekDates.map((date,i) => cached[i]
+        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[]}
+        : {date,ok:false,rotationCode:"",items:[]}
+      ));
+      setIsStale(true);
+    } else {
+      setDays(null);
+    }
+    Promise.all(
+      weekDates.map(date =>
+        apiGet({route:"daily",becado,date,token:API_TOKEN})
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:d.items||[]}; })
+          .catch(() => {
+            const c = cacheGet({route:"daily",becado,date,token:API_TOKEN});
+            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:c.items||[]} : {date,ok:false,rotationCode:"",items:[]};
+          })
+      )
+    ).then(results => { setDays(results); setIsStale(false); });
+  }, [becado, weekDates]);
 
-  const prevWeek = () => setRefDate(d=>offsetDate(d,-7));
-  const nextWeek = () => setRefDate(d=>offsetDate(d,7));
-  const thisWeek = () => setRefDate(today);
+  useEffect(() => { load(); }, [load]);
+
+  const ptr = usePullToRefresh(() => {
+    weekDates.forEach(date => {
+      safeStorage.remove(cacheKey({route:"daily",becado,date,token:API_TOKEN}));
+    });
+    load();
+  }, scrollRef);
+>>>>>>> 2598be0 (rediseño 2.0)
+
   const isThisWeek = weekDates.includes(today);
 
   return (
-    <>
+    <div
+      ref={scrollRef}
+      style={{position:"relative",overflowY:"auto",minHeight:"100vh"}}
+      onTouchStart={ptr.onTouchStart}
+      onTouchMove={ptr.onTouchMove}
+      onTouchEnd={ptr.onTouchEnd}
+    >
+      <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
+
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>{becado}</div>
-
-        {/* Nav semana */}
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
-          <button className="press" onClick={prevWeek}
+          <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text}}>{weekRangeLabel(weekDates)}</div>
-          <button className="press" onClick={nextWeek}
+          <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,7))}
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
           {!isThisWeek && (
-            <button className="press" onClick={thisWeek}
+            <button className="press" onClick={()=>setRefDate(today)}
               style={{height:32,padding:"0 11px",borderRadius:8,border:"1px solid #348FFF60",background:"#348FFF14",fontSize:11,fontWeight:700,color:"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
@@ -559,7 +929,12 @@ function TabSemana({ becado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        {loading ? <Spinner/> : (
+        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
+        {days === null ? (
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {[0,1,2,3,4,5,6].map(i => <SkeletonWeekCard key={i} index={i} T={T}/>)}
+          </div>
+        ) : (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {days.map((day,i)=>{
               const c = rot(day.rotationCode);
@@ -568,7 +943,6 @@ function TabSemana({ becado, T }) {
               return (
                 <div key={day.date} className="anim"
                   style={{animationDelay:`${i*35}ms`,background:T.surface,border:`1px solid ${isToday ? c.accent+"60" : T.border}`,borderLeft:`3px solid ${day.rotationCode ? c.accent : T.border}`,borderRadius:12,overflow:"hidden",boxShadow:isToday?`0 0 0 1px ${c.accent}30`:"none"}}>
-                  {/* Header del día */}
                   <div style={{padding:"9px 13px",display:"flex",alignItems:"center",justifyContent:"space-between",background: isToday ? c.light : "transparent", borderBottom:`1px solid ${T.border}`}}>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <span style={{fontSize:12,fontWeight:700,color: isToday ? c.accent : T.sub,textTransform:"capitalize",fontFamily:"'Bricolage Grotesque',sans-serif"}}>
@@ -585,8 +959,6 @@ function TabSemana({ becado, T }) {
                       <span style={{fontSize:11,color:T.muted}}>Sin rotación</span>
                     )}
                   </div>
-
-                  {/* Actividades compactas */}
                   {grouped.length > 0 ? (
                     <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:4}}>
                       {grouped.map((it,gi)=>(
@@ -607,11 +979,11 @@ function TabSemana({ becado, T }) {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
-
+// ── TabBar ────────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange, T }) {
   const tabs = [
     { id:"horario",    icon:"◑", label:"Mi Horario" },
@@ -649,16 +1021,17 @@ function TabBar({ active, onChange, T }) {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [theme, setTheme] = useState(()=>localStorage.getItem("theme")||"dark");
+  const [theme, setTheme]             = useState(() => safeStorage.get("theme") || "dark");
   const [showSettings, setShowSettings] = useState(false);
-  const [becado, setBecado] = useState(()=>localStorage.getItem("selectedBecado")||"");
-  const [becados, setBecados] = useState([]);
+  const [becado, setBecado]           = useState(() => safeStorage.get("selectedBecado") || "");
+  const [becados, setBecados]         = useState([]);
   const [loadingInit, setLoadingInit] = useState(true);
-  const [initError, setInitError] = useState("");
-  const [activeTab, setActiveTab] = useState("horario");
+  const [initError, setInitError]     = useState("");
+  const [activeTab, setActiveTab]     = useState(() => safeStorage.get("activeTab") || "horario");
 
   const T = THEMES[theme];
 
+<<<<<<< HEAD
   const toggleTheme = () => {
     const next = theme==="dark" ? "light" : "dark";
     setTheme(next);
@@ -684,49 +1057,107 @@ export default function App() {
       finally{ setLoadingInit(false); }
     })();
   },[]);
+=======
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    safeStorage.set("activeTab", tab);
+  };
 
-  const handleSelect = name => { localStorage.setItem("selectedBecado",name); setBecado(name); };
-  const handleChange = () => { localStorage.removeItem("selectedBecado"); setBecado(""); setActiveTab("horario"); };
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    safeStorage.set("theme", next);
+    const meta = document.querySelector("meta[name='theme-color']");
+    if (meta) meta.setAttribute("content", next === "dark" ? "#0D1117" : "#F4F7FB");
+  };
+>>>>>>> 2598be0 (rediseño 2.0)
+
+  useEffect(() => {
+    const meta = document.querySelector("meta[name='theme-color']");
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#0D1117" : "#F4F7FB");
+  }, []);
+
+  // Cargar lista de becados con caché (SWR)
+  useEffect(() => {
+    const params = {route:"becados",token:API_TOKEN};
+    apiSWR(
+      params,
+      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } },
+      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } }
+    ).catch(e => { setInitError(String(e.message||e)); setLoadingInit(false); });
+  }, []);
+
+  // Prefetch rotaciones de hoy en background
+  useEffect(() => {
+    prefetch({route:"summary",date:todayISO(),token:API_TOKEN});
+  }, []);
+
+  const handleSelect = name => { safeStorage.set("selectedBecado", name); setBecado(name); };
+  const handleChange = () => {
+    safeStorage.remove("selectedBecado");
+    safeStorage.remove("activeTab");
+    setBecado("");
+    setActiveTab("horario");
+  };
   const handleShowRotaciones = () => { setBecado("__rotaciones__"); };
 
-  if(loadingInit) return (
+  if (loadingInit) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",maxWidth:480,margin:"0 auto"}}>
       <style>{CSS}</style><Spinner/>
     </div>
   );
 
+  const showRotacionesOnly = becado === "__rotaciones__";
+
   return (
-    <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom: becado&&becado!=="__rotaciones__" ? 72 : 0, position:"relative",overflow:"hidden"}}>
+    <div style={{
+      minHeight:"100vh",
+      background:T.bg,
+      maxWidth:480,
+      margin:"0 auto",
+      fontFamily:"'Inter',sans-serif",
+      paddingBottom: becado ? 72 : 0,
+      position:"relative",
+      overflow:"hidden",
+    }}>
       <style>{CSS}</style>
 
-      {/* Gear button — siempre visible */}
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
-
-      {/* Settings panel */}
       {showSettings && (
-        <SettingsPanel theme={theme} onToggle={()=>{ toggleTheme(); }} onClose={()=>setShowSettings(false)} T={T}/>
+        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} T={T}/>
       )}
 
-      {/* Contenido según estado */}
-      {loadingInit ? <Spinner/> :
-       !becado ? (
-         <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} error={initError} T={T}/>
-       ) : becado==="__rotaciones__" ? (
-         <>
-           <div style={{paddingBottom:72}}>
-             <TabRotaciones T={T}/>
-           </div>
-           <TabBar active="rotaciones" onChange={tab=>{ if(tab==="horario") setBecado(""); else setActiveTab(tab); }} T={T}/>
-         </>
-       ) : (
-         <>
-           {activeTab==="horario" && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
-           {activeTab==="semana" && <TabSemana becado={becado} T={T}/>}
-           {activeTab==="rotaciones" && <TabRotaciones T={T}/>}
-           <TabBar active={activeTab} onChange={setActiveTab} T={T}/>
-         </>
-       )
-      }
+      {!becado ? (
+        <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} error={initError} T={T}/>
+
+      ) : showRotacionesOnly ? (
+        <>
+          <div style={{paddingBottom:72}}>
+            <TabRotaciones T={T}/>
+          </div>
+          <TabBar
+            active="rotaciones"
+            onChange={tab => {
+              if (tab === "horario") {
+                const saved = safeStorage.get("selectedBecado");
+                if (saved) { setBecado(saved); setActiveTab("horario"); }
+                else handleChange();
+              } else {
+                handleTabChange(tab);
+              }
+            }}
+            T={T}
+          />
+        </>
+
+      ) : (
+        <>
+          {activeTab === "horario"    && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
+          {activeTab === "semana"     && <TabSemana becado={becado} T={T}/>}
+          {activeTab === "rotaciones" && <TabRotaciones T={T}/>}
+          <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
+        </>
+      )}
     </div>
   );
 }
