@@ -483,6 +483,63 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
   );
 }
 
+
+// ── Colores de turno ──────────────────────────────────────────────────────────
+const TURNO = {
+  P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Turno Poli",  desde:"14:00", hasta:"17:59" },
+  D: { accent:"#F59E0B", light:"#F59E0B12", glow:"#F59E0B28", label:"Turno Día",   desde:"14:00", hasta:"19:59" },
+  N: { accent:"#818CF8", light:"#818CF812", glow:"#818CF828", label:"Turno Noche", desde:"20:00", hasta:"--"    },
+};
+
+// ── Section divider ───────────────────────────────────────────────────────────
+function SectionDivider({ label, T }) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0 4px"}}>
+      <div style={{height:1,flex:1,background:T.border}}/>
+      <span style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted}}>{label}</span>
+      <div style={{height:1,flex:1,background:T.border}}/>
+    </div>
+  );
+}
+
+// ── Turno card ────────────────────────────────────────────────────────────────
+function TurnoCard({ tipo, index, T }) {
+  const t = TURNO[tipo];
+  if (!t) return null;
+  const [pressed, setPressed] = useState(false);
+  return (
+    <div className="anim"
+      style={{
+        animationDelay:`${index*40}ms`,
+        background: pressed ? t.light : T.surface,
+        border: `1px solid ${pressed ? t.accent+"50" : T.border}`,
+        borderLeft: `3px solid ${t.accent}`,
+        borderRadius: 12,
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        cursor: "pointer",
+        userSelect: "none",
+        boxShadow: pressed ? `0 0 14px ${t.glow}` : "none",
+        transition: "all 0.12s ease",
+      }}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+    >
+      <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:t.accent,lineHeight:1.2}}>{t.desde}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:t.accent,opacity:0.45,lineHeight:1.2,marginTop:2}}>{t.hasta}</div>
+      </div>
+      <div style={{width:1,height:28,background:`${t.accent}25`,flexShrink:0}}/>
+      <div style={{flex:1}}>
+        <div style={{fontSize:14,color:T.text,fontWeight:500,lineHeight:1.35}}>{t.label}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── useOnline hook ────────────────────────────────────────────────────────────
 function useOnline() {
   const [online, setOnline] = useState(() => typeof navigator !== "undefined" ? (navigator.onLine ?? true) : true);
@@ -621,18 +678,33 @@ function TabHorario({ becado, onChangeBecado, T }) {
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[0,1,2,3].map(i => <SkeletonCard key={i} index={i} T={T}/>)}
           </div>
-        ) : grouped.length ? (
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {grouped.map((it,i)=>(
-              <ActivityCard key={i} index={i} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>
-            ))}
-          </div>
-        ) : !error && (
-          <div style={{textAlign:"center",padding:"60px 0"}}>
-            <div style={{fontSize:38,marginBottom:10,opacity:0.2}}>📭</div>
-            <div style={{fontSize:14,color:T.muted,fontWeight:500}}>Sin actividades este día</div>
-          </div>
-        )}
+        ) : (() => {
+          const manana   = grouped.filter(it => t2m(it.from) < t2m("14:00"));
+          const tarde    = grouped.filter(it => t2m(it.from) >= t2m("14:00"));
+          const diaCode  = daily?.turno?.diaCode  || null;
+          const nocheCode= daily?.turno?.nocheCode || null;
+          const hasAny   = manana.length || tarde.length || diaCode || nocheCode;
+          if (!hasAny && !error) return (
+            <div style={{textAlign:"center",padding:"60px 0"}}>
+              <div style={{fontSize:38,marginBottom:10,opacity:0.2}}>📭</div>
+              <div style={{fontSize:14,color:T.muted,fontWeight:500}}>Sin actividades este día</div>
+            </div>
+          );
+          let cardIdx = 0;
+          return (
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {manana.length > 0 && <SectionDivider label="Mañana" T={T}/>}
+              {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
+
+              {(tarde.length > 0 || diaCode) && <SectionDivider label="Tarde" T={T}/>}
+              {tarde.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
+              {diaCode && <TurnoCard key="turno-dia" tipo={diaCode} index={cardIdx++} T={T}/>}
+
+              {nocheCode && <SectionDivider label="Noche" T={T}/>}
+              {nocheCode && <TurnoCard key="turno-noche" tipo={nocheCode} index={cardIdx++} T={T}/>}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -771,8 +843,8 @@ function TabSemana({ becado, onChangeBecado, T }) {
     const hasCached = cached.some(Boolean);
     if (hasCached) {
       setDays(weekDates.map((date,i) => cached[i]
-        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[]}
-        : {date,ok:false,rotationCode:"",items:[]}
+        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[],turno:cached[i].turno||{diaCode:null,nocheCode:null}}
+        : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null}}
       ));
       setIsStale(true);
     } else {
@@ -781,10 +853,10 @@ function TabSemana({ becado, onChangeBecado, T }) {
     Promise.all(
       weekDates.map(date =>
         apiGet({route:"daily",becado,date,token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date)}; })
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date),turno:d.turno||{diaCode:null,nocheCode:null}}; })
           .catch(() => {
             const c = cacheGet({route:"daily",becado,date,token:API_TOKEN});
-            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date)} : {date,ok:false,rotationCode:"",items:[]};
+            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date),turno:c.turno||{diaCode:null,nocheCode:null}} : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null}};
           })
       )
     ).then(results => { setDays(results); setIsStale(false); });
@@ -857,14 +929,18 @@ function TabSemana({ becado, onChangeBecado, T }) {
                       </span>
                       {isToday && <span style={{fontSize:9,fontWeight:700,background:c.accent,color:"#fff",borderRadius:99,padding:"1px 6px",letterSpacing:"0.05em"}}>HOY</span>}
                     </div>
-                    {day.rotationCode ? (
-                      <div style={{display:"flex",alignItems:"center",gap:5}}>
-                        <span style={{width:6,height:6,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 5px ${c.accent}`}}/>
-                        <span style={{fontSize:11,fontWeight:600,color:c.accent}}>{c.name}</span>
-                      </div>
-                    ) : (
-                      <span style={{fontSize:11,color:T.muted}}>Sin rotación</span>
-                    )}
+                    <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      {day.rotationCode ? (
+                        <div style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{width:6,height:6,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 5px ${c.accent}`}}/>
+                          <span style={{fontSize:11,fontWeight:600,color:c.accent}}>{c.name}</span>
+                        </div>
+                      ) : (
+                        <span style={{fontSize:11,color:T.muted}}>Sin rotación</span>
+                      )}
+                      {day.turno?.diaCode && (() => { const t=TURNO[day.turno.diaCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                    </div>
                   </div>
                   {grouped.length > 0 ? (
                     <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:4}}>
