@@ -639,7 +639,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
 }
 
 // ── Tab: Rotaciones ───────────────────────────────────────────────────────────
-function TabRotaciones({ T }) {
+function TabRotaciones({ onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const [summary, setSummary] = useState(null);
@@ -686,7 +686,15 @@ function TabRotaciones({ T }) {
 
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
-        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>Rotaciones</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Rotaciones</div>
+          {onChangeBecado && (
+            <button className="press" onClick={onChangeBecado}
+              style={{background:"none",border:"none",padding:0,textAlign:"right",marginTop:4}}>
+              <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Becados</div>
+            </button>
+          )}
+        </div>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
 
@@ -748,7 +756,7 @@ function TabRotaciones({ T }) {
 }
 
 // ── Tab: Mi semana ────────────────────────────────────────────────────────────
-function TabSemana({ becado, T }) {
+function TabSemana({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(today);
   const [days, setDays] = useState(null);
@@ -805,7 +813,13 @@ function TabSemana({ becado, T }) {
 
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
-        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>{becado}</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
+          <button className="press" onClick={onChangeBecado}
+            style={{background:"none",border:"none",padding:0,textAlign:"right",marginTop:4}}>
+            <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Becados</div>
+          </button>
+        </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
@@ -998,7 +1012,7 @@ export default function App() {
       ) : showRotacionesOnly ? (
         <>
           <div style={{paddingBottom:72}}>
-            <TabRotaciones T={T}/>
+            <TabRotaciones onChangeBecado={handleChange} T={T}/>
           </div>
           <TabBar
             active="rotaciones"
@@ -1018,8 +1032,8 @@ export default function App() {
       ) : (
         <>
           {activeTab === "horario"    && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
-          {activeTab === "semana"     && <TabSemana becado={becado} T={T}/>}
-          {activeTab === "rotaciones" && <TabRotaciones T={T}/>}
+          {activeTab === "semana"     && <TabSemana becado={becado} onChangeBecado={handleChange} T={T}/>}
+          {activeTab === "rotaciones" && <TabRotaciones onChangeBecado={handleChange} T={T}/>}
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
