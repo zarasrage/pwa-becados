@@ -97,12 +97,47 @@ const safeStorage = {
     try { return localStorage.getItem(key); } catch { return null; }
   },
   set(key, value) {
-    try { localStorage.setItem(key, value); } catch {}
+    try { localStorage.setItem(key, value); } catch(e) {
+      // localStorage lleno → limpiar caché expirado e intentar de nuevo
+      purgeCacheStorage();
+      try { localStorage.setItem(key, value); } catch {}
+    }
   },
   remove(key) {
     try { localStorage.removeItem(key); } catch {}
   },
+  keys() {
+    try { return Object.keys(localStorage); } catch { return []; }
+  },
 };
+
+// Elimina entradas de caché expiradas del localStorage
+// Se llama al iniciar la app y cuando el storage se llena
+function purgeCacheStorage() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("cache:"));
+    let removed = 0;
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const { ts, ttl } = JSON.parse(raw);
+        const expired = Date.now() - ts > (ttl || 30 * 60 * 1000);
+        // También eliminar entradas de días pasados aunque no hayan expirado
+        const isOldDaily = key.includes("route=daily") && (() => {
+          const m = key.match(/date=(\d{4}-\d{2}-\d{2})/);
+          if (!m) return false;
+          return m[1] < todayISO();
+        })();
+        if (expired || isOldDaily) {
+          localStorage.removeItem(key);
+          removed++;
+        }
+      } catch {}
+    }
+    return removed;
+  } catch { return 0; }
+}
 
 // ── Sistema de caché ──────────────────────────────────────────────────────────
 // ── Caché inteligente con TTL dinámico ───────────────────────────────────────
@@ -120,10 +155,10 @@ function cacheTTL(params) {
     const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
     return midnight - Date.now();
   }
-  if (route === "summary")  return 4  * 60 * 60 * 1000; // 4h
-  if (route === "monthly")  return 4  * 60 * 60 * 1000; // 4h
-  if (route === "becados")  return 24 * 60 * 60 * 1000; // 24h
-  return 60 * 60 * 1000; // 1h por defecto
+  if (route === "summary")  return 24 * 60 * 60 * 1000; // 24h
+  if (route === "monthly")  return 24 * 60 * 60 * 1000; // 24h
+  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000; // 7 días
+  return 24 * 60 * 60 * 1000; // 24h por defecto
 }
 
 function cacheKey(params) {
@@ -155,11 +190,9 @@ async function apiGet(params) {
   return res.json();
 }
 
-// Stale-while-revalidate con revalidación inteligente:
-// - Si el caché tiene menos de 5 min → mostrar y NO revalidar (evita calls innecesarios)
-// - Si el caché tiene más de 5 min → mostrar y revalidar en background
-// - Sin caché → fetch directo
-const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 minutos
+// Cache-first: mostrar caché instantáneamente, revalidar en background
+// solo UNA vez por sesión por clave (no en cada cambio de tab)
+const _revalidatedThisSession = new Set();
 
 function cacheAge(params) {
   try {
@@ -170,28 +203,40 @@ function cacheAge(params) {
   } catch { return Infinity; }
 }
 
+// SWR_REVALIDATE_AFTER ya no se usa para tabs — solo para decidir si
+// vale la pena revalidar en segundo plano por primera vez en la sesión
+const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 min mínimo para revalidar
+
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
-  const age    = cacheAge(params);
+  const key    = cacheKey(params);
 
   if (cached) {
+    // Mostrar caché inmediatamente — el usuario no espera nada
     onImmediate(cached, true);
-    // Si es reciente, no revalidar — ahorramos un call a la API
-    if (age < SWR_REVALIDATE_AFTER) {
+
+    // Revalidar en background solo si:
+    // 1) No lo hemos revalidado ya en esta sesión, Y
+    // 2) El caché tiene más de 5 minutos (evita calls al abrir recién)
+    if (!_revalidatedThisSession.has(key) && cacheAge(params) > SWR_REVALIDATE_AFTER) {
+      _revalidatedThisSession.add(key);
+      apiGet(params)
+        .then(fresh => { cacheSet(params, fresh); onFresh(fresh, false); })
+        .catch(() => { onFresh(cached, false); }); // silencioso, ya tiene datos
+    } else {
       onFresh(cached, false);
-      return cached;
     }
+    return cached;
   }
+
+  // Sin caché → fetch obligatorio
   try {
     const fresh = await apiGet(params);
     cacheSet(params, fresh);
+    _revalidatedThisSession.add(key);
     onFresh(fresh, false);
     return fresh;
   } catch(e) {
-    if (cached) {
-      onFresh(cached, false);
-      return cached;
-    }
     throw e;
   }
 }
@@ -413,7 +458,7 @@ function PullIndicator({ pullY, triggered, T }) {
 }
 
 // ── Settings panel ────────────────────────────────────────────────────────────
-function SettingsPanel({ theme, onToggle, onClose, T }) {
+function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, T }) {
   return (
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
@@ -428,6 +473,11 @@ function SettingsPanel({ theme, onToggle, onClose, T }) {
         <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:12}}>
           Apariencia
         </div>
+        <button className="press" onClick={onPreviewSplash}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          <span style={{fontSize:15}}>🎭</span>
+          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Ver intro</span>
+        </button>
         <button className="press" onClick={onToggle}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
           <div style={{display:"flex",alignItems:"center",gap:9}}>
@@ -1159,45 +1209,58 @@ function abbrevName(name) {
 }
 
 // ── Tab: Turnos del mes ───────────────────────────────────────────────────────
-const TURNO_TABS = [
-  { id:"P", label:"Poli",  color:"#06B6D4" },
-  { id:"D", label:"Día",   color:"#F59E0B" },
-  { id:"N", label:"Noche", color:"#818CF8" },
-];
-
+// ── Colores de turnos ─────────────────────────────────────────────────────────
+const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#818CF8" };
+const SEMINAR_COLOR = "#E879F9";
 const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
 
 function getMonthDates(year, month) {
-  // Returns array of 42 slots (6 weeks) for the calendar grid
-  const firstDay = new Date(year, month, 1);
-  const lastDay  = new Date(year, month + 1, 0);
-  // Monday-first: getDay() 0=Sun→6, 1=Mon→0, ...
-  const startDow = (firstDay.getDay() + 6) % 7; // 0=Mon
+  const firstDay  = new Date(year, month, 1);
+  const lastDay   = new Date(year, month + 1, 0);
+  const startDow  = (firstDay.getDay() + 6) % 7;
   const slots = [];
   for (let i = 0; i < 42; i++) {
     const dayNum = i - startDow + 1;
-    if (dayNum < 1 || dayNum > lastDay.getDate()) {
-      slots.push(null);
-    } else {
-      const d = new Date(year, month, dayNum);
-      slots.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
-    }
+    if (dayNum < 1 || dayNum > lastDay.getDate()) { slots.push(null); continue; }
+    const d = new Date(year, month, dayNum);
+    slots.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
   }
-  // Trim trailing empty weeks
   let last = 41;
   while (last > 0 && slots[last] === null) last--;
-  const rows = Math.ceil((last + 1) / 7);
-  return slots.slice(0, rows * 7);
+  return slots.slice(0, Math.ceil((last + 1) / 7) * 7);
 }
 
 function monthLabel(year, month) {
   return new Date(year, month, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
 }
 
+// ── Componente grid calendario reutilizable ───────────────────────────────────
+function CalendarGrid({ slots, today, renderCell, T }) {
+  return (
+    <>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {WEEKDAY_LABELS.map(d => (
+          <div key={d} style={{textAlign:"center",fontSize:9,fontWeight:700,color:T.muted,letterSpacing:"0.04em",padding:"2px 0"}}>{d}</div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {slots.map((iso, i) => iso ? renderCell(iso, i) : <div key={i}/>)}
+      </div>
+    </>
+  );
+}
+
+// ── Tab: Turnos generales (para pantalla de selección) ────────────────────────
+const TURNO_TABS = [
+  { id:"P", label:"Poli",  color:"#06B6D4" },
+  { id:"D", label:"Día",   color:"#F59E0B" },
+  { id:"N", label:"Noche", color:"#818CF8" },
+];
+
 function TabTurnos({ onBack, T }) {
-  const today    = useMemo(() => todayISO(), []);
-  const [year, setYear]   = useState(() => { const [y] = today.split("-").map(Number); return y; });
-  const [month, setMonth] = useState(() => { const [,m] = today.split("-").map(Number); return m - 1; });
+  const today = useMemo(() => todayISO(), []);
+  const [year, setYear]   = useState(() => Number(today.split("-")[0]));
+  const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
   const [sub, setSub]     = useState("P");
   const [data, setData]   = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1206,147 +1269,187 @@ function TabTurnos({ onBack, T }) {
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
 
   useEffect(() => {
-    setLoading(true); setError(""); setData(null);
+    setLoading(true); setError("");
     const params = { route:"monthly", month: monthStr, token: API_TOKEN };
-    apiSWR(
-      params,
+    apiSWR(params,
       (d) => { setData(d); setLoading(false); },
-      (d, stale) => { setData(d); if (!stale) setLoading(false); }
+      (d) => { setData(d); setLoading(false); }
     ).catch(e => { setError(String(e.message||e)); setLoading(false); });
   }, [monthStr]);
 
-  const prevMonth = () => {
-    if (month === 0) { setYear(y => y-1); setMonth(11); }
-    else setMonth(m => m-1);
-  };
-  const nextMonth = () => {
-    if (month === 11) { setYear(y => y+1); setMonth(0); }
-    else setMonth(m => m+1);
-  };
+  const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
+  const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
 
-  const slots   = useMemo(() => getMonthDates(year, month), [year, month]);
-  const turnoColor = TURNO_TABS.find(t => t.id === sub)?.color || "#64748B";
+  const slots  = useMemo(() => getMonthDates(year, month), [year, month]);
+  const turnoColor = TURNO_TABS.find(t=>t.id===sub)?.color || "#64748B";
 
-  // Build lookup: date → [names]
   const lookup = useMemo(() => {
     if (!data?.ok) return {};
     const map = {};
-    (data.entries || []).forEach(e => {
-      if (e.type === sub) {
-        if (!map[e.date]) map[e.date] = [];
-        map[e.date].push(e.name);
-      }
+    (data.entries||[]).forEach(e => {
+      if (e.type === sub) { if (!map[e.date]) map[e.date]=[]; map[e.date].push(e.name); }
     });
     return map;
   }, [data, sub]);
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,paddingBottom:24}}>
-      {/* Header */}
       <div style={{padding:"20px 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
             {monthLabel(year, month)}
           </div>
-          <button className="press" onClick={onBack}
-            style={{background:"none",border:"none",padding:0,marginTop:4}}>
+          <button className="press" onClick={onBack} style={{background:"none",border:"none",padding:0,marginTop:6}}>
             <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Volver</div>
           </button>
         </div>
-
-        {/* Navegación mes */}
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-          <button className="press" onClick={prevMonth}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
-          <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>
-            {monthLabel(year, month)}
-          </div>
-          <button className="press" onClick={nextMonth}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+          <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+          <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
+          <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
-
-        {/* Sub-tabs Poli / Día / Noche */}
-        <div style={{display:"flex",gap:6,marginBottom:16}}>
+        <div style={{display:"flex",gap:6,marginBottom:14}}>
           {TURNO_TABS.map(t => (
             <button key={t.id} className="press" onClick={() => setSub(t.id)}
-              style={{
-                flex:1,height:34,borderRadius:9,border:`1px solid ${sub===t.id ? t.color+"60" : T.border}`,
-                background: sub===t.id ? `${t.color}18` : T.surface2,
-                fontSize:12,fontWeight:sub===t.id?700:400,
-                color: sub===t.id ? t.color : T.muted,
-                transition:"all 0.15s",
-              }}>
+              style={{flex:1,height:34,borderRadius:9,border:`1px solid ${sub===t.id?t.color+"60":T.border}`,background:sub===t.id?`${t.color}18`:T.surface2,fontSize:12,fontWeight:sub===t.id?700:400,color:sub===t.id?t.color:T.muted,transition:"all 0.15s"}}>
               {t.label}
             </button>
+          ))}
+        </div>
+      </div>
+      <div style={{padding:"0 16px"}}>
+        <ErrorBox msg={error} T={T}/>
+        {loading && !data ? <Spinner color={turnoColor}/> : (
+          <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
+            const dayNum  = Number(iso.split("-")[2]);
+            const isToday = iso === today;
+            const names   = lookup[iso] || [];
+            const has     = names.length > 0;
+            return (
+              <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1}}>
+                <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                {names.slice(0,3).map((name,ni) => (
+                  <div key={ni} style={{fontSize:8,fontWeight:600,color:turnoColor,background:`${turnoColor}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{abbrevName(name)}</div>
+                ))}
+                {names.length > 3 && <div style={{fontSize:8,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
+              </div>
+            );
+          }}/>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Mi mes (calendario personal del becado) ──────────────────────────────
+function TabMes({ becado, T }) {
+  const today = useMemo(() => todayISO(), []);
+  const [year, setYear]   = useState(() => Number(today.split("-")[0]));
+  const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
+  const [lookup, setLookup] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
+
+  useEffect(() => {
+    const [y, m] = monthStr.split("-").map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const allDates = Array.from({length: daysInMonth}, (_, i) => {
+      const d = i + 1;
+      return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    });
+
+    // Mostrar inmediatamente lo que ya está en caché
+    const cached = {};
+    allDates.forEach(date => {
+      const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
+      if (c?.ok !== false) cached[date] = c;
+    });
+    if (Object.keys(cached).length > 0) {
+      setLookup(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    // Pedir en background solo los días que no están en caché
+    const missing = allDates.filter(date =>
+      !cacheGet({route:"daily", becado, date, token:API_TOKEN})
+    );
+    if (missing.length === 0) { setLoading(false); return; }
+
+    Promise.all(
+      missing.map(date =>
+        apiGet({route:"daily", becado, date, token:API_TOKEN})
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
+          .catch(() => [date, null])
+      )
+    ).then(results => {
+      setLookup(prev => {
+        const next = {...prev};
+        results.forEach(([date, d]) => { if (d?.ok !== false) next[date] = d; });
+        return next;
+      });
+      setLoading(false);
+    });
+  }, [becado, monthStr]);
+
+  const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
+  const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
+
+  const slots = useMemo(() => getMonthDates(year, month), [year, month]);
+
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,paddingBottom:90}}>
+      <div style={{padding:"20px 16px 0"}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
+        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12,textTransform:"capitalize"}}>
+          {monthLabel(year, month)}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+          <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+          <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
+          <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+        </div>
+
+        {/* Leyenda */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+          {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#818CF8"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
+            <div key={id} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:8,height:8,borderRadius:2,background:color}}/>
+              <span style={{fontSize:10,color:T.muted}}>{label}</span>
+            </div>
           ))}
         </div>
       </div>
 
       <div style={{padding:"0 16px"}}>
         <ErrorBox msg={error} T={T}/>
+        {loading && Object.keys(lookup).length === 0 ? <Spinner color="#348FFF"/> : (
+          <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
+            const dayNum  = Number(iso.split("-")[2]);
+            const isToday = iso === today;
+            const day     = lookup[iso] || {};
+            const turno   = day.turno || {};
+            const badges  = [];
+            if (turno.diaCode === "P") badges.push({ label:"P", color:"#06B6D4" });
+            if (turno.diaCode === "D") badges.push({ label:"D", color:"#F59E0B" });
+            if (turno.nocheCode === "N") badges.push({ label:"N", color:"#818CF8" });
+            if (day.seminario) badges.push({ label:"S", color:"#E879F9" });
+            const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
 
-        {loading && !data ? <Spinner color={turnoColor}/> : (
-          <>
-            {/* Cabecera días semana */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-              {WEEKDAY_LABELS.map(d => (
-                <div key={d} style={{textAlign:"center",fontSize:9,fontWeight:700,color:T.muted,letterSpacing:"0.04em",padding:"2px 0"}}>{d}</div>
-              ))}
-            </div>
-
-            {/* Grid calendario */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-              {slots.map((iso, i) => {
-                if (!iso) return <div key={i}/>;
-                const dayNum   = Number(iso.split("-")[2]);
-                const isToday  = iso === today;
-                const names    = lookup[iso] || [];
-                const hasData  = names.length > 0;
-                return (
-                  <div key={iso} className={hasData ? "anim" : ""}
-                    style={{
-                      animationDelay:`${(i%7)*20}ms`,
-                      background: hasData
-                        ? `${turnoColor}15`
-                        : isToday ? T.surface2 : "transparent",
-                      border: `1px solid ${isToday ? turnoColor+"60" : hasData ? turnoColor+"30" : T.border}`,
-                      borderRadius: 6,
-                      padding: "3px 2px",
-                      minHeight: 44,
-                      display:"flex",
-                      flexDirection:"column",
-                      gap: 1,
-                    }}>
-                    <div style={{
-                      fontSize:9,fontWeight:700,
-                      lineHeight:1,marginBottom:1,
-                      background: isToday ? turnoColor : "transparent",
-                      color: isToday ? "#fff" : hasData ? turnoColor : T.muted,
-                      borderRadius: isToday ? 99 : 0,
-                      width: isToday ? 16 : "auto",
-                      height: isToday ? 16 : "auto",
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                      alignSelf: isToday ? "center" : "flex-start",
-                      paddingLeft: isToday ? 0 : 1,
-                    }}>{dayNum}</div>
-                    {names.slice(0,3).map((name,ni) => (
-                      <div key={ni} style={{
-                        fontSize:8,fontWeight:600,color:turnoColor,
-                        background:`${turnoColor}20`,
-                        borderRadius:3,padding:"1px 2px",
-                        lineHeight:1.25,
-                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                      }}>{abbrevName(name)}</div>
-                    ))}
-                    {names.length > 3 && (
-                      <div style={{fontSize:8,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </>
+            return (
+              <div key={iso} style={{background:isToday?T.surface2:"transparent",border:`1px solid ${isToday?"#348FFF60":T.border}`,borderTop:rotC?`2px solid ${rotC}`:`1px solid ${T.border}`,borderRadius:6,padding:"3px 2px",minHeight:48,display:"flex",flexDirection:"column",gap:2}}>
+                <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":"transparent",color:isToday?"#fff":T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:1}}>
+                  {badges.map((b,bi)=>(
+                    <div key={bi} style={{fontSize:8,fontWeight:700,color:b.color,background:`${b.color}25`,borderRadius:3,padding:"1px 3px",lineHeight:1.3}}>{b.label}</div>
+                  ))}
+                </div>
+              </div>
+            );
+          }}/>
         )}
       </div>
     </div>
@@ -1359,7 +1462,7 @@ function TabBar({ active, onChange, T }) {
     { id:"horario",    icon:"◑", label:"Mi Horario" },
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"rotaciones", icon:"⊞", label:"Rotaciones" },
-    { id:"turnos",     icon:"◷", label:"Turnos" },
+    { id:"mes",        icon:"▦□", label:"Mes" },
   ];
   return (
     <div style={{
@@ -1390,8 +1493,183 @@ function TabBar({ active, onChange, T }) {
   );
 }
 
+
+// ── Splash screen ─────────────────────────────────────────────────────────────
+const SPLASH_TTL = 8 * 60 * 60 * 1000; // 8 horas
+
+function useSplash() {
+  const [visible, setVisible] = useState(() => {
+    try {
+      const raw = localStorage.getItem("lastSeen");
+      if (!raw) return true;
+      return Date.now() - Number(raw) > SPLASH_TTL;
+    } catch { return true; }
+  });
+
+  useEffect(() => {
+    if (!visible) return;
+    // Marcar timestamp al mostrar el splash
+    try { localStorage.setItem("lastSeen", String(Date.now())); } catch {}
+    const t = setTimeout(() => setVisible(false), 2600);
+    return () => clearTimeout(t);
+  }, [visible]);
+
+  // Al volver a la app después de mucho tiempo
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const raw = localStorage.getItem("lastSeen");
+        if (!raw || Date.now() - Number(raw) > SPLASH_TTL) {
+          localStorage.setItem("lastSeen", String(Date.now()));
+          setVisible(true);
+        }
+      } catch {}
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  return visible;
+}
+
+// Partícula individual animada
+function Particle({ angle, distance, delay, size, color }) {
+  const x = Math.cos(angle) * distance;
+  const y = Math.sin(angle) * distance;
+  return (
+    <div style={{
+      position:"absolute",
+      top:"50%", left:"50%",
+      width:size, height:size,
+      borderRadius:"50%",
+      background:color,
+      transform:"translate(-50%,-50%)",
+      animation:`particle-out 1.4s ${delay}s cubic-bezier(0.15,0.85,0.35,1) both`,
+      "--tx":`${x}px`, "--ty":`${y}px`,
+    }}/>
+  );
+}
+
+function MimeFace({ phase }) {
+  const fill = "#E6EDF3"; // color del mimo
+  return (
+    <div style={{position:"relative", width:160, height:160, display:"flex", alignItems:"center", justifyContent:"center"}}>
+      {/* Partículas */}
+      {phase >= 1 && Array.from({length:14}).map((_,i) => {
+        const angle  = (i / 14) * Math.PI * 2 + 0.2;
+        const dist   = 78 + (i % 4) * 10;
+        const colors = ["#348FFF","#7CB9FF","#ffffff","#348FFF","#B3D4FF","#ffffff"];
+        const sizes  = [4,3,5,3,4,3,5];
+        return <Particle key={i} angle={angle} distance={dist} delay={0.25 + i*0.045} size={sizes[i%7]} color={colors[i%6]}/>;
+      })}
+
+      <svg width="160" height="160" viewBox="180 160 660 720" fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{
+          transform: phase >= 1 ? "scale(1) rotate(0deg)" : "scale(0.3) rotate(-15deg)",
+          opacity:   phase >= 1 ? 1 : 0,
+          transition:"transform 0.65s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease",
+        }}>
+        <path fill={fill} d="M343.812012,213.738068 C362.727814,201.535263 383.692627,196.350342 405.136353,192.742050 C436.050659,187.540176 467.101715,187.989548 498.254913,190.457138 C529.387268,192.923065 559.961487,198.204666 590.041321,206.518723 C591.253906,206.853882 592.558594,207.467499 594.207031,206.690186 C593.130798,198.308273 592.717041,189.850647 598.079102,182.422485 C601.353882,177.885956 605.366394,174.176559 610.710571,172.193726 C623.099548,167.597153 636.990906,171.167038 644.612305,182.199890 C654.794739,196.940170 650.033752,210.194366 638.386108,222.043610 C640.644409,224.687317 643.616882,225.447205 646.278320,226.662018 C679.531311,241.840607 710.506042,260.551300 737.357178,285.597107 C750.471252,297.829407 761.874268,311.454132 770.424011,327.339600 C777.804138,341.051941 781.785645,355.522736 778.927490,371.061981 C775.319214,390.678986 759.661865,403.724976 738.175720,406.384735 C727.366699,407.722748 716.963806,406.197662 706.603943,403.474640 C701.958923,402.253693 699.314514,403.870880 698.478760,408.559631 C698.304993,409.534607 698.361267,410.552948 698.338013,411.551941 C698.164551,418.988159 698.214355,418.821075 705.567566,420.916382 C724.491577,426.308868 735.214722,439.755005 737.966309,458.358124 C742.725403,490.534332 734.185669,519.093445 710.521851,542.249084 C700.576355,551.981018 688.400757,556.930725 674.457947,557.041077 C670.837769,557.069641 668.829346,557.956360 667.371887,561.616272 C656.377258,589.225525 640.257690,613.515015 619.027222,634.319946 C615.559143,637.718567 613.944702,641.173340 614.068787,646.118896 C614.394653,659.109924 614.432373,672.121460 614.063049,685.109985 C613.917419,690.230042 615.593994,692.364441 620.533142,693.668823 C650.137329,701.487244 679.725525,709.385681 709.171387,717.775757 C723.243408,721.785339 737.113220,726.549683 750.120728,733.546631 C776.164246,747.555786 790.663879,770.300171 799.229309,797.630737 C803.121704,810.050476 806.025696,822.681274 806.325684,835.758118 C806.562866,846.098694 800.600952,852.252441 790.135925,852.352844 C774.304871,852.504883 758.471436,852.428467 742.639038,852.428223 C607.152283,852.426147 471.665558,852.419556 336.178833,852.413940 C303.516846,852.412598 270.854858,852.395813 238.192886,852.427429 C234.475174,852.431030 230.846176,852.138977 227.529922,850.336609 C222.664230,847.692261 219.385757,843.866699 219.648544,838.022400 C221.129120,805.094116 230.709808,775.096924 253.190140,750.343445 C263.031281,739.507141 275.601807,732.137939 289.211212,726.574036 C310.563568,717.844666 333.021210,712.865967 355.153046,706.781982 C372.638123,701.975342 390.156342,697.285706 407.701508,692.703674 C411.352570,691.750183 412.800537,690.043152 412.739136,686.131653 C412.522003,672.302551 412.569519,658.466980 412.714233,644.635986 C412.750397,641.179260 411.636871,638.570679 409.209930,636.227478 C387.291016,615.064331 371.265167,589.947876 359.779816,561.865723 C358.338318,558.341187 356.417023,557.213745 352.722198,557.224731 C339.294434,557.264648 327.670349,552.232605 317.730225,543.443787 C300.033142,527.796387 291.567505,507.345367 287.664764,484.594055 C286.007324,474.931946 286.527252,465.354401 288.616882,455.833038 C293.059998,435.588348 305.528076,423.449646 326.054688,420.009094 C329.961090,419.354340 330.941986,417.987457 330.906677,414.327545 C330.721771,395.164001 330.635712,375.997772 330.745209,356.833832 C330.797485,347.678223 331.193024,338.515289 331.759094,329.375824 C332.043945,324.776459 330.729675,321.125275 328.051971,317.387970 C317.732300,302.984772 311.574188,287.089905 311.476990,269.083069 C311.363434,248.038589 320.204132,231.540619 336.497528,218.718979 C338.716614,216.972748 341.155670,215.506134 343.812012,213.738068 M669.666260,427.574249 C669.630005,411.396820 666.526428,395.874725 660.243042,380.923553 C658.807800,377.508606 656.867676,375.591888 653.444885,374.400635 C632.673950,367.171814 611.502808,361.404816 590.054993,356.600525 C549.491760,347.514374 508.413910,342.684113 466.862610,342.535919 C448.896423,342.471832 430.917480,343.670441 413.035706,345.556305 C403.299469,346.583099 393.534088,347.809601 384.088043,350.633331 C382.048126,351.243134 379.898010,351.673187 378.766541,353.935059 C370.634674,370.190918 362.798248,386.617310 359.343323,404.592804 C356.592377,418.905884 358.014465,433.503479 358.035980,447.965424 C358.082581,479.292877 362.721893,509.913269 373.302948,539.535828 C390.378204,587.339539 417.910767,626.373169 464.474426,649.872131 C485.990051,660.730164 508.115173,666.854309 532.353638,661.707581 C545.070251,659.007324 556.517334,653.420166 567.741211,647.093933 C586.200073,636.689819 602.819336,624.116699 616.317810,607.625732 C633.738464,586.343079 646.088867,562.376648 654.648071,536.319458 C666.154663,501.289246 669.662964,465.173615 669.666260,427.574249 M457.856659,722.628845 C478.050690,735.171936 499.920319,740.206604 523.619690,737.800659 C547.361023,735.390381 567.784302,726.173340 584.784912,709.346008 C589.749878,704.431763 592.505920,699.112366 592.024414,691.735107 C591.385986,681.952271 591.865417,672.097961 591.799133,662.274841 C591.788330,660.679993 592.247070,658.972961 591.191650,657.461792 C589.509338,657.309265 588.370117,658.434509 587.109436,659.130127 C576.756348,664.843567 566.203796,670.177124 555.253113,674.619690 C536.378784,682.276794 516.851257,684.799255 496.597870,681.673706 C476.021027,678.498230 457.412415,670.341309 439.584167,660.013306 C438.099670,659.153259 436.781464,657.550476 434.204926,658.338745 C434.204926,671.710083 434.196167,685.163574 434.215302,698.617065 C434.217865,700.413879 435.428741,701.655273 436.450500,702.968811 C442.331573,710.529236 449.408539,716.794250 457.856659,722.628845 M638.651367,810.574768 C638.555969,800.354980 639.897400,801.148499 629.302856,801.134521 C582.159485,801.072266 535.016052,801.059998 487.872650,801.047546 C457.554291,801.039551 427.235962,801.054260 396.917603,801.077148 C388.155365,801.083801 388.158081,801.112915 388.108612,809.637512 C388.080597,814.468262 388.005341,819.299133 388.016602,824.129822 C388.034546,831.847534 388.057526,831.858032 395.689301,831.858032 C462.822815,831.858032 529.956360,831.851807 597.089844,831.853210 C608.584106,831.853455 620.078430,831.920105 631.572510,831.881897 C638.616821,831.858459 638.626953,831.795166 638.656372,824.545166 C638.673950,820.214050 638.653320,815.882751 638.651367,810.574768 M623.491028,770.785461 C626.988281,770.778870 630.490356,770.655762 633.981506,770.799011 C637.408508,770.939697 638.755066,769.500488 638.694031,766.074951 C638.560547,758.583496 638.666748,751.087891 638.659363,743.593994 C638.651917,736.089844 638.643738,736.043579 630.877258,736.005798 C618.222473,735.944275 605.559021,736.201050 592.917114,735.783020 C588.834106,735.647949 585.597107,736.414124 582.217773,738.587402 C560.801208,752.360840 537.211487,759.357910 511.831726,759.074829 C488.093384,758.810181 465.910309,752.176941 445.488586,739.885376 C442.541443,738.111572 439.897125,735.452820 436.161224,735.439270 C421.839844,735.387512 407.518158,735.441772 393.196564,735.431763 C389.741425,735.429321 388.033508,736.821289 388.129089,740.540894 C388.304382,747.364197 388.148621,754.195312 388.191376,761.022827 C388.258728,771.779968 386.845764,770.726807 397.677063,770.732178 C472.615967,770.768982 547.554871,770.769836 623.491028,770.785461 M509.640594,304.082092 C495.652283,301.807678 481.526215,300.889435 467.400330,300.398621 C446.748505,299.681000 426.082947,299.865448 405.529510,302.382111 C389.471436,304.348328 373.702087,307.710144 358.440186,313.201050 C356.913483,313.750336 354.681091,313.999786 354.614288,315.924988 C354.393402,322.292419 354.531006,328.672272 354.531006,335.554810 C359.155273,334.133636 362.934509,332.933075 366.736664,331.810089 C388.873566,325.272034 411.788055,325.047974 434.520966,324.085999 C465.153046,322.789825 495.730255,324.145050 526.265747,327.458405 C561.486694,331.280151 595.914368,338.582397 629.709900,348.979309 C648.290161,354.695312 666.479309,361.560242 684.477600,368.907410 C632.234375,331.945038 573.019226,313.671387 509.640594,304.082092 M701.509216,831.906799 C705.502686,831.913452 709.496094,831.924622 713.489563,831.925964 C735.286926,831.933350 757.084351,831.953796 778.881714,831.935242 C785.957581,831.929199 785.760742,831.903748 784.992004,825.070679 C784.241455,818.398560 782.095154,812.120300 780.349915,805.714294 C779.426941,802.326416 777.603027,800.833435 773.950928,800.904602 C764.303894,801.092712 754.650879,800.968994 745.000244,800.984253 C727.695618,801.011597 710.390381,801.144531 693.086914,801.017212 C688.763916,800.985413 687.042053,802.484741 687.342651,806.842896 C687.616699,810.817322 687.404114,814.825623 687.396667,818.819031 C687.372253,831.944275 687.370605,831.944275 701.509216,831.906799 M290.500000,831.949219 C304.814575,831.961853 319.130371,831.873657 333.442902,832.050964 C337.516846,832.101379 339.129822,830.735596 338.981079,826.576233 C338.737274,819.760254 338.723999,812.924011 338.953186,806.107727 C339.089783,802.044739 337.318695,800.896667 333.591187,801.003235 C327.604156,801.174500 321.608276,801.041016 315.616150,801.030823 C294.810181,800.995483 274.004181,800.934692 253.198273,800.948975 C250.472321,800.950806 247.396301,800.381348 246.235092,804.170410 C244.041595,811.327942 242.005722,818.489929 241.238419,825.992615 C240.763840,830.632996 242.462494,832.109802 247.057007,832.036560 C261.201538,831.810852 275.351898,831.951233 290.500000,831.949219 M342.670868,503.681305 C341.659576,498.129395 340.541077,492.594513 339.658234,487.022247 C337.472717,473.227814 336.064545,459.356110 335.404938,445.394867 C335.122070,439.407776 333.745514,438.530853 327.834869,439.504425 C317.212494,441.254089 311.377991,448.128143 308.368927,457.951660 C304.921265,469.207184 306.537323,480.309479 309.331635,491.389709 C313.444824,507.699860 321.344788,521.623962 335.006622,531.832520 C339.391754,535.109192 344.180023,537.585449 350.558044,536.830078 C347.311035,525.937500 344.853027,515.275757 342.670868,503.681305 M693.219666,439.507111 C690.784302,440.582825 691.414429,442.807800 691.309265,444.719116 C690.073242,467.168182 687.621399,489.467682 682.811829,511.454010 C681.011841,519.682495 678.834778,527.828491 676.675659,536.640625 C684.344116,536.493774 690.425964,533.681824 695.466125,528.968689 C715.324768,510.398529 721.406189,486.854706 718.358215,460.767944 C716.710754,446.668213 706.391113,438.469910 693.219666,439.507111 M293.499939,771.658813 C306.809387,771.650879 320.120605,771.517639 333.427185,771.708679 C337.607666,771.768738 339.021515,770.204163 338.936157,766.172974 C338.763702,758.024841 338.691803,749.863342 338.974548,741.721191 C339.130432,737.232117 337.342163,735.614136 333.121948,736.173218 C331.647339,736.368530 330.152100,736.525757 328.719788,736.903503 C320.207611,739.148438 311.704163,741.427429 303.210968,743.743408 C289.184296,747.568176 277.352478,754.934265 267.795746,765.900085 C266.656830,767.207031 264.896118,768.260681 265.505493,771.658386 C274.368744,771.658386 283.434357,771.658386 293.499939,771.658813 M702.582275,771.657532 C722.292908,771.657532 742.003479,771.657532 762.404846,771.657532 C759.795227,766.626953 756.682861,763.427063 753.309814,760.496582 C736.404114,745.808838 715.237244,741.432495 694.399719,736.281555 C693.926636,736.164734 693.400452,736.283325 692.905457,736.231445 C689.563232,735.880859 687.998657,737.187073 688.094849,740.730774 C688.252869,746.554932 688.130432,752.386597 688.127625,758.215088 C688.121216,771.633606 688.121521,771.633606 702.582275,771.657532 z"/>
+        <path fill={fill} d="M615.170288,461.787567 C609.934937,472.750122 601.266602,477.960571 589.850037,477.309662 C580.139160,476.755951 570.695190,469.805328 567.784851,461.070007 C564.176392,450.239166 566.814697,440.171722 575.131470,433.035889 C583.022583,426.265289 596.337036,425.698517 605.474976,431.744202 C615.772278,438.556885 619.141846,448.739471 615.170288,461.787567 z"/>
+        <path fill={fill} d="M454.078278,472.216827 C436.328308,483.256104 416.534424,474.567474 413.268066,454.636841 C410.927063,440.352478 424.476135,426.478485 439.866760,427.400299 C450.626007,428.044708 459.695831,434.193237 462.393738,444.110687 C465.247589,454.601532 463.631073,464.613678 454.078278,472.216827 z"/>
+        <path fill={fill} d="M626.552979,406.514496 C622.949097,405.782349 620.678772,403.395874 617.959412,401.825867 C605.442993,394.599396 591.901245,391.036072 577.547119,390.327606 C570.379150,389.973816 565.960876,386.282776 565.933167,380.507263 C565.904114,374.435730 570.413574,370.532898 577.828369,370.693024 C598.481384,371.139038 616.252808,379.195190 632.252136,391.732422 C635.737000,394.463196 636.330444,398.255035 634.951965,402.109070 C633.690430,405.635986 630.690491,407.039825 626.552979,406.514496 z"/>
+        <path fill={fill} d="M435.426575,373.232361 C442.455688,371.408203 449.157104,370.249725 456.045959,370.619110 C461.799347,370.927673 465.711121,374.429718 466.178070,379.691193 C466.596863,384.410095 463.160034,388.731110 457.561127,389.568970 C450.341492,390.649353 443.055542,391.092163 435.895874,392.813904 C426.876221,394.982941 418.521667,398.456085 410.820099,403.575500 C410.265625,403.944061 409.723022,404.334045 409.147675,404.666992 C404.587799,407.305695 400.445068,406.940857 397.873840,403.687378 C395.065338,400.133698 395.665039,395.916565 399.766418,392.246368 C409.982635,383.104248 421.583557,376.493958 435.426575,373.232361 z"/>
+        <path fill={fill} d="M498.775146,597.517944 C491.270508,595.561584 485.452332,591.407410 479.903015,586.865112 C476.468628,584.053955 475.381714,578.837463 477.702972,576.241577 C480.733734,572.852356 484.481934,573.196777 488.182312,575.098755 C489.496216,575.774048 490.637451,576.800110 491.819214,577.715576 C507.193481,589.624023 528.206421,585.469971 538.096985,568.556946 C539.434814,566.269287 540.545837,563.818420 543.211670,562.648071 C546.801208,561.072266 549.332520,561.806885 550.592041,565.746765 C552.377563,571.331848 550.672668,576.181824 547.574097,580.796021 C539.272095,593.158936 517.139038,603.267517 498.775146,597.517944 z"/>
+        <path fill={fill} d="M446.651062,528.753052 C442.862823,531.572388 438.985992,532.730347 434.632538,532.267822 C427.960968,531.559326 422.515320,526.294800 422.554138,519.839600 C422.626526,507.805969 429.726837,498.935547 436.443329,488.637939 C443.926086,498.381805 449.718262,507.547821 451.158783,518.776550 C451.643982,522.558777 449.781830,525.883362 446.651062,528.753052 z"/>
+        <path fill={fill} d="M599.787720,498.281372 C603.678223,504.736420 607.252319,510.918243 607.611450,518.365784 C608.001038,526.445923 602.620667,532.016235 594.086975,532.282166 C585.567688,532.547729 578.688538,526.841919 579.110107,519.089050 C579.735718,507.583801 586.446472,498.853241 592.937927,489.788666 C596.248474,492.270905 597.838562,495.190033 599.787720,498.281372 z"/>
+      </svg>
+    </div>
+  );
+}
+
+function SplashScreen() {
+  const [phase, setPhase] = useState(0);
+  // phase 0→1: entrada, 1→2: salida
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 80);
+    const t2 = setTimeout(() => setPhase(2), 2400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div style={{
+      position:"fixed", inset:0, zIndex:999,
+      background:"#0D1117",
+      display:"flex", flexDirection:"column",
+      alignItems:"center", justifyContent:"center",
+      opacity: phase === 2 ? 0 : 1,
+      transition: phase === 2 ? "opacity 0.6s ease" : "none",
+      pointerEvents:"none",
+    }}>
+      <style>{`
+        @keyframes particle-out {
+          0%   { transform:translate(-50%,-50%) translate(0,0) scale(0); opacity:1; }
+          70%  { opacity:0.8; }
+          100% { transform:translate(-50%,-50%) translate(var(--tx),var(--ty)) scale(1.2); opacity:0; }
+        }
+        @keyframes title-in {
+          0%   { opacity:0; transform:translateY(20px) scale(0.9); }
+          100% { opacity:1; transform:translateY(0) scale(1); }
+        }
+        @keyframes sub-in {
+          0%   { opacity:0; letter-spacing:0.3em; }
+          100% { opacity:0.55; letter-spacing:0.12em; }
+        }
+        @keyframes glow-pulse {
+          0%,100% { transform:translate(-50%,-50%) scale(1); opacity:0.12; }
+          50%      { transform:translate(-50%,-50%) scale(1.2); opacity:0.2; }
+        }
+      `}</style>
+
+      {/* Glow pulsante */}
+      <div style={{
+        position:"absolute", top:"40%", left:"50%",
+        width:300, height:300, borderRadius:"50%",
+        background:"#348FFF",
+        filter:"blur(80px)",
+        animation: phase >= 1 ? "glow-pulse 2s ease infinite" : "none",
+        opacity:0.12,
+        pointerEvents:"none",
+      }}/>
+
+      {/* Mimo */}
+      <MimeFace phase={phase}/>
+
+      {/* MimApp — entra con rebote y escala */}
+      <div style={{
+        fontFamily:"'Bricolage Grotesque',sans-serif",
+        fontSize:40, fontWeight:800,
+        color:"#ffffff",
+        letterSpacing:"-0.03em",
+        marginTop:16,
+        textShadow:"0 0 24px #348FFF, 0 0 48px #348FFF80, 0 2px 8px rgba(0,0,0,0.4)",
+        animation: phase >= 1 ? "title-in 0.65s 0.18s cubic-bezier(0.34,1.56,0.64,1) both" : "none",
+        opacity: phase >= 1 ? undefined : 0,
+      }}>
+        MimApp
+      </div>
+
+      {/* created by Mimo — letras que se abren */}
+      <div style={{
+        fontFamily:"'Inter',sans-serif",
+        fontSize:11, fontWeight:400,
+        color:"#348FFF",
+        marginTop:8,
+        animation: phase >= 1 ? "sub-in 0.7s 0.38s cubic-bezier(0.4,0,0.2,1) both" : "none",
+        opacity: phase >= 1 ? undefined : 0,
+      }}>
+        created by Mimo
+      </div>
+    </div>
+  );
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
+  const showSplash = useSplash();
+  const [previewSplash, setPreviewSplash] = useState(false);
   const [theme, setTheme]             = useState(() => safeStorage.get("theme") || "dark");
   const [showSettings, setShowSettings] = useState(false);
   const [becado, setBecado]           = useState(() => safeStorage.get("selectedBecado") || "");
@@ -1419,6 +1697,12 @@ export default function App() {
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", theme === "dark" ? "#0D1117" : "#F4F7FB");
+    // Limpiar caché expirado cuando el browser esté idle (no bloquea la carga)
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(() => purgeCacheStorage());
+    } else {
+      setTimeout(() => purgeCacheStorage(), 2000);
+    }
   }, []);
 
   // Cargar lista de becados con caché (SWR)
@@ -1466,10 +1750,11 @@ export default function App() {
       overflow:"hidden",
     }}>
       <style>{CSS}</style>
+      {(showSplash || previewSplash) && <SplashScreen/>}
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} T={T}/>
+        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} T={T}/>
       )}
 
       {!becado ? (
@@ -1502,7 +1787,7 @@ export default function App() {
           {activeTab === "horario"    && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
           {activeTab === "semana"     && <TabSemana becado={becado} onChangeBecado={handleChange} T={T}/>}
           {activeTab === "rotaciones" && <TabRotaciones onChangeBecado={handleChange} T={T}/>}
-          {activeTab === "turnos"     && <TabTurnos onBack={() => handleTabChange("horario")} T={T}/>}
+          {activeTab === "mes"        && <TabMes becado={becado} T={T}/>}
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
