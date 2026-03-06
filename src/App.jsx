@@ -97,47 +97,12 @@ const safeStorage = {
     try { return localStorage.getItem(key); } catch { return null; }
   },
   set(key, value) {
-    try { localStorage.setItem(key, value); } catch(e) {
-      // localStorage lleno → limpiar caché expirado e intentar de nuevo
-      purgeCacheStorage();
-      try { localStorage.setItem(key, value); } catch {}
-    }
+    try { localStorage.setItem(key, value); } catch {}
   },
   remove(key) {
     try { localStorage.removeItem(key); } catch {}
   },
-  keys() {
-    try { return Object.keys(localStorage); } catch { return []; }
-  },
 };
-
-// Elimina entradas de caché expiradas del localStorage
-// Se llama al iniciar la app y cuando el storage se llena
-function purgeCacheStorage() {
-  try {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith("cache:"));
-    let removed = 0;
-    for (const key of keys) {
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const { ts, ttl } = JSON.parse(raw);
-        const expired = Date.now() - ts > (ttl || 30 * 60 * 1000);
-        // También eliminar entradas de días pasados aunque no hayan expirado
-        const isOldDaily = key.includes("route=daily") && (() => {
-          const m = key.match(/date=(\d{4}-\d{2}-\d{2})/);
-          if (!m) return false;
-          return m[1] < todayISO();
-        })();
-        if (expired || isOldDaily) {
-          localStorage.removeItem(key);
-          removed++;
-        }
-      } catch {}
-    }
-    return removed;
-  } catch { return 0; }
-}
 
 // ── Sistema de caché ──────────────────────────────────────────────────────────
 // ── Caché inteligente con TTL dinámico ───────────────────────────────────────
@@ -155,10 +120,10 @@ function cacheTTL(params) {
     const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
     return midnight - Date.now();
   }
-  if (route === "summary")  return 24 * 60 * 60 * 1000; // 24h
-  if (route === "monthly")  return 24 * 60 * 60 * 1000; // 24h
-  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000; // 7 días
-  return 24 * 60 * 60 * 1000; // 24h por defecto
+  if (route === "summary")  return 4  * 60 * 60 * 1000; // 4h
+  if (route === "monthly")  return 4  * 60 * 60 * 1000; // 4h
+  if (route === "becados")  return 24 * 60 * 60 * 1000; // 24h
+  return 60 * 60 * 1000; // 1h por defecto
 }
 
 function cacheKey(params) {
@@ -190,9 +155,11 @@ async function apiGet(params) {
   return res.json();
 }
 
-// Cache-first: mostrar caché instantáneamente, revalidar en background
-// solo UNA vez por sesión por clave (no en cada cambio de tab)
-const _revalidatedThisSession = new Set();
+// Stale-while-revalidate con revalidación inteligente:
+// - Si el caché tiene menos de 5 min → mostrar y NO revalidar (evita calls innecesarios)
+// - Si el caché tiene más de 5 min → mostrar y revalidar en background
+// - Sin caché → fetch directo
+const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 minutos
 
 function cacheAge(params) {
   try {
@@ -203,40 +170,28 @@ function cacheAge(params) {
   } catch { return Infinity; }
 }
 
-// SWR_REVALIDATE_AFTER ya no se usa para tabs — solo para decidir si
-// vale la pena revalidar en segundo plano por primera vez en la sesión
-const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 min mínimo para revalidar
-
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
-  const key    = cacheKey(params);
+  const age    = cacheAge(params);
 
   if (cached) {
-    // Mostrar caché inmediatamente — el usuario no espera nada
     onImmediate(cached, true);
-
-    // Revalidar en background solo si:
-    // 1) No lo hemos revalidado ya en esta sesión, Y
-    // 2) El caché tiene más de 5 minutos (evita calls al abrir recién)
-    if (!_revalidatedThisSession.has(key) && cacheAge(params) > SWR_REVALIDATE_AFTER) {
-      _revalidatedThisSession.add(key);
-      apiGet(params)
-        .then(fresh => { cacheSet(params, fresh); onFresh(fresh, false); })
-        .catch(() => { onFresh(cached, false); }); // silencioso, ya tiene datos
-    } else {
+    // Si es reciente, no revalidar — ahorramos un call a la API
+    if (age < SWR_REVALIDATE_AFTER) {
       onFresh(cached, false);
+      return cached;
     }
-    return cached;
   }
-
-  // Sin caché → fetch obligatorio
   try {
     const fresh = await apiGet(params);
     cacheSet(params, fresh);
-    _revalidatedThisSession.add(key);
     onFresh(fresh, false);
     return fresh;
   } catch(e) {
+    if (cached) {
+      onFresh(cached, false);
+      return cached;
+    }
     throw e;
   }
 }
@@ -1464,12 +1419,6 @@ export default function App() {
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", theme === "dark" ? "#0D1117" : "#F4F7FB");
-    // Limpiar caché expirado cuando el browser esté idle (no bloquea la carga)
-    if (typeof requestIdleCallback !== "undefined") {
-      requestIdleCallback(() => purgeCacheStorage());
-    } else {
-      setTimeout(() => purgeCacheStorage(), 2000);
-    }
   }, []);
 
   // Cargar lista de becados con caché (SWR)
