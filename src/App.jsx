@@ -1349,10 +1349,12 @@ function TabMes({ becado, T }) {
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
   const [lookup, setLookup] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState("");
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
 
   useEffect(() => {
+    setError("");
     const [y, m] = monthStr.split("-").map(Number);
     const daysInMonth = new Date(y, m, 0).getDate();
     const allDates = Array.from({length: daysInMonth}, (_, i) => {
@@ -1364,7 +1366,7 @@ function TabMes({ becado, T }) {
     const cached = {};
     allDates.forEach(date => {
       const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
-      if (c?.ok !== false) cached[date] = c;
+      if (c && c?.ok !== false) cached[date] = c;
     });
     if (Object.keys(cached).length > 0) {
       setLookup(cached);
@@ -1379,20 +1381,28 @@ function TabMes({ becado, T }) {
     );
     if (missing.length === 0) { setLoading(false); return; }
 
-    Promise.all(
-      missing.map(date =>
-        apiGet({route:"daily", becado, date, token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
-          .catch(() => [date, null])
-      )
-    ).then(results => {
-      setLookup(prev => {
-        const next = {...prev};
-        results.forEach(([date, d]) => { if (d?.ok !== false) next[date] = d; });
-        return next;
-      });
-      setLoading(false);
-    });
+    // Pedir de a 5 en paralelo para no saturar Apps Script
+    const chunks = [];
+    for (let i = 0; i < missing.length; i += 5) chunks.push(missing.slice(i, i+5));
+    (async () => {
+      try {
+        for (const chunk of chunks) {
+          const results = await Promise.all(
+            chunk.map(date =>
+              apiGet({route:"daily", becado, date, token:API_TOKEN})
+                .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
+                .catch(() => [date, null])
+            )
+          );
+          setLookup(prev => {
+            const next = {...prev};
+            results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
+            return next;
+          });
+        }
+      } catch(e) { setError("Error cargando el mes"); }
+      finally { setLoading(false); }
+    })();
   }, [becado, monthStr]);
 
   const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
