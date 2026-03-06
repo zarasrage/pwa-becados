@@ -282,6 +282,7 @@ function resolveItems(rotationCode, items, dateISO) {
 // ── CSS global ────────────────────────────────────────────────────────────────
 const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --sat: env(safe-area-inset-top, 0px); }
   html { -webkit-text-size-adjust: 100%; }
   body { overscroll-behavior-y: contain; }
   @keyframes fadeUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
@@ -463,7 +464,7 @@ function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, T }) {
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
       <div style={{
-        position:"fixed",top:44,right:12,zIndex:100,
+        position:"fixed",top:"calc(env(safe-area-inset-top, 0px) + 44px)",right:12,zIndex:100,
         background:T.surface,border:`1px solid ${T.border}`,
         borderRadius:14,padding:"14px 16px",width:200,
         boxShadow:"0 8px 32px rgba(0,0,0,0.25)",
@@ -497,7 +498,7 @@ function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, T }) {
 function GearBtn({ onClick, T }) {
   return (
     <button className="press" onClick={onClick}
-      style={{position:"fixed",top:6,right:12,zIndex:80,width:32,height:32,borderRadius:9,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
+      style={{position:"fixed",top:"calc(env(safe-area-inset-top, 0px) + 6px)",right:12,zIndex:80,width:32,height:32,borderRadius:9,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>
       ⚙️
     </button>
   );
@@ -742,7 +743,7 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40}}>
       <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"#348FFF08",filter:"blur(50px)",pointerEvents:"none",zIndex:0}}/>
 
-      <div style={{padding:"56px 16px 14px",position:"relative",zIndex:1}}>
+      <div style={{padding:"calc(env(safe-area-inset-top, 0px) + 56px) 16px 14px",position:"relative",zIndex:1}}>
         <div style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T.muted,textTransform:"uppercase",marginBottom:6}}>
           Traumatología · Becados
         </div>
@@ -976,7 +977,7 @@ function TabRotaciones({ onChangeBecado, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
-      <div style={{padding:"20px 16px 0"}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Rotaciones</div>
@@ -1109,7 +1110,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
-      <div style={{padding:"20px 16px 0"}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
@@ -1294,7 +1295,7 @@ function TabTurnos({ onBack, T }) {
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,paddingBottom:24}}>
-      <div style={{padding:"20px 16px 0"}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
@@ -1412,7 +1413,7 @@ function TabMes({ becado, T }) {
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,paddingBottom:90}}>
-      <div style={{padding:"20px 16px 0"}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12,textTransform:"capitalize"}}>
           {monthLabel(year, month)}
@@ -1794,10 +1795,10 @@ export default function App() {
 
       ) : (
         <>
-          {activeTab === "horario"    && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
-          {activeTab === "semana"     && <TabSemana becado={becado} onChangeBecado={handleChange} T={T}/>}
-          {activeTab === "rotaciones" && <TabRotaciones onChangeBecado={handleChange} T={T}/>}
-          {activeTab === "mes"        && <TabMes becado={becado} T={T}/>}
+          <div style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div style={{display:activeTab==="rotaciones"?"block":"none"}}><TabRotaciones onChangeBecado={handleChange} T={T}/></div>
+          <div style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
