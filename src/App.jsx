@@ -40,12 +40,16 @@ const ROT = {
   TyP: { accent:"#13C045", glow:"#13C04528", light:"#13C04512", dark:"#13C04522", name:"Tobillo y Pie" },
   Col: { accent:"#8B73FF", glow:"#8B73FF28", light:"#8B73FF12", dark:"#8B73FF22", name:"Columna" },
   I:   { accent:"#F472B6", glow:"#F472B628", light:"#F472B612", dark:"#F472B622", name:"Infantil" },
+  A:   { accent:"#E2E8F0", glow:"#E2E8F028", light:"#E2E8F012", dark:"#E2E8F022", name:"Anestesia" },
+  rx:  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Radiología" },
+  F:   { accent:"#94A3B8", glow:"#94A3B828", light:"#94A3B812", dark:"#94A3B822", name:"Fisiatría" },
+  V:   { accent:"#334155", glow:"#33415528", light:"#33415512", dark:"#33415522", name:"Vacaciones" },
   "":  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Sin rotación" },
 };
-const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I",""];
+const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I","A","rx","F","V",""];
 
-const YEAR_COLORS = ["#348FFF","#13C045","#8B73FF"];
-const YEAR_LABELS = ["1er año","2do año","3er año"];
+const YEAR_COLORS = ["#8B73FF","#13C045","#348FFF"];
+const YEAR_LABELS = ["3er año","2do año","1er año"];
 
 function rot(code) { return ROT[code] || ROT[""]; }
 
@@ -93,15 +97,69 @@ const safeStorage = {
     try { return localStorage.getItem(key); } catch { return null; }
   },
   set(key, value) {
-    try { localStorage.setItem(key, value); } catch {}
+    try { localStorage.setItem(key, value); } catch(e) {
+      // localStorage lleno → limpiar caché expirado e intentar de nuevo
+      purgeCacheStorage();
+      try { localStorage.setItem(key, value); } catch {}
+    }
   },
   remove(key) {
     try { localStorage.removeItem(key); } catch {}
   },
+  keys() {
+    try { return Object.keys(localStorage); } catch { return []; }
+  },
 };
 
+// Elimina entradas de caché expiradas del localStorage
+// Se llama al iniciar la app y cuando el storage se llena
+function purgeCacheStorage() {
+  try {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("cache:"));
+    let removed = 0;
+    for (const key of keys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const { ts, ttl } = JSON.parse(raw);
+        const expired = Date.now() - ts > (ttl || 30 * 60 * 1000);
+        // También eliminar entradas de días pasados aunque no hayan expirado
+        const isOldDaily = key.includes("route=daily") && (() => {
+          const m = key.match(/date=(\d{4}-\d{2}-\d{2})/);
+          if (!m) return false;
+          return m[1] < todayISO();
+        })();
+        if (expired || isOldDaily) {
+          localStorage.removeItem(key);
+          removed++;
+        }
+      } catch {}
+    }
+    return removed;
+  } catch { return 0; }
+}
+
 // ── Sistema de caché ──────────────────────────────────────────────────────────
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+// ── Caché inteligente con TTL dinámico ───────────────────────────────────────
+// daily → expira a medianoche (los horarios no cambian durante el día)
+// summary/monthly → expira en 4h (rotaciones cambian poco)
+// becados → expira en 24h (la lista rara vez cambia)
+// Por defecto → 1h
+
+function cacheTTL(params) {
+  const route = (params.route || "").toLowerCase();
+  if (route === "daily") {
+    // Expira a medianoche del día pedido
+    const dateStr = params.date || todayISO();
+    const [y,m,d] = dateStr.split("-").map(Number);
+    const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
+    return midnight - Date.now();
+  }
+  if (route === "summary")  return 24 * 60 * 60 * 1000; // 24h
+  if (route === "monthly")  return 24 * 60 * 60 * 1000; // 24h
+  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000; // 7 días
+  return 24 * 60 * 60 * 1000; // 24h por defecto
+}
 
 function cacheKey(params) {
   return "cache:" + Object.entries(params).sort().map(([k,v])=>`${k}=${v}`).join("&");
@@ -110,14 +168,16 @@ function cacheGet(params) {
   try {
     const raw = safeStorage.get(cacheKey(params));
     if (!raw) return null;
-    const { data, ts } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL) { safeStorage.remove(cacheKey(params)); return null; }
+    const { data, ts, ttl } = JSON.parse(raw);
+    if (Date.now() - ts > (ttl || 30 * 60 * 1000)) { safeStorage.remove(cacheKey(params)); return null; }
     return data;
   } catch { return null; }
 }
 function cacheSet(params, data) {
   try {
-    safeStorage.set(cacheKey(params), JSON.stringify({ data, ts: Date.now() }));
+    const ttl = cacheTTL(params);
+    if (ttl <= 0) return; // ya expiró (ej. día pasado)
+    safeStorage.set(cacheKey(params), JSON.stringify({ data, ts: Date.now(), ttl }));
   } catch {}
 }
 
@@ -130,22 +190,53 @@ async function apiGet(params) {
   return res.json();
 }
 
-// Stale-while-revalidate: muestra caché inmediatamente, actualiza en background
+// Cache-first: mostrar caché instantáneamente, revalidar en background
+// solo UNA vez por sesión por clave (no en cada cambio de tab)
+const _revalidatedThisSession = new Set();
+
+function cacheAge(params) {
+  try {
+    const raw = safeStorage.get(cacheKey(params));
+    if (!raw) return Infinity;
+    const { ts } = JSON.parse(raw);
+    return Date.now() - ts;
+  } catch { return Infinity; }
+}
+
+// SWR_REVALIDATE_AFTER ya no se usa para tabs — solo para decidir si
+// vale la pena revalidar en segundo plano por primera vez en la sesión
+const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 min mínimo para revalidar
+
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
+  const key    = cacheKey(params);
+
   if (cached) {
-    onImmediate(cached, true); // inmediato desde caché
+    // Mostrar caché inmediatamente — el usuario no espera nada
+    onImmediate(cached, true);
+
+    // Revalidar en background solo si:
+    // 1) No lo hemos revalidado ya en esta sesión, Y
+    // 2) El caché tiene más de 5 minutos (evita calls al abrir recién)
+    if (!_revalidatedThisSession.has(key) && cacheAge(params) > SWR_REVALIDATE_AFTER) {
+      _revalidatedThisSession.add(key);
+      apiGet(params)
+        .then(fresh => { cacheSet(params, fresh); onFresh(fresh, false); })
+        .catch(() => { onFresh(cached, false); }); // silencioso, ya tiene datos
+    } else {
+      onFresh(cached, false);
+    }
+    return cached;
   }
+
+  // Sin caché → fetch obligatorio
   try {
     const fresh = await apiGet(params);
     cacheSet(params, fresh);
+    _revalidatedThisSession.add(key);
     onFresh(fresh, false);
     return fresh;
   } catch(e) {
-    if (cached) {
-      onFresh(cached, false); // deja de parpadear aunque no haya red
-      return cached;
-    }
     throw e;
   }
 }
@@ -190,7 +281,6 @@ function resolveItems(rotationCode, items, dateISO) {
 
 // ── CSS global ────────────────────────────────────────────────────────────────
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
   body { overscroll-behavior-y: contain; }
@@ -540,6 +630,47 @@ function TurnoCard({ tipo, index, T }) {
   );
 }
 
+
+// ── Seminario card ────────────────────────────────────────────────────────────
+const SEMINAR_ACCENT = "#E879F9"; // violeta-rosa brillante
+function SemCard({ presenter, title, tag, index, T }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <div className="anim"
+      style={{
+        animationDelay:`${index*40}ms`,
+        background: pressed ? "#E879F912" : T.surface,
+        border: `1px solid ${pressed ? "#E879F950" : T.border}`,
+        borderLeft: `3px solid ${SEMINAR_ACCENT}`,
+        borderRadius: 12,
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        cursor: "pointer",
+        userSelect: "none",
+        boxShadow: pressed ? `0 0 14px #E879F928` : "none",
+        transition: "all 0.12s ease",
+      }}
+      onPointerDown={() => setPressed(true)}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+    >
+      <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:SEMINAR_ACCENT,lineHeight:1.2}}>07:30</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEMINAR_ACCENT,opacity:0.45,lineHeight:1.2,marginTop:2}}>07:59</div>
+      </div>
+      <div style={{width:1,height:28,background:`${SEMINAR_ACCENT}25`,flexShrink:0}}/>
+      <div style={{flex:1}}>
+        <div style={{fontSize:14,color:T.text,fontWeight:500,lineHeight:1.35}}>
+          <span style={{color:SEMINAR_ACCENT}}>{presenter}: </span>{title}
+        </div>
+        <div style={{fontSize:11,color:SEMINAR_ACCENT,opacity:0.7,marginTop:2}}>{tag}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── useOnline hook ────────────────────────────────────────────────────────────
 function useOnline() {
   const [online, setOnline] = useState(() => typeof navigator !== "undefined" ? (navigator.onLine ?? true) : true);
@@ -553,48 +684,130 @@ function useOnline() {
   return online;
 }
 
+// ── Configuración de universidades ───────────────────────────────────────────
+const UNIVERSIDADES = {
+  UNAB: {
+    label: "UNAB",
+    groups: [
+      { label:"3er año", color:"#8B73FF" },
+      { label:"2do año", color:"#13C045" },
+      { label:"1er año", color:"#348FFF" },
+    ],
+    // Los becados se asignan por posición desde la lista de la API: primeros 15
+    getGroups: (becados) => [
+      becados.slice(0,5),
+      becados.slice(5,10),
+      becados.slice(10,15),
+    ].filter(g => g.length > 0),
+  },
+  UANDES: {
+    label: "UANDES",
+    groups: [
+      { label:"3er año", color:"#8B73FF" },
+      { label:"2do año", color:"#13C045" },
+      { label:"1er año", color:"#348FFF" },
+    ],
+    // UANDES: posiciones 15-32 (18 becados, 6 por año)
+    getGroups: (becados) => [
+      becados.slice(15,21),
+      becados.slice(21,27),
+      becados.slice(27,33),
+    ].filter(g => g.length > 0),
+  },
+  IST: {
+    label: "IST",
+    groups: [
+      { label:"Becados IST", color:"#FB923C" },
+    ],
+    // IST: posiciones 33-35
+    getGroups: (becados) => [
+      becados.slice(33,36),
+    ].filter(g => g.length > 0),
+  },
+};
+const UNIV_ORDER = ["UNAB","UANDES","IST"];
+
 // ── SelectScreen ──────────────────────────────────────────────────────────────
-function SelectScreen({ becados, onSelect, onShowRotaciones, error, T }) {
-  const groups = [becados.slice(0,5),becados.slice(5,10),becados.slice(10,15)].filter(g=>g.length>0);
+function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error, T }) {
+  const [univ, setUniv] = useState("UNAB");
+  const univCfg  = UNIVERSIDADES[univ];
+  const groups   = univCfg.getGroups(becados);
+
   return (
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40}}>
       <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"#348FFF08",filter:"blur(50px)",pointerEvents:"none",zIndex:0}}/>
-      <div style={{padding:"56px 16px 16px",position:"relative",zIndex:1}}>
+
+      <div style={{padding:"56px 16px 14px",position:"relative",zIndex:1}}>
         <div style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T.muted,textTransform:"uppercase",marginBottom:6}}>
           Traumatología · Becados
         </div>
-        <p style={{fontSize:14,color:T.sub,lineHeight:1.5,marginBottom:14}}>
+        <p style={{fontSize:14,color:T.sub,lineHeight:1.5,marginBottom:12}}>
           Elige tu nombre para ver tu horario del día.
         </p>
-        <button className="press anim" onClick={onShowRotaciones}
-          style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"80ms"}}>
-          <span>⊞</span> Ver rotaciones de hoy
-        </button>
+
+        {/* Pill selector universidades */}
+        <div style={{display:"flex",gap:6,marginBottom:14,background:T.surface2,borderRadius:12,padding:4}}>
+          {UNIV_ORDER.map(u => (
+            <button key={u} className="press" onClick={() => setUniv(u)}
+              style={{
+                flex:1,height:32,borderRadius:9,border:"none",
+                background: univ===u ? T.surface : "transparent",
+                boxShadow: univ===u ? "0 1px 4px rgba(0,0,0,0.15)" : "none",
+                fontSize:12,fontWeight:univ===u?700:500,
+                color: univ===u ? T.text : T.muted,
+                transition:"all 0.15s",
+              }}>
+              {u}
+            </button>
+          ))}
+        </div>
+
+        {/* Botones de acceso rápido */}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <button className="press anim" onClick={onShowRotaciones}
+            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"80ms"}}>
+            <span>⊞</span> Rotaciones de hoy
+          </button>
+          <button className="press anim" onClick={onShowTurnos}
+            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"130ms"}}>
+            <span>◷</span> Turnos del mes
+          </button>
+        </div>
       </div>
+
       {error && <div style={{margin:"0 16px 12px",position:"relative",zIndex:1}}><ErrorBox msg={error} T={T}/></div>}
+
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
-        {groups.map((group,gi) => (
-          <div key={gi} className="anim" style={{marginBottom:20,animationDelay:`${gi*70+120}ms`}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:YEAR_COLORS[gi],marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
-              <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:YEAR_COLORS[gi]}}/>
-              {YEAR_LABELS[gi]}
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:6}}>
-              {group.map(name => (
-                <button key={name} className="press"
-                  style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif"}}
-                  onClick={() => onSelect(name)}
-                >
-                  <span style={{width:32,height:32,borderRadius:8,background:`${YEAR_COLORS[gi]}18`,color:YEAR_COLORS[gi],fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Bricolage Grotesque',sans-serif"}}>
-                    {name.charAt(0).toUpperCase()}
-                  </span>
-                  <span style={{fontSize:14,fontWeight:500,color:T.text,flex:1}}>{name}</span>
-                  <span style={{fontSize:15,color:T.muted}}>›</span>
-                </button>
-              ))}
-            </div>
+        {groups.length === 0 ? (
+          <div style={{textAlign:"center",padding:"60px 0"}}>
+            <div style={{fontSize:32,marginBottom:10,opacity:0.2}}>👤</div>
+            <div style={{fontSize:14,color:T.muted}}>Sin becados registrados</div>
           </div>
-        ))}
+        ) : groups.map((group, gi) => {
+          const grpCfg = univCfg.groups[gi] || univCfg.groups[0];
+          return (
+            <div key={gi} className="anim" style={{marginBottom:20,animationDelay:`${gi*70+120}ms`}}>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:grpCfg.color,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+                <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:grpCfg.color}}/>
+                {grpCfg.label}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {group.map(name => (
+                  <button key={name} className="press"
+                    style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif"}}
+                    onClick={() => onSelect(name)}
+                  >
+                    <span style={{width:32,height:32,borderRadius:8,background:`${grpCfg.color}18`,color:grpCfg.color,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Bricolage Grotesque',sans-serif"}}>
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                    <span style={{fontSize:14,fontWeight:500,color:T.text,flex:1}}>{name}</span>
+                    <span style={{fontSize:15,color:T.muted}}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -690,9 +903,11 @@ function TabHorario({ becado, onChangeBecado, T }) {
               <div style={{fontSize:14,color:T.muted,fontWeight:500}}>Sin actividades este día</div>
             </div>
           );
+          const sem = daily?.seminario || null;
           let cardIdx = 0;
           return (
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} index={cardIdx++} T={T}/>}
               {manana.length > 0 && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
 
@@ -843,20 +1058,26 @@ function TabSemana({ becado, onChangeBecado, T }) {
     const hasCached = cached.some(Boolean);
     if (hasCached) {
       setDays(weekDates.map((date,i) => cached[i]
-        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[],turno:cached[i].turno||{diaCode:null,nocheCode:null}}
-        : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null}}
+        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[],turno:cached[i].turno||{diaCode:null,nocheCode:null},seminario:cached[i].seminario||null}
+        : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null},seminario:null}
       ));
       setIsStale(true);
     } else {
       setDays(null);
     }
+    // Si todos los días tienen caché reciente, no ir a la red
+    const allFresh = weekDates.every(date =>
+      cacheAge({route:"daily",becado,date,token:API_TOKEN}) < SWR_REVALIDATE_AFTER
+    );
+    if (allFresh && hasCached) { setIsStale(false); return; }
+
     Promise.all(
       weekDates.map(date =>
         apiGet({route:"daily",becado,date,token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date),turno:d.turno||{diaCode:null,nocheCode:null}}; })
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date),turno:d.turno||{diaCode:null,nocheCode:null},seminario:d.seminario||null}; })
           .catch(() => {
             const c = cacheGet({route:"daily",becado,date,token:API_TOKEN});
-            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date),turno:c.turno||{diaCode:null,nocheCode:null}} : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null}};
+            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date),turno:c.turno||{diaCode:null,nocheCode:null},seminario:c.seminario||null} : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null},seminario:null};
           })
       )
     ).then(results => { setDays(results); setIsStale(false); });
@@ -942,6 +1163,15 @@ function TabSemana({ becado, onChangeBecado, T }) {
                       {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
                     </div>
                   </div>
+                  {day.seminario && (
+                    <div style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>07:30</span>
+                      <span style={{fontSize:12,color:"#E879F9",lineHeight:1.3,fontWeight:500}}>
+                        {day.seminario.presenter}: {day.seminario.title}
+                        <span style={{fontSize:10,opacity:0.65,marginLeft:5}}>{day.seminario.tag}</span>
+                      </span>
+                    </div>
+                  )}
                   {grouped.length > 0 ? (
                     <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:4}}>
                       {grouped.map((it,gi)=>(
@@ -953,7 +1183,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
                     </div>
                   ) : (
                     <div style={{padding:"7px 13px 9px"}}>
-                      <span style={{fontSize:12,color:T.muted}}>Sin actividades</span>
+                      <span style={{fontSize:12,color:T.muted}}>{day.seminario ? "" : "Sin actividades"}</span>
                     </div>
                   )}
                 </div>
@@ -966,12 +1196,215 @@ function TabSemana({ becado, onChangeBecado, T }) {
   );
 }
 
+
+// Abrevia un apellido a máximo 6 caracteres (sin puntos)
+function abbrevName(name) {
+  if (!name) return "";
+  return name.length > 6 ? name.slice(0, 6) : name;
+}
+
+// ── Tab: Turnos del mes ───────────────────────────────────────────────────────
+const TURNO_TABS = [
+  { id:"P", label:"Poli",  color:"#06B6D4" },
+  { id:"D", label:"Día",   color:"#F59E0B" },
+  { id:"N", label:"Noche", color:"#818CF8" },
+];
+
+const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
+
+function getMonthDates(year, month) {
+  // Returns array of 42 slots (6 weeks) for the calendar grid
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  // Monday-first: getDay() 0=Sun→6, 1=Mon→0, ...
+  const startDow = (firstDay.getDay() + 6) % 7; // 0=Mon
+  const slots = [];
+  for (let i = 0; i < 42; i++) {
+    const dayNum = i - startDow + 1;
+    if (dayNum < 1 || dayNum > lastDay.getDate()) {
+      slots.push(null);
+    } else {
+      const d = new Date(year, month, dayNum);
+      slots.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+    }
+  }
+  // Trim trailing empty weeks
+  let last = 41;
+  while (last > 0 && slots[last] === null) last--;
+  const rows = Math.ceil((last + 1) / 7);
+  return slots.slice(0, rows * 7);
+}
+
+function monthLabel(year, month) {
+  return new Date(year, month, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
+}
+
+function TabTurnos({ onBack, T }) {
+  const today    = useMemo(() => todayISO(), []);
+  const [year, setYear]   = useState(() => { const [y] = today.split("-").map(Number); return y; });
+  const [month, setMonth] = useState(() => { const [,m] = today.split("-").map(Number); return m - 1; });
+  const [sub, setSub]     = useState("P");
+  const [data, setData]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
+
+  useEffect(() => {
+    setLoading(true); setError(""); setData(null);
+    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
+    apiSWR(
+      params,
+      (d) => { setData(d); setLoading(false); },
+      (d, stale) => { setData(d); if (!stale) setLoading(false); }
+    ).catch(e => { setError(String(e.message||e)); setLoading(false); });
+  }, [monthStr]);
+
+  const prevMonth = () => {
+    if (month === 0) { setYear(y => y-1); setMonth(11); }
+    else setMonth(m => m-1);
+  };
+  const nextMonth = () => {
+    if (month === 11) { setYear(y => y+1); setMonth(0); }
+    else setMonth(m => m+1);
+  };
+
+  const slots   = useMemo(() => getMonthDates(year, month), [year, month]);
+  const turnoColor = TURNO_TABS.find(t => t.id === sub)?.color || "#64748B";
+
+  // Build lookup: date → [names]
+  const lookup = useMemo(() => {
+    if (!data?.ok) return {};
+    const map = {};
+    (data.entries || []).forEach(e => {
+      if (e.type === sub) {
+        if (!map[e.date]) map[e.date] = [];
+        map[e.date].push(e.name);
+      }
+    });
+    return map;
+  }, [data, sub]);
+
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,paddingBottom:24}}>
+      {/* Header */}
+      <div style={{padding:"20px 16px 0"}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
+            {monthLabel(year, month)}
+          </div>
+          <button className="press" onClick={onBack}
+            style={{background:"none",border:"none",padding:0,marginTop:4}}>
+            <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Volver</div>
+          </button>
+        </div>
+
+        {/* Navegación mes */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+          <button className="press" onClick={prevMonth}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+          <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>
+            {monthLabel(year, month)}
+          </div>
+          <button className="press" onClick={nextMonth}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+        </div>
+
+        {/* Sub-tabs Poli / Día / Noche */}
+        <div style={{display:"flex",gap:6,marginBottom:16}}>
+          {TURNO_TABS.map(t => (
+            <button key={t.id} className="press" onClick={() => setSub(t.id)}
+              style={{
+                flex:1,height:34,borderRadius:9,border:`1px solid ${sub===t.id ? t.color+"60" : T.border}`,
+                background: sub===t.id ? `${t.color}18` : T.surface2,
+                fontSize:12,fontWeight:sub===t.id?700:400,
+                color: sub===t.id ? t.color : T.muted,
+                transition:"all 0.15s",
+              }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"0 16px"}}>
+        <ErrorBox msg={error} T={T}/>
+
+        {loading && !data ? <Spinner color={turnoColor}/> : (
+          <>
+            {/* Cabecera días semana */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+              {WEEKDAY_LABELS.map(d => (
+                <div key={d} style={{textAlign:"center",fontSize:9,fontWeight:700,color:T.muted,letterSpacing:"0.04em",padding:"2px 0"}}>{d}</div>
+              ))}
+            </div>
+
+            {/* Grid calendario */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+              {slots.map((iso, i) => {
+                if (!iso) return <div key={i}/>;
+                const dayNum   = Number(iso.split("-")[2]);
+                const isToday  = iso === today;
+                const names    = lookup[iso] || [];
+                const hasData  = names.length > 0;
+                return (
+                  <div key={iso} className={hasData ? "anim" : ""}
+                    style={{
+                      animationDelay:`${(i%7)*20}ms`,
+                      background: hasData
+                        ? `${turnoColor}15`
+                        : isToday ? T.surface2 : "transparent",
+                      border: `1px solid ${isToday ? turnoColor+"60" : hasData ? turnoColor+"30" : T.border}`,
+                      borderRadius: 6,
+                      padding: "3px 2px",
+                      minHeight: 44,
+                      display:"flex",
+                      flexDirection:"column",
+                      gap: 1,
+                    }}>
+                    <div style={{
+                      fontSize:9,fontWeight:700,
+                      lineHeight:1,marginBottom:1,
+                      background: isToday ? turnoColor : "transparent",
+                      color: isToday ? "#fff" : hasData ? turnoColor : T.muted,
+                      borderRadius: isToday ? 99 : 0,
+                      width: isToday ? 16 : "auto",
+                      height: isToday ? 16 : "auto",
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      alignSelf: isToday ? "center" : "flex-start",
+                      paddingLeft: isToday ? 0 : 1,
+                    }}>{dayNum}</div>
+                    {names.slice(0,3).map((name,ni) => (
+                      <div key={ni} style={{
+                        fontSize:8,fontWeight:600,color:turnoColor,
+                        background:`${turnoColor}20`,
+                        borderRadius:3,padding:"1px 2px",
+                        lineHeight:1.25,
+                        overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                      }}>{abbrevName(name)}</div>
+                    ))}
+                    {names.length > 3 && (
+                      <div style={{fontSize:8,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── TabBar ────────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange, T }) {
   const tabs = [
     { id:"horario",    icon:"◑", label:"Mi Horario" },
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"rotaciones", icon:"⊞", label:"Rotaciones" },
+    { id:"turnos",     icon:"◷", label:"Turnos" },
   ];
   return (
     <div style={{
@@ -1011,6 +1444,7 @@ export default function App() {
   const [loadingInit, setLoadingInit] = useState(true);
   const [initError, setInitError]     = useState("");
   const [activeTab, setActiveTab]     = useState(() => safeStorage.get("activeTab") || "horario");
+  const [showTurnos, setShowTurnos]   = useState(false);
 
   const T = THEMES[theme];
 
@@ -1030,6 +1464,12 @@ export default function App() {
   useEffect(() => {
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", theme === "dark" ? "#0D1117" : "#F4F7FB");
+    // Limpiar caché expirado cuando el browser esté idle (no bloquea la carga)
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(() => purgeCacheStorage());
+    } else {
+      setTimeout(() => purgeCacheStorage(), 2000);
+    }
   }, []);
 
   // Cargar lista de becados con caché (SWR)
@@ -1055,6 +1495,7 @@ export default function App() {
     setActiveTab("horario");
   };
   const handleShowRotaciones = () => { setBecado("__rotaciones__"); };
+  const handleShowTurnos     = () => { setShowTurnos(true); };
 
   if (loadingInit) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",maxWidth:480,margin:"0 auto"}}>
@@ -1083,7 +1524,9 @@ export default function App() {
       )}
 
       {!becado ? (
-        <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} error={initError} T={T}/>
+        showTurnos
+          ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
+          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} error={initError} T={T}/>
 
       ) : showRotacionesOnly ? (
         <>
@@ -1110,6 +1553,7 @@ export default function App() {
           {activeTab === "horario"    && <TabHorario becado={becado} onChangeBecado={handleChange} T={T}/>}
           {activeTab === "semana"     && <TabSemana becado={becado} onChangeBecado={handleChange} T={T}/>}
           {activeTab === "rotaciones" && <TabRotaciones onChangeBecado={handleChange} T={T}/>}
+          {activeTab === "turnos"     && <TabTurnos onBack={() => handleTabChange("horario")} T={T}/>}
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
