@@ -115,7 +115,7 @@ const safeStorage = {
 // Se llama al iniciar la app y cuando el storage se llena
 function purgeCacheStorage() {
   try {
-    const keys = Object.keys(localStorage).filter(k => k.startsWith("cache:"));
+    const keys = safeStorage.keys().filter(k => k.startsWith("cache:"));
     let removed = 0;
     for (const key of keys) {
       try {
@@ -459,8 +459,142 @@ function PullIndicator({ pullY, triggered, T }) {
   );
 }
 
+// ── SwapTurnos — cambio de turnos con PIN ────────────────────────────────────
+function SwapTurnos({ becados, onClose, T }) {
+  const today = useMemo(() => todayISO(), []);
+  const [becado1, setBecado1] = useState("");
+  const [date1,   setDate1]   = useState(today);
+  const [becado2, setBecado2] = useState("");
+  const [date2,   setDate2]   = useState(today);
+
+  const [pin,     setPin]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null); // {ok, msg}
+
+  // tipo = P | D | N — determina qué sheet usar y qué valor buscar
+  const TIPO_OPTS = [
+    { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
+    { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
+    { id:"N", label:"Noche", sheet:"Noche", color:"#818CF8" },
+  ];
+  const [tipo, setTipo] = useState("P");
+
+  const handleSwap = async () => {
+    if (!becado1 || !becado2 || !pin) return;
+    if (becado1 === becado2 && date1 === date2) {
+      setResult({ ok:false, msg:"Selecciona becados o días distintos" });
+      return;
+    }
+    setLoading(true); setResult(null);
+    try {
+      const tipoObj = TIPO_OPTS.find(t => t.id === tipo);
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ route:"swap_turno", pin, becado1, date1, becado2, date2, sheet: tipoObj.sheet, tipoCode: tipo }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Invalidar caché de los días afectados
+        [
+          {route:"daily",becado:becado1,date:date1,token:API_TOKEN},
+          {route:"daily",becado:becado2,date:date2,token:API_TOKEN},
+        ].forEach(p => safeStorage.remove(cacheKey(p)));
+        setResult({ ok:true, msg:"✓ Cambio aplicado correctamente" });
+        setPin("");
+      } else {
+        setResult({ ok:false, msg: data.error || "Error al aplicar el cambio" });
+      }
+    } catch(e) {
+      setResult({ ok:false, msg:"Error de conexión" });
+    }
+    setLoading(false);
+  };
+
+  const inputStyle = (focused) => ({
+    width:"100%", padding:"10px 12px", borderRadius:10,
+    border:`1px solid ${focused ? "#348FFF80" : T.border}`,
+    background:T.surface2, color:T.text,
+    fontSize:13, fontFamily:"'Inter',sans-serif",
+    outline:"none",
+  });
+
+  return (
+    <>
+      <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:190,background:"rgba(0,0,0,0.5)"}}/>
+      <div className="anim" style={{
+        position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
+        width:"100%", maxWidth:480, zIndex:200,
+        background:T.surface, borderRadius:"20px 20px 0 0",
+        padding:"20px 20px calc(var(--sab) + 24px)",
+        boxShadow:"0 -8px 40px rgba(0,0,0,0.3)",
+        fontFamily:"'Inter',sans-serif",
+        maxHeight:"90vh", overflowY:"auto",
+      }}>
+        {/* Handle */}
+        <div style={{width:36,height:4,borderRadius:99,background:T.border,margin:"0 auto 20px"}}/>
+
+        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:4}}>Administración</div>
+        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:22,fontWeight:800,color:T.text,marginBottom:20}}>Cambio de turno</div>
+
+        {/* Tipo de turno */}
+        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Tipo de turno</div>
+        <div style={{display:"flex",gap:8,marginBottom:18}}>
+          {TIPO_OPTS.map(o => (
+            <button key={o.id} className="press" onClick={() => setTipo(o.id)}
+              style={{flex:1,height:36,borderRadius:9,border:`1px solid ${tipo===o.id?o.color+"60":T.border}`,background:tipo===o.id?`${o.color}18`:T.surface2,fontSize:12,fontWeight:tipo===o.id?700:400,color:tipo===o.id?o.color:T.muted,transition:"all 0.15s"}}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Becado 1 */}
+        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Becado A</div>
+        <select value={becado1} onChange={e=>setBecado1(e.target.value)} style={{...inputStyle(false),marginBottom:8,appearance:"none",WebkitAppearance:"none"}}>
+          <option value="">Seleccionar becado…</option>
+          {becados.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <input type="date" value={date1} onChange={e=>setDate1(e.target.value)} style={{...inputStyle(false),marginBottom:18}}/>
+
+        {/* Flecha swap */}
+        <div style={{textAlign:"center",fontSize:20,marginBottom:18,color:T.muted}}>⇅</div>
+
+        {/* Becado 2 */}
+        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Becado B</div>
+        <select value={becado2} onChange={e=>setBecado2(e.target.value)} style={{...inputStyle(false),marginBottom:8,appearance:"none",WebkitAppearance:"none"}}>
+          <option value="">Seleccionar becado…</option>
+          {becados.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <input type="date" value={date2} onChange={e=>setDate2(e.target.value)} style={{...inputStyle(false),marginBottom:18}}/>
+
+        {/* PIN */}
+        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>PIN de administrador</div>
+        <input
+          type="password" inputMode="numeric" maxLength={4}
+          placeholder="••••"
+          value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))}
+          style={{...inputStyle(false),marginBottom:18,letterSpacing:"0.3em",fontSize:18,textAlign:"center"}}
+        />
+
+        {/* Resultado */}
+        {result && (
+          <div style={{marginBottom:14,padding:"10px 13px",borderRadius:10,background:result.ok?"#13C04518":"#F8717118",border:`1px solid ${result.ok?"#13C04540":"#F8717140"}`,fontSize:13,color:result.ok?"#13C045":"#F87171"}}>
+            {result.msg}
+          </div>
+        )}
+
+        {/* Botón */}
+        <button className="press" onClick={handleSwap} disabled={loading || !becado1 || !becado2 || pin.length < 4}
+          style={{width:"100%",height:46,borderRadius:12,border:"none",background:(!becado1||!becado2||pin.length<4)?"#348FFF40":"#348FFF",color:"#fff",fontSize:14,fontWeight:700,opacity:loading?0.7:1,transition:"all 0.15s"}}>
+          {loading ? "Aplicando…" : "Confirmar cambio"}
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Settings panel ────────────────────────────────────────────────────────────
-function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, T }) {
+function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, onSwapTurnos, T }) {
   return (
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
@@ -475,6 +609,11 @@ function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, T }) {
         <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:12}}>
           Apariencia
         </div>
+        <button className="press" onClick={onSwapTurnos}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          <span style={{fontSize:15}}>⇄</span>
+          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Cambio de turno</span>
+        </button>
         <button className="press" onClick={onPreviewSplash}
           style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
           <span style={{fontSize:15}}>🎭</span>
@@ -583,9 +722,9 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
 
 // ── Colores de turno ──────────────────────────────────────────────────────────
 const TURNO = {
-  P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Turno Poli",  desde:"14:00", hasta:"17:59" },
-  D: { accent:"#F59E0B", light:"#F59E0B12", glow:"#F59E0B28", label:"Turno Día",   desde:"14:00", hasta:"19:59" },
-  N: { accent:"#818CF8", light:"#818CF812", glow:"#818CF828", label:"Turno Noche", desde:"20:00", hasta:"--"    },
+  P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Poli",  desde:"14:00", hasta:"17:59" },
+  D: { accent:"#F59E0B", light:"#F59E0B12", glow:"#F59E0B28", label:"Día",   desde:"14:00", hasta:"19:59" },
+  N: { accent:"#818CF8", light:"#818CF812", glow:"#818CF828", label:"Noche", desde:"20:00", hasta:"--"    },
 };
 
 // ── Section divider ───────────────────────────────────────────────────────────
@@ -874,7 +1013,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
         <div style={{position:"fixed",top:0,right:0,width:240,height:240,borderRadius:"50%",background:c.glow,filter:"blur(70px)",pointerEvents:"none",zIndex:0}}/>
       )}
 
-      <div style={{padding:"20px 16px 0",position:"relative",zIndex:1}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0",position:"relative",zIndex:1}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi horario</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
@@ -1053,59 +1192,76 @@ function TabRotaciones({ onChangeBecado, T }) {
 function TabSemana({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(today);
-  const [days, setDays] = useState(null);
-  const [isStale, setIsStale] = useState(false);
-  const isOnline = useOnline();
+  const [lookup, setLookup] = useState({});   // date → daily data
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
-  const sessionKey = `semana:${becado}:${weekDates[0]}`;
+  // Cargar semana: mostrar caché inmediatamente, pedir solo lo que falta, nunca borrar lo que hay
+  useEffect(() => {
+    // 1. Mostrar caché inmediatamente — sin borrar nada
+    const cached = {};
+    weekDates.forEach(date => {
+      const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
+      if (c && c.ok !== false) cached[date] = c;
+    });
+    setLookup(prev => ({...prev, ...cached}));
 
-  const load = useCallback((forceRefresh = false) => {
-    const cached = weekDates.map(date => cacheGet({route:"daily",becado,date,token:API_TOKEN}));
-    const hasCached = cached.some(Boolean);
-
-    // Mostrar caché inmediatamente — nunca borrar lo que hay
-    if (hasCached) {
-      setDays(weekDates.map((date,i) => cached[i]
-        ? {date,ok:cached[i].ok!==false,rotationCode:cached[i].rotationCode||"",items:cached[i].items||[],turno:cached[i].turno||{diaCode:null,nocheCode:null},seminario:cached[i].seminario||null}
-        : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null},seminario:null}
-      ));
-    }
-
-    // Ir a la red solo si: es refresh forzado (pull), O es la primera vez en esta sesión
-    if (!forceRefresh && _revalidatedThisSession.has(sessionKey)) {
-      setIsStale(false);
-      return;
-    }
-    _revalidatedThisSession.add(sessionKey);
-
-    if (!hasCached) setDays(null); // solo mostrar spinner si no hay nada
+    // 2. Pedir solo los días que NO están en caché
+    const missing = weekDates.filter(date => !cacheGet({route:"daily", becado, date, token:API_TOKEN}));
+    if (missing.length === 0) { setLoading(false); return; }
+    setLoading(true);
 
     Promise.all(
-      weekDates.map(date =>
-        apiGet({route:"daily",becado,date,token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN},d); return {date,ok:d.ok!==false,rotationCode:d.rotationCode||"",items:resolveItems(d.rotationCode,d.items||[],date),turno:d.turno||{diaCode:null,nocheCode:null},seminario:d.seminario||null}; })
-          .catch(() => {
-            const c = cacheGet({route:"daily",becado,date,token:API_TOKEN});
-            return c ? {date,ok:true,rotationCode:c.rotationCode||"",items:resolveItems(c.rotationCode,c.items||[],date),turno:c.turno||{diaCode:null,nocheCode:null},seminario:c.seminario||null} : {date,ok:false,rotationCode:"",items:[],turno:{diaCode:null,nocheCode:null},seminario:null};
-          })
+      missing.map(date =>
+        apiGet({route:"daily", becado, date, token:API_TOKEN})
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
+          .catch(() => [date, null])
       )
-    ).then(results => { setDays(results); setIsStale(false); });
-  }, [becado, weekDates, sessionKey]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const ptr = usePullToRefresh(() => {
-    weekDates.forEach(date => {
-      safeStorage.remove(cacheKey({route:"daily",becado,date,token:API_TOKEN}));
+    ).then(results => {
+      setLookup(prev => {
+        const next = {...prev};
+        results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
+        return next;
+      });
+      setLoading(false);
     });
-    _revalidatedThisSession.delete(sessionKey);
-    load(true);
+  }, [becado, weekDates]);
+
+  // Pull-to-refresh: borrar caché solo de esta semana y volver a pedir
+  const ptr = usePullToRefresh(() => {
+    weekDates.forEach(date => safeStorage.remove(cacheKey({route:"daily",becado,date,token:API_TOKEN})));
+    setLookup(prev => {
+      const next = {...prev};
+      weekDates.forEach(date => delete next[date]);
+      return next;
+    });
+    setLoading(true);
+    Promise.all(
+      weekDates.map(date =>
+        apiGet({route:"daily", becado, date, token:API_TOKEN})
+          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
+          .catch(() => [date, null])
+      )
+    ).then(results => {
+      setLookup(prev => {
+        const next = {...prev};
+        results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
+        return next;
+      });
+      setLoading(false);
+    });
   }, scrollRef);
 
   const isThisWeek = weekDates.includes(today);
+  // Construir array de días desde lookup para el render
+  const days = weekDates.map(date => {
+    const d = lookup[date];
+    if (!d) return {date, rotationCode:"", items:[], turno:{diaCode:null,nocheCode:null}, seminario:null};
+    return {date, ok:d.ok!==false, rotationCode:d.rotationCode||"", items:d.items||[], turno:d.turno||{diaCode:null,nocheCode:null}, seminario:d.seminario||null};
+  });
+  const hasAnyData = Object.keys(lookup).some(k => weekDates.includes(k));
 
   return (
     <div
@@ -1142,8 +1298,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
-        {days === null ? (
+        {!hasAnyData && loading ? (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[0,1,2,3,4,5,6].map(i => <SkeletonWeekCard key={i} index={i} T={T}/>)}
           </div>
@@ -1771,6 +1926,7 @@ export default function App() {
   const [activeTab, setActiveTab]     = useState(() => safeStorage.get("activeTab") || "horario");
   const [showTurnos, setShowTurnos]       = useState(false);
   const [showRotaciones, setShowRotaciones] = useState(false);
+  const [showSwap, setShowSwap] = useState(false);
 
   const T = THEMES[theme];
 
@@ -1843,15 +1999,15 @@ export default function App() {
       fontFamily:"'Inter',sans-serif",
       paddingBottom: becado ? 72 : 0,
       position:"relative",
-      overflow:"hidden",
     }}>
       <style>{CSS}</style>
       {(showSplash || previewSplash) && <SplashScreen/>}
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} T={T}/>
+        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} T={T}/>
       )}
+      {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
 
       {!becado ? (
         showRotaciones
