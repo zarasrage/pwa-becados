@@ -1884,7 +1884,7 @@ function SplashScreen() {
       {/* Mimo */}
       <MimeFace phase={phase}/>
 
-      {/* MimApp — entra con rebote y escala */}
+      {/* MimApp! — entra con rebote y escala */}
       <div style={{
         fontFamily:"'Bricolage Grotesque',sans-serif",
         fontSize:40, fontWeight:800,
