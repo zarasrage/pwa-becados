@@ -460,48 +460,150 @@ function PullIndicator({ pullY, triggered, T }) {
 }
 
 // ── SwapTurnos — cambio de turnos con PIN ────────────────────────────────────
+// Sub-componente: selector de becado + turno del mes
+function TurnoSelector({ label, becados, month, tipoCode, selected, onSelect, T }) {
+  const [becado, setBecado]   = useState("");
+  const [turnos, setTurnos]   = useState([]); // [{date, code}]
+  const [loadingT, setLoadingT] = useState(false);
+
+  // Cada vez que cambia becado o mes, carga sus turnos
+  useEffect(() => {
+    if (!becado) { setTurnos([]); onSelect(null); return; }
+    setLoadingT(true); setTurnos([]); onSelect(null);
+    apiGet({ route:"personal-month", becado, month, token:API_TOKEN })
+      .then(d => {
+        if (!d.ok) { setTurnos([]); return; }
+        // Filtrar solo días que tengan el tipoCode en diaCode o nocheCode
+        const found = (d.days || []).filter(day => {
+          if (tipoCode === "N") return day.nocheCode === "N";
+          return day.diaCode === tipoCode; // P o D
+        }).map(day => ({ date: day.date, code: tipoCode }));
+        setTurnos(found);
+      })
+      .catch(() => setTurnos([]))
+      .finally(() => setLoadingT(false));
+  }, [becado, month, tipoCode]);
+
+  // Reset turno seleccionado si cambia becado/tipo
+  useEffect(() => { onSelect(null); }, [becado, tipoCode]);
+
+  const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const selectStyle = {
+    width:"100%", padding:"11px 36px 11px 14px", borderRadius:10,
+    border:`1px solid ${T.border}`, background:T.surface2, color:T.text,
+    fontSize:14, fontFamily:"'Inter',sans-serif", outline:"none",
+    WebkitAppearance:"none", appearance:"none", boxSizing:"border-box",
+  };
+
+  return (
+    <div>
+      <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>{label}</div>
+
+      {/* Select becado */}
+      <div style={{position:"relative",marginBottom:10}}>
+        <select value={becado} onChange={e => setBecado(e.target.value)} style={selectStyle}>
+          <option value="">Seleccionar becado…</option>
+          {becados.map(b => <option key={b} value={b}>{b}</option>)}
+        </select>
+        <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:T.muted,fontSize:12}}>▾</span>
+      </div>
+
+      {/* Lista de turnos disponibles */}
+      {becado && (
+        loadingT ? (
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 0",color:T.muted,fontSize:13}}>
+            <div style={{width:14,height:14,border:`2px solid ${T.border}`,borderTopColor:"#348FFF",borderRadius:"50%",animation:"spin 0.6s linear infinite",flexShrink:0}}/>
+            Cargando turnos…
+          </div>
+        ) : turnos.length === 0 ? (
+          <div style={{padding:"10px 0",fontSize:13,color:T.muted}}>Sin turnos de este tipo este mes</div>
+        ) : (
+          <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+            {turnos.map(t => {
+              const [y,m,d] = t.date.split("-").map(Number);
+              const dow = new Date(y,m-1,d).getDay();
+              const isSelected = selected?.date === t.date;
+              const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#818CF8" };
+              const col = TIPO_COLOR[tipoCode] || "#64748B";
+              return (
+                <button key={t.date} className="press" onClick={() => onSelect(isSelected ? null : { date:t.date, becado, code:tipoCode })}
+                  style={{
+                    padding:"6px 11px", borderRadius:9,
+                    border:`1.5px solid ${isSelected ? col : T.border}`,
+                    background: isSelected ? `${col}22` : T.surface2,
+                    color: isSelected ? col : T.sub,
+                    fontSize:13, fontWeight: isSelected ? 700 : 400,
+                    transition:"all 0.12s",
+                    display:"flex", alignItems:"center", gap:5,
+                  }}>
+                  <span style={{fontSize:10,opacity:0.65}}>{DIAS_ES[dow]}</span>
+                  <span>{d}</span>
+                </button>
+              );
+            })}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 function SwapTurnos({ becados, onClose, T }) {
-  const today = useMemo(() => todayISO(), []);
-  const [becado1, setBecado1] = useState("");
-  const [date1,   setDate1]   = useState(today);
-  const [becado2, setBecado2] = useState("");
-  const [date2,   setDate2]   = useState(today);
+  const today   = useMemo(() => todayISO(), []);
+  const curMonth = today.slice(0, 7); // YYYY-MM
 
-  const [pin,     setPin]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null); // {ok, msg}
-
-  // tipo = P | D | N — determina qué sheet usar y qué valor buscar
   const TIPO_OPTS = [
     { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
     { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
     { id:"N", label:"Noche", sheet:"Noche", color:"#818CF8" },
   ];
-  const [tipo, setTipo] = useState("P");
+  const [tipo,    setTipo]    = useState("P");
+  const [month,   setMonth]   = useState(curMonth);
+  const [selA,    setSelA]    = useState(null); // {date, becado, code}
+  const [selB,    setSelB]    = useState(null);
+  const [pin,     setPin]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result,  setResult]  = useState(null);
+
+  // Reset selections when tipo or month changes
+  const handleTipo = (id) => { setTipo(id); setSelA(null); setSelB(null); setResult(null); };
+  const handleMonth = (delta) => {
+    const [y,m] = month.split("-").map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+    setSelA(null); setSelB(null); setResult(null);
+  };
+
+  const tipoObj  = TIPO_OPTS.find(t => t.id === tipo);
+  const canSubmit = selA && selB && pin.length === 4 && !loading
+    && !(selA.becado === selB.becado && selA.date === selB.date);
+
+  const monthLabel = (() => {
+    const [y,m] = month.split("-").map(Number);
+    return new Date(y,m-1,1).toLocaleDateString("es-CL",{month:"long",year:"numeric"});
+  })();
 
   const handleSwap = async () => {
-    if (!becado1 || !becado2 || !pin) return;
-    if (becado1 === becado2 && date1 === date2) {
-      setResult({ ok:false, msg:"Selecciona becados o días distintos" });
-      return;
-    }
+    if (!canSubmit) return;
     setLoading(true); setResult(null);
     try {
-      const tipoObj = TIPO_OPTS.find(t => t.id === tipo);
       const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ route:"swap_turno", pin, becado1, date1, becado2, date2, sheet: tipoObj.sheet, tipoCode: tipo }),
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          route:"swap_turno", pin,
+          becado1: selA.becado, date1: selA.date,
+          becado2: selB.becado, date2: selB.date,
+          sheet: tipoObj.sheet, tipoCode: tipo,
+        }),
       });
       const data = await res.json();
       if (data.ok) {
-        // Invalidar caché de los días afectados
-        [
-          {route:"daily",becado:becado1,date:date1,token:API_TOKEN},
-          {route:"daily",becado:becado2,date:date2,token:API_TOKEN},
-        ].forEach(p => safeStorage.remove(cacheKey(p)));
+        [{route:"daily",becado:selA.becado,date:selA.date,token:API_TOKEN},
+         {route:"daily",becado:selB.becado,date:selB.date,token:API_TOKEN}]
+          .forEach(p => safeStorage.remove(cacheKey(p)));
         setResult({ ok:true, msg:"✓ Cambio aplicado correctamente" });
-        setPin("");
+        setPin(""); setSelA(null); setSelB(null);
       } else {
         setResult({ ok:false, msg: data.error || "Error al aplicar el cambio" });
       }
@@ -511,83 +613,119 @@ function SwapTurnos({ becados, onClose, T }) {
     setLoading(false);
   };
 
-  const inputStyle = (focused) => ({
-    width:"100%", padding:"10px 12px", borderRadius:10,
-    border:`1px solid ${focused ? "#348FFF80" : T.border}`,
-    background:T.surface2, color:T.text,
-    fontSize:13, fontFamily:"'Inter',sans-serif",
-    outline:"none",
-  });
-
   return (
     <>
-      <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:190,background:"rgba(0,0,0,0.5)"}}/>
-      <div className="anim" style={{
-        position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)",
-        width:"100%", maxWidth:480, zIndex:200,
-        background:T.surface, borderRadius:"20px 20px 0 0",
-        padding:"20px 20px calc(var(--sab) + 24px)",
-        boxShadow:"0 -8px 40px rgba(0,0,0,0.3)",
+      <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:190,background:"rgba(0,0,0,0.55)"}}/>
+      <div style={{
+        position:"fixed", bottom:0, left:0, right:0, zIndex:200,
+        background:T.surface, borderRadius:"22px 22px 0 0",
+        boxShadow:"0 -12px 48px rgba(0,0,0,0.35)",
         fontFamily:"'Inter',sans-serif",
-        maxHeight:"90vh", overflowY:"auto",
+        maxHeight:"92vh", display:"flex", flexDirection:"column",
       }}>
-        {/* Handle */}
-        <div style={{width:36,height:4,borderRadius:99,background:T.border,margin:"0 auto 20px"}}/>
-
-        <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:4}}>Administración</div>
-        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:22,fontWeight:800,color:T.text,marginBottom:20}}>Cambio de turno</div>
-
-        {/* Tipo de turno */}
-        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Tipo de turno</div>
-        <div style={{display:"flex",gap:8,marginBottom:18}}>
-          {TIPO_OPTS.map(o => (
-            <button key={o.id} className="press" onClick={() => setTipo(o.id)}
-              style={{flex:1,height:36,borderRadius:9,border:`1px solid ${tipo===o.id?o.color+"60":T.border}`,background:tipo===o.id?`${o.color}18`:T.surface2,fontSize:12,fontWeight:tipo===o.id?700:400,color:tipo===o.id?o.color:T.muted,transition:"all 0.15s"}}>
-              {o.label}
+        {/* Header fijo */}
+        <div style={{padding:"12px 20px 16px", flexShrink:0, borderBottom:`1px solid ${T.border}`}}>
+          <div style={{width:40,height:4,borderRadius:99,background:T.border,margin:"0 auto 14px"}}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <div>
+              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:2}}>Administración</div>
+              <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:22,fontWeight:800,color:T.text,lineHeight:1.1}}>Cambio de turno</div>
+            </div>
+            <button className="press" onClick={onClose}
+              style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:T.muted}}>
+              ✕
             </button>
-          ))}
+          </div>
         </div>
 
-        {/* Becado 1 */}
-        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Becado A</div>
-        <select value={becado1} onChange={e=>setBecado1(e.target.value)} style={{...inputStyle(false),marginBottom:8,appearance:"none",WebkitAppearance:"none"}}>
-          <option value="">Seleccionar becado…</option>
-          {becados.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-        <input type="date" value={date1} onChange={e=>setDate1(e.target.value)} style={{...inputStyle(false),marginBottom:18}}/>
+        {/* Cuerpo scrollable */}
+        <div style={{overflowY:"auto",padding:"16px 20px",flex:1,display:"flex",flexDirection:"column",gap:20}}>
 
-        {/* Flecha swap */}
-        <div style={{textAlign:"center",fontSize:20,marginBottom:18,color:T.muted}}>⇅</div>
-
-        {/* Becado 2 */}
-        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>Becado B</div>
-        <select value={becado2} onChange={e=>setBecado2(e.target.value)} style={{...inputStyle(false),marginBottom:8,appearance:"none",WebkitAppearance:"none"}}>
-          <option value="">Seleccionar becado…</option>
-          {becados.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-        <input type="date" value={date2} onChange={e=>setDate2(e.target.value)} style={{...inputStyle(false),marginBottom:18}}/>
-
-        {/* PIN */}
-        <div style={{fontSize:11,fontWeight:600,color:T.muted,marginBottom:6,textTransform:"uppercase",letterSpacing:"0.06em"}}>PIN de administrador</div>
-        <input
-          type="password" inputMode="numeric" maxLength={4}
-          placeholder="••••"
-          value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))}
-          style={{...inputStyle(false),marginBottom:18,letterSpacing:"0.3em",fontSize:18,textAlign:"center"}}
-        />
-
-        {/* Resultado */}
-        {result && (
-          <div style={{marginBottom:14,padding:"10px 13px",borderRadius:10,background:result.ok?"#13C04518":"#F8717118",border:`1px solid ${result.ok?"#13C04540":"#F8717140"}`,fontSize:13,color:result.ok?"#13C045":"#F87171"}}>
-            {result.msg}
+          {/* Tipo de turno */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>Tipo de turno</div>
+            <div style={{display:"flex",gap:8}}>
+              {TIPO_OPTS.map(o => (
+                <button key={o.id} className="press" onClick={() => handleTipo(o.id)}
+                  style={{flex:1,height:40,borderRadius:10,border:`1px solid ${tipo===o.id ? o.color+"80" : T.border}`,background:tipo===o.id ? `${o.color}20` : T.surface2,fontSize:13,fontWeight:tipo===o.id?700:500,color:tipo===o.id?o.color:T.sub,transition:"all 0.15s"}}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
 
-        {/* Botón */}
-        <button className="press" onClick={handleSwap} disabled={loading || !becado1 || !becado2 || pin.length < 4}
-          style={{width:"100%",height:46,borderRadius:12,border:"none",background:(!becado1||!becado2||pin.length<4)?"#348FFF40":"#348FFF",color:"#fff",fontSize:14,fontWeight:700,opacity:loading?0.7:1,transition:"all 0.15s"}}>
-          {loading ? "Aplicando…" : "Confirmar cambio"}
-        </button>
+          {/* Mes */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>Mes</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button className="press" onClick={() => handleMonth(-1)}
+                style={{width:36,height:36,borderRadius:9,border:`1px solid ${T.border}`,background:T.surface2,fontSize:17,color:T.sub,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>‹</button>
+              <div style={{flex:1,textAlign:"center",fontSize:14,fontWeight:600,color:T.text,textTransform:"capitalize"}}>{monthLabel}</div>
+              <button className="press" onClick={() => handleMonth(1)}
+                style={{width:36,height:36,borderRadius:9,border:`1px solid ${T.border}`,background:T.surface2,fontSize:17,color:T.sub,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>›</button>
+            </div>
+          </div>
+
+          {/* Becado A */}
+          <TurnoSelector
+            label="Becado A"
+            becados={becados} month={month} tipoCode={tipo}
+            selected={selA} onSelect={setSelA} T={T}
+          />
+
+          {/* Divisor */}
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{flex:1,height:1,background:T.border}}/>
+            <div style={{width:32,height:32,borderRadius:8,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:T.muted}}>⇅</div>
+            <div style={{flex:1,height:1,background:T.border}}/>
+          </div>
+
+          {/* Becado B */}
+          <TurnoSelector
+            label="Becado B"
+            becados={becados} month={month} tipoCode={tipo}
+            selected={selB} onSelect={setSelB} T={T}
+          />
+
+          {/* Resumen selección */}
+          {selA && selB && (
+            <div style={{background:T.surface2,border:`1px solid ${tipoObj.color}30`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:11,fontWeight:700,color:tipoObj.color,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>Confirmando cambio</div>
+              <div style={{fontSize:13,color:T.sub,lineHeight:1.8}}>
+                <span style={{color:T.text,fontWeight:600}}>{selA.becado}</span> el {formatDate(selA.date).split(",")[1]?.trim() || selA.date}
+                <span style={{color:T.muted}}> ↔ </span>
+                <span style={{color:T.text,fontWeight:600}}>{selB.becado}</span> el {formatDate(selB.date).split(",")[1]?.trim() || selB.date}
+              </div>
+            </div>
+          )}
+
+          {/* PIN */}
+          <div>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>PIN de administrador</div>
+            <input
+              type="password" inputMode="numeric" maxLength={4} placeholder="_ _ _ _"
+              value={pin} onChange={e => setPin(e.target.value.replace(/[^0-9]/g,""))}
+              style={{width:"100%",padding:"12px",borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,color:T.text,fontSize:24,textAlign:"center",letterSpacing:"0.5em",outline:"none",fontFamily:"'JetBrains Mono',monospace",boxSizing:"border-box"}}
+            />
+          </div>
+
+          {/* Resultado */}
+          {result && (
+            <div style={{padding:"11px 14px",borderRadius:10,background:result.ok?"#13C04518":"#F8717118",border:`1px solid ${result.ok?"#13C04540":"#F8717140"}`,fontSize:13,color:result.ok?"#13C045":"#F87171",lineHeight:1.4}}>
+              {result.msg}
+            </div>
+          )}
+
+          <div style={{height:4}}/>
+        </div>
+
+        {/* Botón fijo abajo */}
+        <div style={{padding:`12px 20px calc(var(--sab) + 16px)`,flexShrink:0,borderTop:`1px solid ${T.border}`}}>
+          <button className="press" onClick={handleSwap} disabled={!canSubmit}
+            style={{width:"100%",height:50,borderRadius:13,border:"none",background:canSubmit?"#348FFF":"#348FFF38",color:canSubmit?"#fff":"#ffffff80",fontSize:15,fontWeight:700,transition:"all 0.15s",cursor:canSubmit?"pointer":"default"}}>
+            {loading ? "Aplicando…" : "Confirmar cambio"}
+          </button>
+        </div>
       </div>
     </>
   );
@@ -1884,7 +2022,7 @@ function SplashScreen() {
       {/* Mimo */}
       <MimeFace phase={phase}/>
 
-      {/* MimApp! — entra con rebote y escala */}
+      {/* MimApp — entra con rebote y escala */}
       <div style={{
         fontFamily:"'Bricolage Grotesque',sans-serif",
         fontSize:40, fontWeight:800,
