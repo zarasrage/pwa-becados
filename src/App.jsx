@@ -181,8 +181,62 @@ function cacheSet(params, data) {
   } catch {}
 }
 
+// ── Demo mode ─────────────────────────────────────────────────────────────────
+const DEMO_BECADO = "— Demo —";
+const DEMO_ROTATIONS = ["H","M","CyP","R","TyP","Col","H","M","CyP","R","TyP","Col","","",""];
+const DEMO_ACTIVITIES = {
+  H:   [["07:30","Pase de visita Hombro"],["08:30","Pabellón Artroscopía"],["12:00","Almuerzo"],["14:00","Policlínico Hombro"],["16:30","Revisión casos"]],
+  M:   [["07:30","Pase de visita Mano"],["09:00","Pabellón Mano"],["12:00","Almuerzo"],["14:00","Policlínico Mano"],["16:00","Revisión radiológica"]],
+  CyP: [["07:30","Pase de visita Cadera"],["08:00","Pabellón Cadera/Pelvis"],["12:30","Almuerzo"],["14:00","Policlínico Cadera"],["17:00","Fin de jornada"]],
+  R:   [["07:30","Pase de visita Rodilla"],["08:30","Pabellón Artroscopía Rodilla"],["12:00","Almuerzo"],["14:00","Policlínico Rodilla"],["16:30","Lectura bibliográfica"]],
+  TyP: [["07:30","Pase de visita Tobillo"],["09:00","Pabellón Tobillo y Pie"],["12:00","Almuerzo"],["14:00","Policlínico TyP"],["16:30","Fin de jornada"]],
+  Col: [["07:30","Pase de visita Columna"],["08:00","Pabellón Columna"],["12:00","Almuerzo"],["14:00","Policlínico Columna"],["16:00","Revisión casos clínicos"]],
+  "": [],
+};
+
+function demoDaily(dateStr) {
+  const dow = new Date(dateStr).getDay();
+  const d   = Number(dateStr.split("-")[2]);
+  if (dow === 0 || dow === 6) return { ok:true, becado:DEMO_BECADO, date:dateStr, rotationCode:"", rotationName:"", items:[] };
+  const rotCode = DEMO_ROTATIONS[(d - 1) % DEMO_ROTATIONS.length];
+  const rotInfo = ROT[rotCode] || ROT[""];
+  const acts = DEMO_ACTIVITIES[rotCode] || [];
+  return {
+    ok: true, becado: DEMO_BECADO, date: dateStr,
+    rotationCode: rotCode, rotationName: rotInfo.name,
+    items: acts.map(([time, activity]) => ({ time, activity })),
+  };
+}
+
+function demoPersonalMonth(monthStr) {
+  const [y, m] = monthStr.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const TURNO_SEQ = [null,"P",null,null,"D",null,"N",null,null,"P",null,"D",null,null,"N",null,"P",null,null,null,"D",null,"N",null,null,"P",null,null,"D",null,null];
+  const days = Array.from({ length: daysInMonth }, (_, i) => {
+    const d   = i + 1;
+    const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const dow = new Date(y, m-1, d).getDay();
+    const rotCode = (dow === 0 || dow === 6) ? "" : DEMO_ROTATIONS[(d-1) % DEMO_ROTATIONS.length];
+    const turno   = (dow === 0 || dow === 6) ? null : TURNO_SEQ[i % TURNO_SEQ.length];
+    return {
+      date: iso, rotationCode: rotCode,
+      diaCode:   turno === "P" ? "P" : turno === "D" ? "D" : null,
+      nocheCode: turno === "N" ? "N" : null,
+      hasSeminar: false,
+    };
+  });
+  return { ok:true, becado:DEMO_BECADO, month:monthStr, days };
+}
+
 // ── API ───────────────────────────────────────────────────────────────────────
 async function apiGet(params) {
+  if (params.becado === DEMO_BECADO) {
+    await new Promise(r => setTimeout(r, 180));
+    const route = (params.route || "").toLowerCase();
+    if (route === "daily")          return demoDaily(params.date);
+    if (route === "personal-month") return demoPersonalMonth(params.month);
+    return { ok:false, error:"Demo: ruta no disponible" };
+  }
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
   const res = await fetch(url.toString());
@@ -460,34 +514,53 @@ function PullIndicator({ pullY, triggered, T }) {
 }
 
 // ── SwapTurnos — cambio de turnos con PIN ────────────────────────────────────
-// Sub-componente: selector de becado + turno del mes
-function TurnoSelector({ label, becados, month, tipoCode, selected, onSelect, T }) {
-  const [becado, setBecado]   = useState("");
-  const [turnos, setTurnos]   = useState([]); // [{date, code}]
+function nextMonthStr(m) {
+  const [y, mo] = m.split("-").map(Number);
+  const d = new Date(y, mo, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+function monthNameLabel(m) {
+  const [y, mo] = m.split("-").map(Number);
+  return new Date(y, mo-1, 1).toLocaleDateString("es-CL", { month:"long" });
+}
+
+// Sub-componente: selector de becado + turnos de este mes Y el siguiente
+function TurnoSelector({ label, becados, curMonth, tipoCode, selected, onSelect, T }) {
+  const [becado,   setBecado]   = useState("");
+  const [turnos,   setTurnos]   = useState([]);
   const [loadingT, setLoadingT] = useState(false);
 
-  // Cada vez que cambia becado o mes, carga sus turnos
+  const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF" };
+  const col = TIPO_COLOR[tipoCode] || "#64748B";
+  const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  const filterDays = (days, month) => (days || [])
+    .filter(day => tipoCode === "N" ? day.nocheCode === "N" : day.diaCode === tipoCode)
+    .map(day => ({ date: day.date, code: tipoCode, month }));
+
   useEffect(() => {
     if (!becado) { setTurnos([]); onSelect(null); return; }
     setLoadingT(true); setTurnos([]); onSelect(null);
-    apiGet({ route:"personal-month", becado, month, token:API_TOKEN })
-      .then(d => {
-        if (!d.ok) { setTurnos([]); return; }
-        // Filtrar solo días que tengan el tipoCode en diaCode o nocheCode
-        const found = (d.days || []).filter(day => {
-          if (tipoCode === "N") return day.nocheCode === "N";
-          return day.diaCode === tipoCode; // P o D
-        }).map(day => ({ date: day.date, code: tipoCode }));
-        setTurnos(found);
-      })
-      .catch(() => setTurnos([]))
-      .finally(() => setLoadingT(false));
-  }, [becado, month, tipoCode]);
+    const m2 = nextMonthStr(curMonth);
+    Promise.all([
+      apiGet({ route:"personal-month", becado, month: curMonth, token:API_TOKEN }),
+      apiGet({ route:"personal-month", becado, month: m2,       token:API_TOKEN }),
+    ]).then(([d1, d2]) => {
+      const t1 = d1.ok ? filterDays(d1.days, curMonth) : [];
+      const t2 = d2.ok ? filterDays(d2.days, m2)       : [];
+      setTurnos([...t1, ...t2]);
+    }).catch(() => setTurnos([])).finally(() => setLoadingT(false));
+  }, [becado, curMonth, tipoCode]);
 
-  // Reset turno seleccionado si cambia becado/tipo
   useEffect(() => { onSelect(null); }, [becado, tipoCode]);
 
-  const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+  // Agrupar por mes
+  const byMonth = turnos.reduce((acc, t) => {
+    if (!acc[t.month]) acc[t.month] = [];
+    acc[t.month].push(t);
+    return acc;
+  }, {});
+
   const selectStyle = {
     width:"100%", padding:"11px 36px 11px 14px", borderRadius:10,
     border:`1px solid ${T.border}`, background:T.surface2, color:T.text,
@@ -498,8 +571,6 @@ function TurnoSelector({ label, becados, month, tipoCode, selected, onSelect, T 
   return (
     <div>
       <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>{label}</div>
-
-      {/* Select becado */}
       <div style={{position:"relative",marginBottom:10}}>
         <select value={becado} onChange={e => setBecado(e.target.value)} style={selectStyle}>
           <option value="">Seleccionar becado…</option>
@@ -507,40 +578,46 @@ function TurnoSelector({ label, becados, month, tipoCode, selected, onSelect, T 
         </select>
         <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:T.muted,fontSize:12}}>▾</span>
       </div>
-
-      {/* Lista de turnos disponibles */}
       {becado && (
         loadingT ? (
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 0",color:T.muted,fontSize:13}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",color:T.muted,fontSize:13}}>
             <div style={{width:14,height:14,border:`2px solid ${T.border}`,borderTopColor:"#348FFF",borderRadius:"50%",animation:"spin 0.6s linear infinite",flexShrink:0}}/>
             Cargando turnos…
           </div>
         ) : turnos.length === 0 ? (
-          <div style={{padding:"10px 0",fontSize:13,color:T.muted}}>Sin turnos de este tipo este mes</div>
+          <div style={{padding:"8px 0",fontSize:13,color:T.muted}}>Sin turnos de este tipo</div>
         ) : (
-          <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
-            {turnos.map(t => {
-              const [y,m,d] = t.date.split("-").map(Number);
-              const dow = new Date(y,m-1,d).getDay();
-              const isSelected = selected?.date === t.date;
-              const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#818CF8" };
-              const col = TIPO_COLOR[tipoCode] || "#64748B";
-              return (
-                <button key={t.date} className="press" onClick={() => onSelect(isSelected ? null : { date:t.date, becado, code:tipoCode })}
-                  style={{
-                    padding:"6px 11px", borderRadius:9,
-                    border:`1.5px solid ${isSelected ? col : T.border}`,
-                    background: isSelected ? `${col}22` : T.surface2,
-                    color: isSelected ? col : T.sub,
-                    fontSize:13, fontWeight: isSelected ? 700 : 400,
-                    transition:"all 0.12s",
-                    display:"flex", alignItems:"center", gap:5,
-                  }}>
-                  <span style={{fontSize:10,opacity:0.65}}>{DIAS_ES[dow]}</span>
-                  <span>{d}</span>
-                </button>
-              );
-            })}
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {Object.entries(byMonth).map(([m, ts]) => (
+              <div key={m}>
+                <div style={{fontSize:10,fontWeight:700,color:T.muted,letterSpacing:"0.07em",textTransform:"capitalize",marginBottom:6}}>
+                  {monthNameLabel(m)}
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {ts.map(t => {
+                    const [ty,tm,td] = t.date.split("-").map(Number);
+                    const dow = new Date(ty,tm-1,td).getDay();
+                    const isSel = selected?.date === t.date;
+                    return (
+                      <button key={t.date} className="press"
+                        onClick={() => onSelect(isSel ? null : { date:t.date, becado, code:tipoCode })}
+                        style={{
+                          padding:"6px 11px", borderRadius:9,
+                          border:`1.5px solid ${isSel ? col : T.border}`,
+                          background: isSel ? `${col}22` : T.surface2,
+                          color: isSel ? col : T.sub,
+                          fontSize:13, fontWeight: isSel ? 700 : 400,
+                          transition:"all 0.12s",
+                          display:"flex", alignItems:"center", gap:5,
+                        }}>
+                        <span style={{fontSize:10,opacity:0.6}}>{DIAS_ES[dow]}</span>
+                        <span>{td}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )
       )}
@@ -555,33 +632,19 @@ function SwapTurnos({ becados, onClose, T }) {
   const TIPO_OPTS = [
     { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
     { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
-    { id:"N", label:"Noche", sheet:"Noche", color:"#818CF8" },
+    { id:"N", label:"Noche", sheet:"Noche", color:"#4F6EFF" },
   ];
   const [tipo,    setTipo]    = useState("P");
-  const [month,   setMonth]   = useState(curMonth);
   const [selA,    setSelA]    = useState(null); // {date, becado, code}
   const [selB,    setSelB]    = useState(null);
   const [pin,     setPin]     = useState("");
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
 
-  // Reset selections when tipo or month changes
   const handleTipo = (id) => { setTipo(id); setSelA(null); setSelB(null); setResult(null); };
-  const handleMonth = (delta) => {
-    const [y,m] = month.split("-").map(Number);
-    const d = new Date(y, m - 1 + delta, 1);
-    setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
-    setSelA(null); setSelB(null); setResult(null);
-  };
-
   const tipoObj  = TIPO_OPTS.find(t => t.id === tipo);
   const canSubmit = selA && selB && pin.length === 4 && !loading
     && !(selA.becado === selB.becado && selA.date === selB.date);
-
-  const monthLabel = (() => {
-    const [y,m] = month.split("-").map(Number);
-    return new Date(y,m-1,1).toLocaleDateString("es-CL",{month:"long",year:"numeric"});
-  })();
 
   const handleSwap = async () => {
     if (!canSubmit) return;
@@ -654,22 +717,10 @@ function SwapTurnos({ becados, onClose, T }) {
             </div>
           </div>
 
-          {/* Mes */}
-          <div>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>Mes</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button className="press" onClick={() => handleMonth(-1)}
-                style={{width:36,height:36,borderRadius:9,border:`1px solid ${T.border}`,background:T.surface2,fontSize:17,color:T.sub,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>‹</button>
-              <div style={{flex:1,textAlign:"center",fontSize:14,fontWeight:600,color:T.text,textTransform:"capitalize"}}>{monthLabel}</div>
-              <button className="press" onClick={() => handleMonth(1)}
-                style={{width:36,height:36,borderRadius:9,border:`1px solid ${T.border}`,background:T.surface2,fontSize:17,color:T.sub,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>›</button>
-            </div>
-          </div>
-
           {/* Becado A */}
           <TurnoSelector
             label="Becado A"
-            becados={becados} month={month} tipoCode={tipo}
+            becados={becados} curMonth={curMonth} tipoCode={tipo}
             selected={selA} onSelect={setSelA} T={T}
           />
 
@@ -683,7 +734,7 @@ function SwapTurnos({ becados, onClose, T }) {
           {/* Becado B */}
           <TurnoSelector
             label="Becado B"
-            becados={becados} month={month} tipoCode={tipo}
+            becados={becados} curMonth={curMonth} tipoCode={tipo}
             selected={selB} onSelect={setSelB} T={T}
           />
 
@@ -862,7 +913,7 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
 const TURNO = {
   P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Poli",  desde:"14:00", hasta:"17:59" },
   D: { accent:"#F59E0B", light:"#F59E0B12", glow:"#F59E0B28", label:"Día",   desde:"14:00", hasta:"19:59" },
-  N: { accent:"#818CF8", light:"#818CF812", glow:"#818CF828", label:"Noche", desde:"20:00", hasta:"--"    },
+  N: { accent:"#4F6EFF", light:"#4F6EFF12", glow:"#4F6EFF28", label:"Noche", desde:"20:00", hasta:"--"    },
 };
 
 // ── Section divider ───────────────────────────────────────────────────────────
@@ -1076,7 +1127,7 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
                 {grpCfg.label}
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {group.map(name => (
+                {group.filter(name => name !== DEMO_BECADO).map(name => (
                   <button key={name} className="press"
                     style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif"}}
                     onClick={() => onSelect(name)}
@@ -1092,6 +1143,24 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
             </div>
           );
         })}
+
+        {/* Becado demo — separado al fondo */}
+        <div className="anim" style={{marginBottom:20,animationDelay:"320ms"}}>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:T.muted}}/>
+            Modo demo
+          </div>
+          <button className="press"
+            style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px dashed ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif"}}
+            onClick={() => onSelect(DEMO_BECADO)}
+          >
+            <span style={{width:32,height:32,borderRadius:8,background:`${T.muted}18`,color:T.muted,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              ✦
+            </span>
+            <span style={{fontSize:14,fontWeight:500,color:T.sub,flex:1}}>{DEMO_BECADO}</span>
+            <span style={{fontSize:15,color:T.muted}}>›</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1159,7 +1228,7 @@ function TabHorario({ becado, onChangeBecado, T }) {
             <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
           {daily?.rotationCode && (
-            <div style={{display:"flex",alignItems:"center",gap:6,background:c.light,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"5px 11px",flexShrink:0,marginTop:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,background:c.light,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"5px 11px",flexShrink:0,marginTop:16}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 6px ${c.accent}`}}/>
               <span style={{fontSize:12,fontWeight:600,color:c.accent}}>{c.name}</span>
             </div>
@@ -1257,14 +1326,8 @@ function TabRotaciones({ onChangeBecado, T }) {
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+        <div style={{marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Rotaciones</div>
-          {onChangeBecado && (
-            <button className="press" onClick={onChangeBecado}
-              style={{background:"none",border:"none",padding:0,textAlign:"right",marginTop:4}}>
-              <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Becados</div>
-            </button>
-          )}
         </div>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
@@ -1413,11 +1476,10 @@ function TabSemana({ becado, onChangeBecado, T }) {
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
-          <button className="press" onClick={onChangeBecado}
-            style={{background:"none",border:"none",padding:0,textAlign:"right",marginTop:4}}>
-            <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Becados</div>
+        <div style={{marginBottom:12}}>
+          <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
+            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
@@ -1511,7 +1573,7 @@ function abbrevName(name) {
 
 // ── Tab: Turnos del mes ───────────────────────────────────────────────────────
 // ── Colores de turnos ─────────────────────────────────────────────────────────
-const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#818CF8" };
+const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF" };
 const SEMINAR_COLOR = "#E879F9";
 const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
 
@@ -1555,7 +1617,7 @@ function CalendarGrid({ slots, today, renderCell, T }) {
 const TURNO_TABS = [
   { id:"P", label:"Poli",      color:"#06B6D4" },
   { id:"D", label:"Día",       color:"#F59E0B" },
-  { id:"N", label:"Noche",     color:"#818CF8" },
+  { id:"N", label:"Noche",     color:"#4F6EFF" },
   { id:"S", label:"Seminarios",color:"#E879F9" },
 ];
 
@@ -1613,13 +1675,10 @@ function TabTurnos({ onBack, T }) {
     <div style={{minHeight:"100vh",background:T.bg,paddingBottom:24}}>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+        <div style={{marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
             {monthLabel(year, month)}
           </div>
-          <button className="press" onClick={onBack} style={{background:"none",border:"none",padding:0,marginTop:6}}>
-            <div style={{fontSize:13,fontWeight:600,color:T.sub}}>← Volver</div>
-          </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
@@ -1801,7 +1860,7 @@ function TabMes({ becado, T }) {
 
         {/* Leyenda */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-          {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#818CF8"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
+          {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#4F6EFF"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
             <div key={id} style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:color}}/>
               <span style={{fontSize:10,color:T.muted}}>{label}</span>
@@ -1821,7 +1880,7 @@ function TabMes({ becado, T }) {
             const badges  = [];
             if (turno.diaCode === "P") badges.push({ label:"P", color:"#06B6D4" });
             if (turno.diaCode === "D") badges.push({ label:"D", color:"#F59E0B" });
-            if (turno.nocheCode === "N") badges.push({ label:"N", color:"#818CF8" });
+            if (turno.nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
             if (day.seminario) badges.push({ label:"S", color:"#E879F9" });
             const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
 
@@ -2101,8 +2160,8 @@ export default function App() {
     const params = {route:"becados",token:API_TOKEN};
     apiSWR(
       params,
-      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } },
-      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } }
+      (data) => { if (data.ok && data.becados) { setBecados([...data.becados, DEMO_BECADO]); setLoadingInit(false); } },
+      (data) => { if (data.ok && data.becados) { setBecados([...data.becados, DEMO_BECADO]); setLoadingInit(false); } }
     ).catch(e => { setInitError(String(e.message||e)); setLoadingInit(false); });
   }, []);
 
@@ -2156,7 +2215,12 @@ export default function App() {
               </div>
             </>
         : showTurnos
-          ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
+          ? <>
+              <div style={{paddingBottom:80}}><TabTurnos onBack={() => setShowTurnos(false)} T={T}/></div>
+              <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 16px calc(var(--sab) + 20px)",background:T.tabBg,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,zIndex:50}}>
+                <button className="press" onClick={()=>setShowTurnos(false)} style={{width:"100%",height:40,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,fontSize:13,fontWeight:600,color:T.sub}}>&#8592; Volver</button>
+              </div>
+            </>
           : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} error={initError} T={T}/>
 
       ) : (
