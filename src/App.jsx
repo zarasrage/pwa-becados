@@ -29,7 +29,21 @@ const THEMES = {
     skeleton: "#E8EDF5",
     skeletonShine: "#F4F7FB",
   },
+  pink: {
+    bg:       "#FDF2F7",
+    surface:  "#FFF8FB",
+    surface2: "#FAE8F2",
+    border:   "#EFC8DC",
+    text:     "#2D0F1E",
+    sub:      "#7A3558",
+    muted:    "#BF80A0",
+    tabBg:    "rgba(253,242,247,0.94)",
+    skeleton: "#FAE8F2",
+    skeletonShine: "#FFF0F6",
+    accent:   "#D4397A",
+  },
 };
+const THEME_BG = { dark:"#0D1117", light:"#F4F7FB", pink:"#FFF0F6" };
 
 // ── Colores institucionales por rotación ──────────────────────────────────────
 const ROT = {
@@ -345,12 +359,63 @@ const CSS = `
   @keyframes spin      { to{transform:rotate(360deg)} }
   @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
   @keyframes shimmer   { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  @keyframes petalFall {
+    0%   { transform: translateY(-20px) rotate(0deg) scale(1);   opacity: 0; }
+    10%  { opacity: 0.7; }
+    80%  { opacity: 0.5; }
+    100% { transform: translateY(105vh) rotate(540deg) scale(0.7); opacity: 0; }
+  }
+  @keyframes petalSway {
+    0%,100% { margin-left: 0; }
+    25%     { margin-left: 18px; }
+    75%     { margin-left: -18px; }
+  }
   .anim  { animation: fadeUp 0.28s ease both; }
   .fade  { animation: fadeIn 0.2s ease both; }
   .press { transition: transform 0.1s, opacity 0.1s; -webkit-tap-highlight-color: transparent; cursor: pointer; user-select: none; }
   .press:active { transform: scale(0.96); opacity: 0.82; }
   ::-webkit-scrollbar { width: 0; }
+  .theme-pink .sakura-font { font-family: 'Georgia', 'Palatino', serif !important; }
+  .petal {
+    position: fixed; pointer-events: none; z-index: 999;
+    animation: petalFall linear infinite, petalSway ease-in-out infinite;
+    user-select: none;
+  }
 `;
+
+
+// ── Sakura petals ─────────────────────────────────────────────────────────────
+const PETAL_SHAPES = ["🌸","🌺","✿","❀","🌷"];
+const PETALS_CONFIG = Array.from({length: 12}, (_, i) => ({
+  id: i,
+  left:     `${(i * 8.3 + Math.sin(i * 1.7) * 6)}%`,
+  size:     10 + (i % 5) * 3,
+  duration: 6 + (i % 7) * 1.4,
+  swayDur:  2.5 + (i % 4) * 0.8,
+  delay:    -(i * 0.9 + (i % 3) * 1.2),
+  shape:    PETAL_SHAPES[i % PETAL_SHAPES.length],
+  opacity:  0.35 + (i % 4) * 0.1,
+}));
+
+function SakuraPetals() {
+  return (
+    <>
+      {PETALS_CONFIG.map(p => (
+        <div key={p.id} className="petal" style={{
+          left: p.left,
+          top: 0,
+          fontSize: p.size,
+          animationDuration: `${p.duration}s, ${p.swayDur}s`,
+          animationDelay: `${p.delay}s, ${p.delay * 0.7}s`,
+          opacity: p.opacity,
+          filter: "saturate(0.8) brightness(1.1)",
+        }}>
+          {p.shape}
+        </div>
+      ))}
+    </>
+  );
+}
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonLine({ width = "100%", height = 14, radius = 6, T, style = {} }) {
@@ -773,7 +838,7 @@ function SwapTurnos({ becados, onClose, T }) {
         {/* Botón fijo abajo */}
         <div style={{padding:`12px 20px calc(var(--sab) + 16px)`,flexShrink:0,borderTop:`1px solid ${T.border}`}}>
           <button className="press" onClick={handleSwap} disabled={!canSubmit}
-            style={{width:"100%",height:50,borderRadius:13,border:"none",background:canSubmit?"#348FFF":"#348FFF38",color:canSubmit?"#fff":"#ffffff80",fontSize:15,fontWeight:700,transition:"all 0.15s",cursor:canSubmit?"pointer":"default"}}>
+            style={{width:"100%",height:50,borderRadius:13,border:"none",background:canSubmit?(T?.accent||"#348FFF"):(T?.accent||"#348FFF")+"38",color:canSubmit?"#fff":"#ffffff80",fontSize:15,fontWeight:700,transition:"all 0.15s",cursor:canSubmit?"pointer":"default"}}>
             {loading ? "Aplicando…" : "Confirmar cambio"}
           </button>
         </div>
@@ -808,14 +873,15 @@ function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, onSwapTurnos
           <span style={{fontSize:15}}>🎭</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Ver intro</span>
         </button>
-        <button className="press" onClick={onToggle}
+        <button className="press"
+          onClick={onToggle}
           style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
           <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <span style={{fontSize:16}}>{theme==="dark" ? "🌙" : "☀️"}</span>
-            <span style={{fontSize:13,fontWeight:500,color:T.text}}>{theme==="dark" ? "Dark" : "Light"}</span>
+            <span style={{fontSize:16}}>{theme==="dark"||theme==="pink" ? "🌙" : "☀️"}</span>
+            <span style={{fontSize:13,fontWeight:500,color:T.text}}>{theme==="dark"||theme==="pink" ? "Dark" : "Light"}</span>
           </div>
-          <div style={{width:36,height:20,borderRadius:99,background:theme==="dark"?"#348FFF":T.border,position:"relative",transition:"background 0.2s",flexShrink:0}}>
-            <div style={{position:"absolute",top:2,left:theme==="dark"?18:2,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
+          <div style={{width:36,height:20,borderRadius:99,background:theme==="light"?T.border:(T.accent||"#348FFF"),position:"relative",transition:"background 0.2s",flexShrink:0}}>
+            <div style={{position:"absolute",top:2,left:theme==="light"?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
           </div>
         </button>
       </div>
@@ -866,7 +932,7 @@ function DateNav({ date, today, onPrev, onNext, onToday, T }) {
       </button>
       {!isToday && (
         <button className="press" onClick={onToday}
-          style={{height:32,padding:"0 11px",borderRadius:8,border:"1px solid #348FFF60",background:"#348FFF14",fontSize:11,fontWeight:700,color:"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+          style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
           HOY
         </button>
       )}
@@ -1490,7 +1556,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
           {!isThisWeek && (
             <button className="press" onClick={()=>setRefDate(today)}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:"1px solid #348FFF60",background:"#348FFF14",fontSize:11,fontWeight:700,color:"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
@@ -1929,7 +1995,7 @@ function TabBar({ active, onChange, T }) {
           >
             <span style={{fontSize:18,lineHeight:1}}>{tab.icon}</span>
             <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
-            <span style={{width:isActive?18:0,height:2,borderRadius:99,background:"#348FFF",transition:"width 0.22s ease",marginTop:1}}/>
+            <span style={{width:isActive?18:0,height:2,borderRadius:99,background:T.accent||"#348FFF",transition:"width 0.22s ease",marginTop:1}}/>
           </button>
         );
       })}
@@ -2125,29 +2191,50 @@ export default function App() {
   const [showRotaciones, setShowRotaciones] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
 
-  const T = THEMES[theme];
+  const ACCENT = theme === "pink" ? "#D4397A" : "#348FFF";
+  const T = { ...THEMES[theme], accent: ACCENT };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     safeStorage.set("activeTab", tab);
   };
 
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
+  const toggleTapCount = useRef(0);
+  const toggleTapTimer = useRef(null);
+
+  const applyTheme = (next) => {
     setTheme(next);
     safeStorage.set("theme", next);
-    const bg = next === "dark" ? "#0D1117" : "#F4F7FB";
+    const bg = THEME_BG[next] || "#0D1117";
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
+    document.body.classList.toggle("theme-pink", next === "pink");
+  };
+
+  const toggleTheme = () => {
+    // Secret: 5 taps in < 3s activa Sakura
+    if (theme !== "pink") {
+      toggleTapCount.current += 1;
+      clearTimeout(toggleTapTimer.current);
+      if (toggleTapCount.current >= 5) {
+        toggleTapCount.current = 0;
+        applyTheme("pink");
+        return;
+      }
+      toggleTapTimer.current = setTimeout(() => { toggleTapCount.current = 0; }, 3000);
+    }
+    // Toggle normal dark ↔ light (salir de pink vuelve a dark)
+    const next = theme === "light" ? "dark" : "light";
+    applyTheme(next);
   };
 
   useEffect(() => {
-    const bg = theme === "dark" ? "#0D1117" : "#F4F7FB";
+    const bg = THEME_BG[theme] || "#0D1117";
     const meta = document.querySelector("meta[name='theme-color']");
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
-    // Limpiar caché expirado cuando el browser esté idle (no bloquea la carga)
+    document.body.classList.toggle("theme-pink", theme === "pink");
     if (typeof requestIdleCallback !== "undefined") {
       requestIdleCallback(() => purgeCacheStorage());
     } else {
@@ -2190,7 +2277,9 @@ export default function App() {
   return (
     <div style={{
       minHeight:"100vh",
-      background:T.bg,
+      background: theme === "pink"
+        ? "linear-gradient(160deg, #FDF2F7 0%, #FFF8FB 40%, #FAE8F2 100%)"
+        : T.bg,
       maxWidth:480,
       margin:"0 auto",
       fontFamily:"'Inter',sans-serif",
@@ -2198,6 +2287,7 @@ export default function App() {
       position:"relative",
     }}>
       <style>{CSS}</style>
+      {theme === "pink" && <SakuraPetals/>}
       {(showSplash || previewSplash) && <SplashScreen/>}
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
