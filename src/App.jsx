@@ -1817,17 +1817,24 @@ function TabTurnos({ onBack, T }) {
   const handleRefresh = () => {
     if (refreshing) return;
     setRefreshing(true);
-    // Fetch directo SIN borrar caché antes ni blanquear pantalla
-    // El caché se reemplaza solo si el fetch tiene éxito
-    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
     setError("");
-    apiGet(params)
-      .then(fresh => {
-        cacheSet(params, fresh);
-        setData(fresh);
-        setRefreshing(false);
-      })
-      .catch(() => { setRefreshing(false); }); // sin conexión: datos y caché intactos
+    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
+    // 1) Invalidar caché del servidor (Apps Script CacheService)
+    // 2) Pedir datos frescos
+    // Si falla: datos y caché del cliente quedan intactos
+    apiGet({ route:"invalidate_cache", token: API_TOKEN })
+      .catch(() => {}) // si falla la invalidación, igual intentamos el fetch
+      .finally(() => {
+        safeStorage.remove(cacheKey(params)); // limpiar caché cliente también
+        apiGet(params)
+          .then(fresh => {
+            if (!fresh?.ok) { setRefreshing(false); return; }
+            cacheSet(params, fresh);
+            setData(fresh);
+            setRefreshing(false);
+          })
+          .catch(() => { setRefreshing(false); });
+      });
   };
 
 
@@ -2001,10 +2008,14 @@ function TabMes({ becado, T }) {
     if (refreshingMes) return;
     setRefreshingMes(true);
     const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
-    setError("");
-    apiGet(params)
-      .then(fresh => { cacheSet(params, fresh); applyMonthData(fresh); setRefreshingMes(false); })
-      .catch(() => { setRefreshingMes(false); });
+    apiGet({ route:"invalidate_cache", token: API_TOKEN })
+      .catch(() => {})
+      .finally(() => {
+        safeStorage.remove(cacheKey(params));
+        apiGet(params)
+          .then(fresh => { cacheSet(params, fresh); applyMonthData(fresh); setRefreshingMes(false); })
+          .catch(() => { setRefreshingMes(false); });
+      });
   };
 
   const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
