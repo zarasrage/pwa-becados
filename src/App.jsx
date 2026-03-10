@@ -46,21 +46,40 @@ const THEMES = {
     skeletonShine: "#F4F7FB",
   },
   pink: {
-    bg:       "#FEE6F2",
-    surface:  "#FFF0F8",
-    surface2: "#FCDAED",
-    border:   "#F4A8CE",
-    text:     "#1E0713",
-    sub:      "#8B1A4A",
-    muted:    "#CF6A9C",
-    tabBg:    "rgba(254,230,242,0.96)",
-    skeleton: "#FCDAED",
-    skeletonShine: "#FFF0F8",
-    accent:   "#E8186A",
-    glow:     "#E8186A",
+    bg:"#FEE6F2", surface:"#FFF0F8", surface2:"#FCDAED", border:"#F4A8CE",
+    text:"#1E0713", sub:"#8B1A4A", muted:"#CF6A9C", tabBg:"rgba(254,230,242,0.96)",
+    skeleton:"#FCDAED", skeletonShine:"#FFF0F8", accent:"#E8186A", glow:"#E8186A",
+  },
+  ocean: {
+    bg:"#04080F", surface:"#071424", surface2:"#0A1C32", border:"#0E3050",
+    text:"#C8EEFF", sub:"#4A9CC4", muted:"#1A4060", tabBg:"rgba(4,8,15,0.95)",
+    skeleton:"#0A1C32", skeletonShine:"#0E2442", accent:"#00C8FF", glow:"#00C8FF",
+  },
+  sunset: {
+    bg:"#0F0500", surface:"#1C0A05", surface2:"#271108", border:"#3D1A0C",
+    text:"#FFE8CC", sub:"#C06830", muted:"#6A2E10", tabBg:"rgba(15,5,0,0.95)",
+    skeleton:"#271108", skeletonShine:"#341608", accent:"#FF5500", glow:"#FF5500",
+  },
+  forest: {
+    bg:"#020A04", surface:"#071510", surface2:"#0A1E14", border:"#123520",
+    text:"#C8F0D4", sub:"#3A8A52", muted:"#184C28", tabBg:"rgba(2,10,4,0.95)",
+    skeleton:"#0A1E14", skeletonShine:"#0E281C", accent:"#22D45A", glow:"#22D45A",
+  },
+  aurora: {
+    bg:"#020510", surface:"#060B1C", surface2:"#0A1028", border:"#101830",
+    text:"#DDE8FF", sub:"#607CC4", muted:"#20304A", tabBg:"rgba(2,5,16,0.95)",
+    skeleton:"#0A1028", skeletonShine:"#0E1638", accent:"#8A5CF6", glow:"#8A5CF6",
+  },
+  neon: {
+    bg:"#03000A", surface:"#080018", surface2:"#0D0024", border:"#1E0040",
+    text:"#F0E6FF", sub:"#9050E0", muted:"#3A1060", tabBg:"rgba(3,0,10,0.96)",
+    skeleton:"#0D0024", skeletonShine:"#140030", accent:"#CC00FF", glow:"#CC00FF",
   },
 };
-const THEME_BG = { dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2" };
+const THEME_BG = {
+  dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2",
+  ocean:"#04080F", sunset:"#0F0500", forest:"#020A04", aurora:"#020510", neon:"#03000A",
+};
 
 // ── Colores institucionales por rotación ──────────────────────────────────────
 const ROT = {
@@ -428,6 +447,53 @@ const CSS = `
     animation: petalFall linear infinite, petalSway ease-in-out infinite;
     user-select: none;
   }
+  @keyframes bubbleRise {
+    0%   { transform: translateY(0) scale(1); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 0.6; }
+    100% { transform: translateY(-110vh) scale(0.5); opacity: 0; }
+  }
+  @keyframes bubbleSway {
+    0%,100% { margin-left: 0px; }
+    33%     { margin-left: 18px; }
+    66%     { margin-left: -12px; }
+  }
+  @keyframes auroraShift1 {
+    0%   { transform: translate(0%,0%) scale(1); }
+    100% { transform: translate(8%,12%) scale(1.2); }
+  }
+  @keyframes auroraShift2 {
+    0%   { transform: translate(0%,0%) scale(1.1); }
+    100% { transform: translate(-10%,8%) scale(0.9); }
+  }
+  @keyframes auroraShift3 {
+    0%   { transform: translate(0%,0%) scale(0.9); }
+    100% { transform: translate(6%,-10%) scale(1.15); }
+  }
+  @keyframes fireflyFloat {
+    0%,100% { transform: translate(0,0) scale(1); opacity: 0.15; }
+    25%     { transform: translate(12px,-18px) scale(1.3); opacity: 0.9; }
+    50%     { transform: translate(-8px,-8px) scale(0.8); opacity: 0.5; }
+    75%     { transform: translate(16px,-24px) scale(1.1); opacity: 0.8; }
+  }
+  @keyframes emberRise {
+    0%   { transform: translateY(0) scale(1) rotate(0deg); opacity: 0; }
+    10%  { opacity: 1; }
+    80%  { opacity: 0.6; }
+    100% { transform: translateY(-90vh) scale(0.2) rotate(360deg); opacity: 0; }
+  }
+  @keyframes neonPulseA {
+    0%,100% { opacity: 0.6; transform: scale(1); }
+    50%     { opacity: 1;   transform: scale(1.15); }
+  }
+  @keyframes neonPulseB {
+    0%,100% { opacity: 0.4; transform: scale(1.1); }
+    50%     { opacity: 0.9; transform: scale(0.9); }
+  }
+  @keyframes popIn {
+    0%   { opacity:0; transform: translate(-50%,-50%) scale(0.88); }
+    100% { opacity:1; transform: translate(-50%,-50%) scale(1); }
+  }
 `;
 
 
@@ -480,6 +546,438 @@ function SakuraPetals() {
           <PetalSVG size={p.size} color={p.color} opacity={p.opacity}/>
         </div>
       ))}
+    </>
+  );
+}
+
+// ── Efectos ambientales por tema ─────────────────────────────────────────────
+
+function OceanBubbles() {
+  const bubbles = Array.from({length:22},(_,i)=>({
+    id:i,
+    size: i%4===0 ? 18+Math.sin(i)*8 : i%3===0 ? 10+Math.cos(i)*4 : 3+Math.sin(i*1.7)*3,
+    x: 4+i*4.2+Math.cos(i*0.8)*12,
+    dur: i%4===0 ? 14+Math.sin(i)*4 : 6+Math.sin(i)*3,
+    delay: -(i*0.7),
+    swayDur: 3+Math.cos(i*1.3)*1.5,
+    opacity: i%4===0 ? 0.15 : i%3===0 ? 0.25 : 0.45,
+  }));
+  const rays = Array.from({length:5},(_,i)=>({
+    id:i, x:10+i*18, rot:-15+i*6, dur:8+i*2.5, delay:-(i*1.8),
+  }));
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      {/* Deep water gradient */}
+      <div style={{position:"fixed",inset:0,
+        background:"linear-gradient(to bottom, #001830 0%, #04080F 40%, #001025 100%)",
+        opacity:0.6}}/>
+      {/* Light rays from above */}
+      {rays.map(r=>(
+        <div key={r.id} style={{
+          position:"absolute",top:-60,left:`${r.x}%`,
+          width:30,height:"70%",
+          background:`linear-gradient(to bottom, #00C8FF18, transparent)`,
+          transform:`rotate(${r.rot}deg)`,
+          transformOrigin:"top center",
+          filter:"blur(8px)",
+          animation:`neonPulseA ${r.dur}s ${r.delay}s ease-in-out infinite`,
+        }}/>
+      ))}
+      {/* Ambient glow orbs */}
+      <div style={{position:"fixed",top:-60,left:"5%",width:400,height:400,borderRadius:"50%",
+        background:"radial-gradient(circle, #00C8FF0D 0%, transparent 70%)",filter:"blur(60px)",
+        animation:"neonPulseA 12s ease-in-out infinite"}}/>
+      <div style={{position:"fixed",bottom:-80,right:"-5%",width:350,height:350,borderRadius:"50%",
+        background:"radial-gradient(circle, #0055FF0F 0%, transparent 70%)",filter:"blur(70px)",
+        animation:"neonPulseB 15s ease-in-out infinite"}}/>
+      {/* Bubbles: big/medium/small */}
+      {bubbles.map(b=>(
+        <div key={b.id} style={{
+          position:"absolute",bottom:-20,left:`${b.x}%`,
+          width:b.size,height:b.size,borderRadius:"50%",
+          background:`radial-gradient(circle at 30% 25%, #00C8FF${Math.round(b.opacity*80).toString(16).padStart(2,"0")}, transparent 70%)`,
+          border:`1px solid #00C8FF${Math.round(b.opacity*120).toString(16).padStart(2,"0")}`,
+          boxShadow: b.size>12 ? `0 0 ${b.size}px #00C8FF20` : "none",
+          animation:`bubbleRise ${b.dur}s ${b.delay}s infinite ease-in, bubbleSway ${b.swayDur}s ${b.delay*0.4}s infinite ease-in-out`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function AuroraEffect() {
+  const stars = Array.from({length:40},(_,i)=>({
+    id:i, x:Math.sin(i*137.5)*50+50, y:Math.cos(i*97.3)*40+20,
+    size:Math.sin(i*1.7)*0.8+1.2, dur:2+Math.cos(i)*1.5, delay:-(i*0.3),
+  }));
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      {/* Star field */}
+      {stars.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
+          width:s.size,height:s.size,borderRadius:"50%",
+          background:"#C8D8FF",
+          boxShadow:`0 0 ${s.size*2}px #8A5CF680`,
+          animation:`neonPulseA ${s.dur}s ${s.delay}s ease-in-out infinite`,
+          opacity:0.6,
+        }}/>
+      ))}
+      {/* Aurora curtains — violet */}
+      <div style={{position:"absolute",top:"-30%",left:"-20%",width:"80%",height:"70%",
+        background:"radial-gradient(ellipse, #8A5CF630 0%, #4F46E514 45%, transparent 70%)",
+        filter:"blur(50px)",animation:"auroraShift1 12s ease-in-out infinite alternate"}}/>
+      {/* Aurora curtains — cyan/teal */}
+      <div style={{position:"absolute",top:"0%",right:"-30%",width:"90%",height:"60%",
+        background:"radial-gradient(ellipse, #06B6D422 0%, #0EA5E910 45%, transparent 70%)",
+        filter:"blur(60px)",animation:"auroraShift2 16s ease-in-out infinite alternate"}}/>
+      {/* Aurora curtains — green */}
+      <div style={{position:"absolute",top:"20%",left:"-10%",width:"70%",height:"50%",
+        background:"radial-gradient(ellipse, #22D45A18 0%, #4ADE8008 45%, transparent 70%)",
+        filter:"blur(65px)",animation:"auroraShift3 19s ease-in-out infinite alternate"}}/>
+      {/* Aurora curtains — deep rose */}
+      <div style={{position:"absolute",bottom:"-20%",right:"5%",width:"75%",height:"60%",
+        background:"radial-gradient(ellipse, #C026D316 0%, #8A5CF608 50%, transparent 70%)",
+        filter:"blur(70px)",animation:"auroraShift1 22s 4s ease-in-out infinite alternate-reverse"}}/>
+      {/* Top vignette glow */}
+      <div style={{position:"absolute",inset:0,
+        background:"radial-gradient(ellipse at 50% -10%, #8A5CF612, transparent 55%)"}}/>
+      {/* Bottom fade to solid bg */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"30%",
+        background:"linear-gradient(to top, #020510, transparent)"}}/>
+    </div>
+  );
+}
+
+function ForestFireflies() {
+  const flies = Array.from({length:24},(_,i)=>({
+    id:i,
+    x: 3+i*3.8+Math.sin(i*2.1)*12,
+    y: 10+Math.cos(i*1.8)*38,
+    dur: 2.5+Math.sin(i)*2+1.5,
+    delay: -(i*0.42),
+    size: 1.5+Math.cos(i*1.3)*1.8+2,
+    bright: i%5===0 ? 1 : i%3===0 ? 0.7 : 0.35,  // some brighter
+    hue: i%7===0 ? "#AAFF70" : i%5===0 ? "#00FF88" : "#22D45A", // slight hue variation
+  }));
+  const mistLayers = [
+    {bottom:"5%", opacity:0.18, dur:25, delay:0},
+    {bottom:"12%", opacity:0.10, dur:32, delay:-8},
+    {bottom:"20%", opacity:0.06, dur:40, delay:-15},
+  ];
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      {/* Deep forest canopy top */}
+      <div style={{position:"fixed",top:0,left:0,right:0,height:"25%",
+        background:"linear-gradient(to bottom, #010602, transparent)"}}/>
+      {/* Ground fog layers */}
+      {mistLayers.map((m,i)=>(
+        <div key={i} style={{
+          position:"fixed",bottom:m.bottom,left:"-20%",right:"-20%",height:80,
+          background:"radial-gradient(ellipse at 50% 100%, #22D45A12, transparent 70%)",
+          filter:"blur(20px)",
+          opacity:m.opacity,
+          animation:`auroraShift1 ${m.dur}s ${m.delay}s ease-in-out infinite alternate`,
+        }}/>
+      ))}
+      {/* Bottom solid vignette */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"40%",
+        background:"linear-gradient(to top, #020A04 15%, transparent)"}}/>
+      {/* Ambient canopy glow */}
+      <div style={{position:"fixed",top:-60,left:"20%",width:380,height:300,
+        background:"radial-gradient(ellipse, #22D45A0A, transparent 70%)",filter:"blur(55px)",
+        animation:"neonPulseA 18s ease-in-out infinite"}}/>
+      {/* Fireflies */}
+      {flies.map(f=>(
+        <div key={f.id} style={{
+          position:"absolute",left:`${f.x}%`,top:`${f.y}%`,
+          width:f.size,height:f.size,borderRadius:"50%",
+          background:f.hue,
+          boxShadow:`0 0 ${f.size*4}px ${f.size}px ${f.hue}${Math.round(f.bright*180).toString(16).padStart(2,"0")}, 0 0 ${f.size*10}px ${f.hue}40`,
+          opacity:f.bright,
+          animation:`fireflyFloat ${f.dur}s ${f.delay}s ease-in-out infinite`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function SunsetEmbers() {
+  const embers = Array.from({length:20},(_,i)=>({
+    id:i,
+    x: 2+i*4.8+Math.sin(i*1.9)*14,
+    dur: 7+Math.cos(i)*4, delay:-(i*0.6),
+    size: i%5===0 ? 4+Math.sin(i)*2 : 1.2+Math.sin(i*1.4)*1.5,
+    color: i%4===0 ? "#FFDD00" : i%3===0 ? "#FFAA40" : "#FF5500",
+  }));
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      {/* Volcanic sky gradient */}
+      <div style={{position:"fixed",inset:0,
+        background:"linear-gradient(to bottom, #200800 0%, #0F0500 35%, transparent 65%)",
+        opacity:0.7}}/>
+      {/* Lava horizon glow */}
+      <div style={{position:"fixed",bottom:"15%",left:"-10%",right:"-10%",height:120,
+        background:"radial-gradient(ellipse at 50% 100%, #FF3300 0%, #FF550030 40%, transparent 70%)",
+        filter:"blur(30px)",
+        animation:"neonPulseA 4s ease-in-out infinite"}}/>
+      {/* Heat halo — pulsing crown */}
+      <div style={{position:"fixed",top:"-20%",left:"10%",right:"10%",height:"60%",
+        background:"radial-gradient(ellipse at 50% 0%, #FF220018 0%, #FF550008 40%, transparent 70%)",
+        filter:"blur(40px)",
+        animation:"neonPulseB 6s ease-in-out infinite"}}/>
+      {/* Side lava walls */}
+      <div style={{position:"fixed",top:0,left:0,width:"15%",height:"100%",
+        background:"linear-gradient(to right, #FF220008, transparent)",
+        filter:"blur(20px)"}}/>
+      <div style={{position:"fixed",top:0,right:0,width:"15%",height:"100%",
+        background:"linear-gradient(to left, #FF220008, transparent)",
+        filter:"blur(20px)"}}/>
+      {/* Ground */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"45%",
+        background:"linear-gradient(to top, #0F0500 20%, transparent)"}}/>
+      {/* Embers */}
+      {embers.map(e=>(
+        <div key={e.id} style={{
+          position:"absolute",bottom:-10,left:`${e.x}%`,
+          width:e.size,height:e.size*(1.2+Math.sin(e.id)*0.6),borderRadius:"50% 50% 40% 40%",
+          background:`radial-gradient(circle at 40% 30%, #FFEE80, ${e.color})`,
+          boxShadow:`0 0 ${e.size*5}px ${e.size*2.5}px ${e.color}70`,
+          animation:`emberRise ${e.dur}s ${e.delay}s infinite ease-out`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+function NeonGrid() {
+  const hLines = [15, 32, 50, 68, 84];
+  const vLines = [20, 40, 60, 80];
+  const glitchBars = Array.from({length:3},(_,i)=>({
+    id:i, top:15+i*28, dur:0.12, delay:3+i*5.5, height:2+i,
+  }));
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+      {/* Scanlines */}
+      <div style={{position:"absolute",inset:0,
+        backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px)",
+        pointerEvents:"none"}}/>
+      {/* Tron horizontal grid lines */}
+      {hLines.map((t,i)=>(
+        <div key={i} style={{
+          position:"fixed",top:`${t}%`,left:0,right:0,height:1,
+          background:`linear-gradient(90deg, transparent 5%, #CC00FF${i===2?"28":"14"} 50%, transparent 95%)`,
+          animation:`neonPulseB ${5+i*1.5}s ${-i*2}s ease-in-out infinite`,
+        }}/>
+      ))}
+      {/* Tron vertical grid lines */}
+      {vLines.map((l,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:`${l}%`,top:0,bottom:0,width:1,
+          background:`linear-gradient(180deg, transparent 5%, #FF00FF10 50%, transparent 95%)`,
+          animation:`neonPulseA ${7+i*2}s ${-i*1.8}s ease-in-out infinite`,
+        }}/>
+      ))}
+      {/* Glitch displacement bars */}
+      {glitchBars.map(g=>(
+        <div key={g.id} style={{
+          position:"fixed",top:`${g.top}%`,left:0,right:0,height:g.height,
+          background:`linear-gradient(90deg, transparent, #CC00FF30, #FF00FF20, transparent)`,
+          filter:"blur(1px)",
+          animation:`neonPulseB ${g.dur}s ${g.delay}s step-end infinite`,
+          opacity:0,
+        }}/>
+      ))}
+      {/* Main glow orbs */}
+      <div style={{position:"fixed",top:"8%",left:"-10%",width:320,height:320,borderRadius:"50%",
+        background:"radial-gradient(circle, #CC00FF20, transparent 70%)",filter:"blur(40px)",
+        animation:"neonPulseA 6s ease-in-out infinite"}}/>
+      <div style={{position:"fixed",bottom:"12%",right:"-14%",width:380,height:380,borderRadius:"50%",
+        background:"radial-gradient(circle, #FF00FF18, transparent 70%)",filter:"blur(50px)",
+        animation:"neonPulseB 8s ease-in-out infinite"}}/>
+      <div style={{position:"fixed",top:"42%",left:"35%",width:200,height:200,borderRadius:"50%",
+        background:"radial-gradient(circle, #7700FF16, transparent 70%)",filter:"blur(30px)",
+        animation:"neonPulseA 10s 2s ease-in-out infinite reverse"}}/>
+      {/* Cyan accent orb */}
+      <div style={{position:"fixed",top:"60%",left:"-5%",width:220,height:220,borderRadius:"50%",
+        background:"radial-gradient(circle, #00FFFF0C, transparent 70%)",filter:"blur(40px)",
+        animation:"neonPulseB 13s 1s ease-in-out infinite"}}/>
+      {/* Bright corner flare */}
+      <div style={{position:"fixed",top:0,right:0,width:180,height:180,
+        background:"radial-gradient(circle at 100% 0%, #CC00FF18, transparent 70%)",
+        filter:"blur(30px)"}}/>
+    </div>
+  );
+}
+
+// ── ThemePicker ───────────────────────────────────────────────────────────────
+const THEME_OPTIONS = [
+  { id:"dark",   name:"Void",    desc:"El original",          preview:["#0D1117","#161B22","#348FFF"], emoji:"⬛", tag:null },
+  { id:"light",  name:"Blanco",  desc:"Claridad total",        preview:["#F4F7FB","#FFFFFF","#348FFF"], emoji:"☀️", tag:null },
+  { id:"pink",   name:"Sakura",  desc:"Pétalos de cerezo",     preview:["#FEE6F2","#FFF0F8","#E8186A"], emoji:"🌸", tag:"✦ SECRET" },
+  { id:"ocean",  name:"Abismo",  desc:"Profundidades del mar", preview:["#04080F","#071424","#00C8FF"], emoji:"🌊", tag:"✦ SECRET" },
+  { id:"sunset", name:"Volcán",  desc:"Calor y brasa",         preview:["#0F0500","#1C0A05","#FF5500"], emoji:"🌋", tag:"✦ SECRET" },
+  { id:"forest", name:"Bosque",  desc:"Luciérnagas nocturnas", preview:["#020A04","#071510","#22D45A"], emoji:"🌿", tag:"✦ SECRET" },
+  { id:"aurora", name:"Aurora",  desc:"Luces del norte",       preview:["#020510","#060B1C","#8A5CF6"], emoji:"🔮", tag:"✦ SECRET" },
+  { id:"neon",   name:"Glitch",  desc:"Ciudad cyberpunk",      preview:["#03000A","#080018","#CC00FF"], emoji:"⚡", tag:"✦ SECRET" },
+];
+
+const ACCENT_MAP = {
+  dark:"#348FFF", light:"#348FFF", pink:"#E8186A",
+  ocean:"#00C8FF", sunset:"#FF5500", forest:"#22D45A", aurora:"#8A5CF6", neon:"#CC00FF",
+};
+
+function ThemePicker({ current, onSelect, onClose }) {
+  const [hovered, setHovered] = useState(null);
+  const accent = ACCENT_MAP[current] || "#348FFF";
+  const isDark = !["light"].includes(current);
+
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position:"fixed",inset:0,zIndex:290,
+        background:"rgba(0,0,0,0.65)",
+        backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",
+        animation:"fadeIn 0.18s ease both",
+      }}/>
+      <div style={{
+        position:"fixed",left:"50%",top:"50%",
+        transform:"translate(-50%,-50%)",
+        zIndex:300,
+        width:"min(94vw, 400px)",
+        background: isDark
+          ? `linear-gradient(160deg, ${accent}08 0%, #000000F0 40%)`
+          : "rgba(255,255,255,0.97)",
+        border:`1px solid ${accent}35`,
+        borderRadius:28,
+        padding:"22px 16px 18px",
+        boxShadow:`0 0 80px ${accent}20, 0 0 0 1px ${accent}15, 0 32px 80px rgba(0,0,0,0.6)`,
+        animation:"popIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both",
+        fontFamily:"'Inter',sans-serif",
+        overflowY:"auto",
+        maxHeight:"88vh",
+      }}>
+        <div style={{
+          position:"absolute",top:0,left:"10%",right:"10%",height:1,
+          background:`linear-gradient(90deg, transparent, ${accent}80, transparent)`,
+          borderRadius:99,
+        }}/>
+        <div style={{textAlign:"center",marginBottom:20,position:"relative"}}>
+          <div style={{
+            display:"inline-flex",alignItems:"center",gap:6,
+            fontSize:9,fontWeight:800,letterSpacing:"0.2em",textTransform:"uppercase",
+            color:accent,marginBottom:8,
+            padding:"3px 10px",
+            background:`${accent}12`,
+            border:`1px solid ${accent}25`,
+            borderRadius:99,
+          }}>
+            <span style={{width:4,height:4,borderRadius:"50%",background:accent,display:"inline-block",boxShadow:`0 0 6px ${accent}`}}/>
+            TEMAS SECRETOS
+            <span style={{width:4,height:4,borderRadius:"50%",background:accent,display:"inline-block",boxShadow:`0 0 6px ${accent}`}}/>
+          </div>
+          <div style={{
+            fontFamily:"'Bricolage Grotesque',sans-serif",
+            fontSize:24,fontWeight:800,lineHeight:1.1,
+            color: isDark ? "#F0EFFF" : "#0A0A14",
+            letterSpacing:"-0.02em",
+          }}>
+            Elige tu universo
+          </div>
+          <div style={{fontSize:11,color: isDark ? "#556080" : "#94A3B8",marginTop:4}}>
+            Cada tema transforma la experiencia
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+          {THEME_OPTIONS.map((opt, i) => {
+            const ac      = ACCENT_MAP[opt.id] || "#348FFF";
+            const isActive = current === opt.id;
+            const isHov    = hovered === opt.id;
+            const isSecret = !!opt.tag;
+            return (
+              <button key={opt.id} className="press"
+                onPointerEnter={() => setHovered(opt.id)}
+                onPointerLeave={() => setHovered(null)}
+                onClick={() => { onSelect(opt.id); onClose(); }}
+                style={{
+                  position:"relative",
+                  background: isActive
+                    ? `linear-gradient(135deg, ${ac}22 0%, ${ac}0A 100%)`
+                    : isHov
+                      ? `${opt.preview[0]}EE`
+                      : `${opt.preview[0]}CC`,
+                  border:`1.5px solid ${isActive ? ac+"70" : isHov ? ac+"40" : ac+"18"}`,
+                  borderRadius:18,
+                  padding:"13px 11px 11px",
+                  cursor:"pointer",
+                  textAlign:"left",
+                  transition:"all 0.16s ease",
+                  overflow:"hidden",
+                  boxShadow: isActive
+                    ? `0 0 24px ${ac}25, inset 0 0 24px ${ac}08`
+                    : isHov
+                      ? `0 4px 20px rgba(0,0,0,0.4), 0 0 12px ${ac}15`
+                      : "none",
+                }}>
+                {isActive && (
+                  <div style={{
+                    position:"absolute",top:0,left:"15%",right:"15%",height:2,
+                    background:`linear-gradient(90deg, transparent, ${ac}, transparent)`,
+                    borderRadius:99,
+                  }}/>
+                )}
+                {isSecret && (
+                  <div style={{
+                    position:"absolute",top:8,right:8,
+                    fontSize:6,fontWeight:800,letterSpacing:"0.1em",
+                    color:ac,background:`${ac}18`,border:`1px solid ${ac}30`,
+                    borderRadius:99,padding:"2px 5px",
+                    opacity: isActive || isHov ? 1 : 0.6,
+                  }}>{opt.tag}</div>
+                )}
+                {isActive && (
+                  <div style={{
+                    position:"absolute",top:9,left:9,
+                    width:7,height:7,borderRadius:"50%",
+                    background:ac,boxShadow:`0 0 10px ${ac}, 0 0 4px ${ac}`,
+                  }}/>
+                )}
+                <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:10}}>
+                  <div style={{width:22,height:22,borderRadius:8,background:opt.preview[0],border:`1px solid ${ac}20`,flexShrink:0}}/>
+                  <div style={{width:16,height:16,borderRadius:6,background:opt.preview[1],border:`1px solid ${ac}15`,flexShrink:0}}/>
+                  <div style={{width:12,height:12,borderRadius:4,background:ac,boxShadow:`0 0 8px ${ac}90`,flexShrink:0}}/>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                  <span style={{fontSize:18,lineHeight:1,filter: isActive||isHov ? "none" : "saturate(0.7)"}}>{opt.emoji}</span>
+                  <span style={{
+                    fontFamily:"'Bricolage Grotesque',sans-serif",
+                    fontSize:15,fontWeight:800,lineHeight:1,
+                    color: isActive ? ac : isHov ? "#E8F0FF" : "#8090B0",
+                    transition:"color 0.15s",
+                  }}>{opt.name}</span>
+                </div>
+                <div style={{fontSize:10,lineHeight:1.4,paddingLeft:24,color: isActive ? ac+"99" : "#445060"}}>
+                  {opt.desc}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{marginTop:16,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
+          <div style={{height:1,flex:1,background: isDark ? "#ffffff10" : "#00000010"}}/>
+          <button className="press" onClick={onClose} style={{
+            fontSize:11,fontWeight:600,letterSpacing:"0.05em",
+            color: isDark ? "#445060" : "#94A3B8",
+            background:"none",border:`1px solid ${isDark?"#ffffff12":"#00000010"}`,
+            borderRadius:99,padding:"5px 14px",cursor:"pointer",
+          }}>
+            cerrar
+          </button>
+          <div style={{height:1,flex:1,background: isDark ? "#ffffff10" : "#00000010"}}/>
+        </div>
+      </div>
     </>
   );
 }
@@ -2322,8 +2820,9 @@ export default function App() {
   const [showTurnos, setShowTurnos]       = useState(false);
   const [showRotaciones, setShowRotaciones] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
-  const ACCENT = theme === "pink" ? "#E8186A" : "#348FFF";
+  const ACCENT = ACCENT_MAP[theme] || "#348FFF";
   const T = { ...THEMES[theme], accent: ACCENT };
 
   const handleTabChange = (tab) => {
@@ -2342,21 +2841,24 @@ export default function App() {
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
     document.body.classList.toggle("theme-pink", next === "pink");
+    ["ocean","sunset","forest","aurora","neon"].forEach(t =>
+      document.body.classList.toggle("theme-"+t, next === t)
+    );
   };
 
   const toggleTheme = () => {
-    // Secret: 5 taps in < 3s activa Sakura
-    if (theme !== "pink") {
+    const isSecret = ["pink","ocean","sunset","forest","aurora","neon"].includes(theme);
+    if (!isSecret) {
       toggleTapCount.current += 1;
       clearTimeout(toggleTapTimer.current);
       if (toggleTapCount.current >= 5) {
         toggleTapCount.current = 0;
-        applyTheme("pink");
+        setShowThemePicker(true);
         return;
       }
       toggleTapTimer.current = setTimeout(() => { toggleTapCount.current = 0; }, 3000);
     }
-    // Toggle normal dark ↔ light (salir de pink vuelve a dark)
+    // Toggle normal dark ↔ light (desde tema secreto vuelve a dark)
     const next = theme === "light" ? "dark" : "light";
     applyTheme(next);
   };
@@ -2367,6 +2869,9 @@ export default function App() {
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
     document.body.classList.toggle("theme-pink", theme === "pink");
+    ["ocean","sunset","forest","aurora","neon"].forEach(t =>
+      document.body.classList.toggle("theme-"+t, theme === t)
+    );
     if (typeof requestIdleCallback !== "undefined") {
       requestIdleCallback(() => purgeCacheStorage());
     } else {
@@ -2427,6 +2932,12 @@ export default function App() {
         <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
+      {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
+      {theme === "ocean"  && <OceanBubbles/>}
+      {theme === "aurora" && <AuroraEffect/>}
+      {theme === "forest" && <ForestFireflies/>}
+      {theme === "sunset" && <SunsetEmbers/>}
+      {theme === "neon"   && <NeonGrid/>}
 
       {!becado ? (
         showRotaciones
