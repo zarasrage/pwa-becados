@@ -2,6 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbz9Zme-RquoB2GVh6yj9v9Yl2xFAq2JKO5RnM_Cm5-EYgEQV6CWsD5H4ai3ZtmKiq4U/exec";
 const API_TOKEN = "queseyo_calendriobecados2026";
+const SHEET_ID  = "10rsV7iRYehwWIyZGG6neEr1-kXUWFjya_ZZLnqUVKYk";
+// Nombres exactos de las hojas en el Spreadsheet
+const SHEET_NAMES = {
+  rotaciones: "Rotaciones",
+  dia:        "Dia",
+  noche:      "Noche",
+  seminarios: "Seminarios",
+  horarios: {
+    H:   "Horario Hombro",
+    M:   "Horario Mano",
+    CyP: "Horario Cadera",
+    R:   "Horario Rodilla",
+    TyP: "Horario TyP",
+    Col: "Horario Columna",
+  },
+};
 
 // ── Temas ─────────────────────────────────────────────────────────────────────
 const THEMES = {
@@ -30,20 +46,21 @@ const THEMES = {
     skeletonShine: "#F4F7FB",
   },
   pink: {
-    bg:       "#FDF2F7",
-    surface:  "#FFF8FB",
-    surface2: "#FAE8F2",
-    border:   "#EFC8DC",
-    text:     "#2D0F1E",
-    sub:      "#7A3558",
-    muted:    "#BF80A0",
-    tabBg:    "rgba(253,242,247,0.94)",
-    skeleton: "#FAE8F2",
-    skeletonShine: "#FFF0F6",
-    accent:   "#D4397A",
+    bg:       "#FEE6F2",
+    surface:  "#FFF0F8",
+    surface2: "#FCDAED",
+    border:   "#F4A8CE",
+    text:     "#1E0713",
+    sub:      "#8B1A4A",
+    muted:    "#CF6A9C",
+    tabBg:    "rgba(254,230,242,0.96)",
+    skeleton: "#FCDAED",
+    skeletonShine: "#FFF0F8",
+    accent:   "#E8186A",
+    glow:     "#E8186A",
   },
 };
-const THEME_BG = { dark:"#0D1117", light:"#F4F7FB", pink:"#FFF0F6" };
+const THEME_BG = { dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2" };
 
 // ── Colores institucionales por rotación ──────────────────────────────────────
 const ROT = {
@@ -309,11 +326,31 @@ async function apiSWR(params, onImmediate, onFresh) {
   }
 }
 
-// Prefetch silencioso
+// Prefetch silencioso (día individual)
 function prefetch(params) {
   if (cacheGet(params)) return;
   apiGet(params)
     .then(d => { if (d.ok !== false) cacheSet(params, d); })
+    .catch(() => {});
+}
+
+// Prefetch de semana completa en UNA llamada al backend
+// — usa ruta "week" que devuelve 7 días de una vez
+function prefetchWeek(becado, mondayISO) {
+  // Si ya tenemos los 7 días en caché, no hacer nada
+  const weekDates = getWeekDates(mondayISO);
+  const allCached = weekDates.every(d => !!cacheGet({route:"daily",becado,date:d,token:API_TOKEN}));
+  if (allCached) return;
+  // Una sola llamada para los 7 días
+  apiGet({ route:"week", becado, start:mondayISO, token:API_TOKEN })
+    .then(res => {
+      if (!res.ok || !res.days) return;
+      res.days.forEach(day => {
+        if (day.ok !== false) {
+          cacheSet({route:"daily", becado, date:day.date, token:API_TOKEN}, day);
+        }
+      });
+    })
     .catch(() => {});
 }
 
@@ -360,15 +397,25 @@ const CSS = `
   @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
   @keyframes shimmer   { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
   @keyframes petalFall {
-    0%   { transform: translateY(-20px) rotate(0deg) scale(1);   opacity: 0; }
-    10%  { opacity: 0.7; }
-    80%  { opacity: 0.5; }
-    100% { transform: translateY(105vh) rotate(540deg) scale(0.7); opacity: 0; }
+    0%   { transform: translateY(-30px) rotate(0deg) scale(1.1); opacity: 0; }
+    8%   { opacity: 1; }
+    85%  { opacity: 0.7; }
+    100% { transform: translateY(108vh) rotate(680deg) scale(0.6); opacity: 0; }
   }
   @keyframes petalSway {
-    0%,100% { margin-left: 0; }
-    25%     { margin-left: 18px; }
-    75%     { margin-left: -18px; }
+    0%   { margin-left: 0px; }
+    20%  { margin-left: 22px; }
+    50%  { margin-left: -8px; }
+    75%  { margin-left: 26px; }
+    100% { margin-left: 0px; }
+  }
+  @keyframes sakuraGlow {
+    0%,100% { opacity: 0.6; transform: scale(1); }
+    50%     { opacity: 1;   transform: scale(1.08); }
+  }
+  @keyframes pinkPulse {
+    0%,100% { box-shadow: 0 0 0 0 #E8186A00; }
+    50%     { box-shadow: 0 0 16px 4px #E8186A30; }
   }
   .anim  { animation: fadeUp 0.28s ease both; }
   .fade  { animation: fadeIn 0.2s ease both; }
@@ -384,33 +431,53 @@ const CSS = `
 `;
 
 
-// ── Sakura petals ─────────────────────────────────────────────────────────────
-const PETAL_SHAPES = ["🌸","🌺","✿","❀","🌷"];
-const PETALS_CONFIG = Array.from({length: 12}, (_, i) => ({
+// ── Sakura petals SVG ────────────────────────────────────────────────────────
+// Pétalo SVG: forma orgánica de cerezo
+function PetalSVG({ size, color, opacity }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block",filter:`drop-shadow(0 0 ${size*0.3}px ${color}90)`}}>
+      <path d="M12 2 C14 5, 19 6, 20 10 C21 14, 18 19, 12 22 C6 19, 3 14, 4 10 C5 6, 10 5, 12 2Z"
+        fill={color} opacity={opacity}/>
+      <path d="M12 2 C12 8, 14 14, 12 22" stroke="white" strokeWidth="0.4" opacity="0.35" fill="none"/>
+    </svg>
+  );
+}
+
+const PETAL_COLORS = [
+  "#FF4D94","#FF69B4","#FF1A75","#FF85B8","#E8186A",
+  "#FF3380","#FFB3D1","#F50057","#FF6BA8","#FF0066",
+];
+
+const PETALS_CONFIG = Array.from({length: 18}, (_, i) => ({
   id: i,
-  left:     `${(i * 8.3 + Math.sin(i * 1.7) * 6)}%`,
-  size:     10 + (i % 5) * 3,
-  duration: 6 + (i % 7) * 1.4,
-  swayDur:  2.5 + (i % 4) * 0.8,
-  delay:    -(i * 0.9 + (i % 3) * 1.2),
-  shape:    PETAL_SHAPES[i % PETAL_SHAPES.length],
-  opacity:  0.35 + (i % 4) * 0.1,
+  left:     (i * 5.8 + Math.sin(i * 2.3) * 8),
+  size:     14 + (i % 5) * 5,
+  duration: 5 + (i % 6) * 1.8,
+  swayDur:  2 + (i % 5) * 0.9,
+  delay:    -(i * 0.75 + (i % 4) * 1.1),
+  color:    PETAL_COLORS[i % PETAL_COLORS.length],
+  opacity:  0.55 + (i % 4) * 0.12,
+  rotate:   i * 37,
 }));
 
 function SakuraPetals() {
   return (
     <>
+      {/* Glow ambiental en esquinas */}
+      <div style={{position:"fixed",top:-80,left:-80,width:280,height:280,borderRadius:"50%",background:"radial-gradient(circle, #FF4D9440 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"radial-gradient(circle, #E8186A30 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",bottom:80,right:-40,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle, #FF69B428 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
       {PETALS_CONFIG.map(p => (
         <div key={p.id} className="petal" style={{
-          left: p.left,
+          left: `${p.left}%`,
           top: 0,
-          fontSize: p.size,
+          width: p.size,
+          height: p.size,
           animationDuration: `${p.duration}s, ${p.swayDur}s`,
-          animationDelay: `${p.delay}s, ${p.delay * 0.7}s`,
-          opacity: p.opacity,
-          filter: "saturate(0.8) brightness(1.1)",
+          animationDelay: `${p.delay}s, ${p.delay * 0.6}s`,
+          transform: `rotate(${p.rotate}deg)`,
         }}>
-          {p.shape}
+          <PetalSVG size={p.size} color={p.color} opacity={p.opacity}/>
         </div>
       ))}
     </>
@@ -943,22 +1010,31 @@ function DateNav({ date, today, onPrev, onNext, onToday, T }) {
 // ── Activity card ─────────────────────────────────────────────────────────────
 function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
   const [pressed, setPressed] = useState(false);
+  const isPink = T.accent === "#E8186A";
   return (
     <div className="anim"
       style={{
         animationDelay:`${index*40}ms`,
-        background: pressed ? light : T.surface,
-        border: `1px solid ${pressed ? accent+"50" : T.border}`,
+        background: isPink
+          ? (pressed ? `linear-gradient(135deg, ${accent}22, ${accent}12)` : "rgba(255,255,255,0.72)")
+          : (pressed ? light : T.surface),
+        border: isPink
+          ? `1px solid ${pressed ? accent+"70" : accent+"35"}`
+          : `1px solid ${pressed ? accent+"50" : T.border}`,
         borderLeft: `3px solid ${accent}`,
-        borderRadius: 12,
+        borderRadius: isPink ? 16 : 12,
         padding: "12px 14px",
         display: "flex",
         alignItems: "center",
         gap: 12,
         cursor: "pointer",
         userSelect: "none",
-        boxShadow: pressed ? `0 0 14px ${glow}` : "none",
-        transition: "all 0.12s ease",
+        boxShadow: isPink
+          ? (pressed ? `0 4px 20px ${accent}50, 0 0 0 1px ${accent}20` : `0 2px 12px ${accent}20, 0 1px 3px rgba(0,0,0,0.05)`)
+          : (pressed ? `0 0 14px ${glow}` : "none"),
+        backdropFilter: isPink ? "blur(12px)" : "none",
+        WebkitBackdropFilter: isPink ? "blur(12px)" : "none",
+        transition: "all 0.15s ease",
       }}
       onPointerDown={() => setPressed(true)}
       onPointerUp={() => setPressed(false)}
@@ -966,10 +1042,10 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
     >
       <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
         <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:accent,lineHeight:1.2}}>{from}</div>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:accent,opacity:0.45,lineHeight:1.2,marginTop:2}}>{to}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:accent,opacity:0.55,lineHeight:1.2,marginTop:2}}>{to}</div>
       </div>
-      <div style={{width:1,height:28,background:`${accent}25`,flexShrink:0}}/>
-      <div style={{fontSize:14,color:T.text,fontWeight:400,lineHeight:1.35,flex:1}}>{activity}</div>
+      <div style={{width:1,height:28,background:`${accent}30`,flexShrink:0}}/>
+      <div style={{fontSize:14,color:T.text,fontWeight: isPink ? 500 : 400,lineHeight:1.35,flex:1}}>{activity}</div>
     </div>
   );
 }
@@ -1245,28 +1321,40 @@ function TabHorario({ becado, onChangeBecado, T }) {
   const load = useCallback((targetDate) => {
     const params = {route:"daily",becado,date:targetDate,token:API_TOKEN};
     setError("");
+    // Timeout de seguridad: si en 12s no llegó nada, salir del skeleton
+    const bail = setTimeout(() => {
+      setDaily(prev => prev ?? { ok:false, rotationCode:"", items:[] });
+      setError("No se pudo conectar. Comprueba tu conexión.");
+    }, 12000);
     apiSWR(
       params,
-      (data) => { setDaily(data); setIsStale(true); },
-      (data, stale) => { setDaily(data); setIsStale(stale); }
-    ).catch(e => setError(String(e.message||e)));
+      (data) => { clearTimeout(bail); setDaily(data); setIsStale(true); },
+      (data, stale) => { clearTimeout(bail); setDaily(data); setIsStale(stale); }
+    ).catch(e => { clearTimeout(bail); setDaily(prev => prev ?? { ok:false, rotationCode:"", items:[] }); setError(String(e.message||e)); });
   }, [becado]);
 
   useEffect(() => { load(date); }, [date, load]);
 
-  // Prefetch semana + día siguiente si es tarde
+  // Prefetch semana en UNA llamada + siguiente semana + día siguiente si es tarde
   useEffect(() => {
-    const weekDates = getWeekDates(today);
-    weekDates.forEach(d => prefetch({route:"daily",becado,date:d,token:API_TOKEN}));
+    const monday = getWeekDates(today)[0];
+    prefetchWeek(becado, monday);
+    // Prefetch semana siguiente también
+    const nextMonday = offsetDate(monday, 7);
+    setTimeout(() => prefetchWeek(becado, nextMonday), 2000);
     if (new Date().getHours() >= 18) {
       prefetch({route:"daily",becado,date:offsetDate(today,1),token:API_TOKEN});
     }
   }, [becado, today]);
 
   const ptr = usePullToRefresh(() => {
+    // Fetch fresco sin borrar caché antes — solo se reemplaza si tiene éxito
+    // Si no hay conexión, los datos actuales y el caché quedan intactos
     const params = {route:"daily",becado,date,token:API_TOKEN};
-    safeStorage.remove(cacheKey(params));
-    load(date);
+    setError("");
+    apiGet(params)
+      .then(fresh => { cacheSet(params, fresh); setDaily(fresh); setIsStale(false); })
+      .catch(() => {});
   }, scrollRef);
 
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
@@ -1290,7 +1378,13 @@ function TabHorario({ becado, onChangeBecado, T }) {
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi horario</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
-            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,lineHeight:1.1,
+              background:T.accent==="#E8186A" ? "linear-gradient(135deg,#FF1A75,#E8186A,#FF4D94)" : "none",
+              WebkitBackgroundClip:T.accent==="#E8186A" ? "text" : "unset",
+              WebkitTextFillColor:T.accent==="#E8186A" ? "transparent" : "unset",
+              color:T.accent==="#E8186A" ? "transparent" : T.text,
+              filter:T.accent==="#E8186A" ? "drop-shadow(0 0 8px #E8186A50)" : "none",
+            }}>{becado}</div>
             <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
           {daily?.rotationCode && (
@@ -1357,11 +1451,15 @@ function TabRotaciones({ onChangeBecado, T }) {
   const load = useCallback((targetDate) => {
     const params = {route:"summary",date:targetDate,token:API_TOKEN};
     setError("");
+    const bail = setTimeout(() => {
+      setSummary(prev => prev ?? { ok:false, groups:{} });
+      setError("No se pudo conectar. Comprueba tu conexión.");
+    }, 12000);
     apiSWR(
       params,
-      (data) => { setSummary(data); setIsStale(true); },
-      (data, stale) => { setSummary(data); setIsStale(stale); }
-    ).catch(e => setError(String(e.message||e)));
+      (data) => { clearTimeout(bail); setSummary(data); setIsStale(true); },
+      (data, stale) => { clearTimeout(bail); setSummary(data); setIsStale(stale); }
+    ).catch(e => { clearTimeout(bail); setSummary(prev => prev ?? { ok:false, groups:{} }); setError(String(e.message||e)); });
   }, []);
 
   useEffect(() => { load(date); }, [date, load]);
@@ -1371,9 +1469,12 @@ function TabRotaciones({ onChangeBecado, T }) {
   }, [today]);
 
   const ptr = usePullToRefresh(() => {
+    // Fetch fresco sin borrar caché antes — solo se reemplaza si tiene éxito
     const params = {route:"summary",date,token:API_TOKEN};
-    safeStorage.remove(cacheKey(params));
-    load(date);
+    setError("");
+    apiGet(params)
+      .then(fresh => { cacheSet(params, fresh); setSummary(fresh); setIsStale(false); })
+      .catch(() => {});
   }, scrollRef);
 
   const entries = summary?.groups
@@ -1465,60 +1566,56 @@ function TabSemana({ becado, onChangeBecado, T }) {
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
-  // Cargar semana: mostrar caché inmediatamente, pedir solo lo que falta, nunca borrar lo que hay
-  useEffect(() => {
-    // 1. Mostrar caché inmediatamente — sin borrar nada
+  // Cargar semana: UNA llamada "week" que devuelve 7 días a la vez
+  const loadWeek = (dates, force = false) => {
+    // Mostrar caché inmediatamente
     const cached = {};
-    weekDates.forEach(date => {
+    dates.forEach(date => {
       const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
       if (c && c.ok !== false) cached[date] = c;
     });
-    setLookup(prev => ({...prev, ...cached}));
+    if (Object.keys(cached).length > 0) setLookup(prev => ({...prev, ...cached}));
 
-    // 2. Pedir solo los días que NO están en caché
-    const missing = weekDates.filter(date => !cacheGet({route:"daily", becado, date, token:API_TOKEN}));
-    if (missing.length === 0) { setLoading(false); return; }
+    const allCached = dates.every(d => !!cacheGet({route:"daily",becado,date:d,token:API_TOKEN}));
+    if (allCached && !force) { setLoading(false); return; }
     setLoading(true);
+    const monday = dates[0];
+    apiGet({ route:"week", becado, start:monday, token:API_TOKEN })
+      .then(res => {
+        if (!res.ok || !res.days) return;
+        const next = {};
+        res.days.forEach(day => {
+          if (day.ok !== false) {
+            cacheSet({route:"daily",becado,date:day.date,token:API_TOKEN}, day);
+            next[day.date] = day;
+          }
+        });
+        setLookup(prev => ({...prev, ...next}));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
 
-    Promise.all(
-      missing.map(date =>
-        apiGet({route:"daily", becado, date, token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
-          .catch(() => [date, null])
-      )
-    ).then(results => {
-      setLookup(prev => {
-        const next = {...prev};
-        results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
-        return next;
-      });
-      setLoading(false);
-    });
-  }, [becado, weekDates]);
+  useEffect(() => { loadWeek(weekDates); }, [becado, weekDates]);
 
-  // Pull-to-refresh: borrar caché solo de esta semana y volver a pedir
+  // Pull-to-refresh
   const ptr = usePullToRefresh(() => {
-    weekDates.forEach(date => safeStorage.remove(cacheKey({route:"daily",becado,date,token:API_TOKEN})));
-    setLookup(prev => {
-      const next = {...prev};
-      weekDates.forEach(date => delete next[date]);
-      return next;
-    });
-    setLoading(true);
-    Promise.all(
-      weekDates.map(date =>
-        apiGet({route:"daily", becado, date, token:API_TOKEN})
-          .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
-          .catch(() => [date, null])
-      )
-    ).then(results => {
-      setLookup(prev => {
-        const next = {...prev};
-        results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
-        return next;
-      });
-      setLoading(false);
-    });
+    // Fetch fresco — caché solo se reemplaza si tiene éxito
+    // Sin conexión: datos actuales y caché quedan intactos
+    const monday = weekDates[0];
+    apiGet({ route:"week", becado, start:monday, token:API_TOKEN })
+      .then(res => {
+        if (!res.ok || !res.days) return;
+        const next = {};
+        res.days.forEach(day => {
+          if (day.ok !== false) {
+            cacheSet({route:"daily",becado,date:day.date,token:API_TOKEN}, day);
+            next[day.date] = day;
+          }
+        });
+        setLookup(prev => ({...prev, ...next}));
+      })
+      .catch(() => {});
   }, scrollRef);
 
   const isThisWeek = weekDates.includes(today);
@@ -1695,20 +1792,43 @@ function TabTurnos({ onBack, T }) {
   const [data, setData]   = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [selectedSem, setSelectedSem] = useState(null); // { date, sem } for detail panel
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
 
-  // Load turno data (Poli/Día/Noche)
-  useEffect(() => {
-    setLoading(true); setError("");
-    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
+  const loadData = (mStr) => {
+    const params = { route:"monthly", month: mStr, token: API_TOKEN };
+    setError("");
+    // Mostrar caché inmediatamente si existe, fetch en background
+    // Si no hay caché → spinner hasta que lleguen datos
+    const cached = cacheGet(params);
+    if (!cached) setLoading(true);
     apiSWR(params,
       (d) => { setData(d); setLoading(false); },
       (d) => { setData(d); setLoading(false); }
     ).catch(e => { setError(String(e.message||e)); setLoading(false); });
-  }, [monthStr]);
+  };
+
+  // Load turno data (Poli/Día/Noche)
+  useEffect(() => { loadData(monthStr); }, [monthStr]);
+
+  const handleRefresh = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    // Fetch directo SIN borrar caché antes ni blanquear pantalla
+    // El caché se reemplaza solo si el fetch tiene éxito
+    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
+    setError("");
+    apiGet(params)
+      .then(fresh => {
+        cacheSet(params, fresh);
+        setData(fresh);
+        setRefreshing(false);
+      })
+      .catch(() => { setRefreshing(false); }); // sin conexión: datos y caché intactos
+  };
 
 
 
@@ -1750,6 +1870,10 @@ function TabTurnos({ onBack, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+          <button className="press" onClick={handleRefresh} disabled={refreshing}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:refreshing?0.5:1}}>
+            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:refreshing?"#348FFF":T.muted,borderRadius:"50%",animation:refreshing?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
+          </button>
         </div>
         {/* Sub-tabs */}
         <div style={{display:"flex",gap:6,marginBottom:14}}>
@@ -1850,61 +1974,38 @@ function TabMes({ becado, T }) {
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
   const [lookup, setLookup] = useState({});
   const [loading, setLoading] = useState(false);
+  const [refreshingMes, setRefreshingMes] = useState(false);
   const [error, setError]   = useState("");
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
 
+  const applyMonthData = (data) => {
+    if (!data?.ok || !data.days) return;
+    const map = {};
+    data.days.forEach(day => { map[day.date] = day; });
+    setLookup(map);
+    setLoading(false);
+  };
+
   useEffect(() => {
     setError("");
-    const [y, m] = monthStr.split("-").map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    const allDates = Array.from({length: daysInMonth}, (_, i) => {
-      const d = i + 1;
-      return `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    });
-
-    // Mostrar inmediatamente lo que ya está en caché
-    const cached = {};
-    allDates.forEach(date => {
-      const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
-      if (c && c?.ok !== false) cached[date] = c;
-    });
-    if (Object.keys(cached).length > 0) {
-      setLookup(cached);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-
-    // Pedir en background solo los días que no están en caché
-    const missing = allDates.filter(date =>
-      !cacheGet({route:"daily", becado, date, token:API_TOKEN})
-    );
-    if (missing.length === 0) { setLoading(false); return; }
-
-    // Pedir de a 5 en paralelo para no saturar Apps Script
-    const chunks = [];
-    for (let i = 0; i < missing.length; i += 5) chunks.push(missing.slice(i, i+5));
-    (async () => {
-      try {
-        for (const chunk of chunks) {
-          const results = await Promise.all(
-            chunk.map(date =>
-              apiGet({route:"daily", becado, date, token:API_TOKEN})
-                .then(d => { cacheSet({route:"daily",becado,date,token:API_TOKEN}, d); return [date, d]; })
-                .catch(() => [date, null])
-            )
-          );
-          setLookup(prev => {
-            const next = {...prev};
-            results.forEach(([date, d]) => { if (d?.ok !== false && d) next[date] = d; });
-            return next;
-          });
-        }
-      } catch(e) { setError("Error cargando el mes"); }
-      finally { setLoading(false); }
-    })();
+    const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
+    // Spinner solo si no hay caché para este mes
+    const cached = cacheGet(params);
+    if (!cached) setLoading(true);
+    apiSWR(params, applyMonthData, applyMonthData)
+      .catch(e => { setError("Error cargando el mes"); setLoading(false); });
   }, [becado, monthStr]);
+
+  const handleRefreshMes = () => {
+    if (refreshingMes) return;
+    setRefreshingMes(true);
+    const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
+    setError("");
+    apiGet(params)
+      .then(fresh => { cacheSet(params, fresh); applyMonthData(fresh); setRefreshingMes(false); })
+      .catch(() => { setRefreshingMes(false); });
+  };
 
   const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
   const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
@@ -1922,6 +2023,10 @@ function TabMes({ becado, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+          <button className="press" onClick={handleRefreshMes} disabled={refreshingMes}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:refreshingMes?0.5:1}}>
+            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:refreshingMes?"#348FFF":T.muted,borderRadius:"50%",animation:refreshingMes?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
+          </button>
         </div>
 
         {/* Leyenda */}
@@ -1942,12 +2047,15 @@ function TabMes({ becado, T }) {
             const dayNum  = Number(iso.split("-")[2]);
             const isToday = iso === today;
             const day     = lookup[iso] || {};
-            const turno   = day.turno || {};
+            // personal-month devuelve diaCode/nocheCode/hasSeminar directamente
+            const diaCode   = day.diaCode   || day.turno?.diaCode   || null;
+            const nocheCode = day.nocheCode || day.turno?.nocheCode || null;
+            const hasSem    = day.hasSeminar || !!day.seminario;
             const badges  = [];
-            if (turno.diaCode === "P") badges.push({ label:"P", color:"#06B6D4" });
-            if (turno.diaCode === "D") badges.push({ label:"D", color:"#F59E0B" });
-            if (turno.nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
-            if (day.seminario) badges.push({ label:"S", color:"#E879F9" });
+            if (diaCode === "P") badges.push({ label:"P", color:"#06B6D4" });
+            if (diaCode === "D") badges.push({ label:"D", color:"#F59E0B" });
+            if (nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
+            if (hasSem) badges.push({ label:"S", color:"#E879F9" });
             const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
 
             return (
@@ -1969,6 +2077,7 @@ function TabMes({ becado, T }) {
 
 // ── TabBar ────────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange, T }) {
+  const isPink = T.accent === "#E8186A";
   const tabs = [
     { id:"horario",    icon:"◑", label:"Mi Horario" },
     { id:"semana",     icon:"▦", label:"Semana" },
@@ -1978,24 +2087,36 @@ function TabBar({ active, onChange, T }) {
     <div style={{
       position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
       width:"100%",maxWidth:480,
-      background:T.tabBg,
-      backdropFilter:"blur(20px)",
-      WebkitBackdropFilter:"blur(20px)",
-      borderTop:`1px solid ${T.border}`,
+      background: isPink ? "rgba(255,214,234,0.88)" : T.tabBg,
+      backdropFilter:"blur(24px)",
+      WebkitBackdropFilter:"blur(24px)",
+      borderTop: isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`,
       display:"flex",
       paddingBottom:"calc(var(--sab) + 8px)",
       zIndex:50,
+      boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
     }}>
       {tabs.map(tab=>{
         const isActive = active===tab.id;
         return (
           <button key={tab.id} className="press"
-            style={{flex:1,border:"none",background:"none",padding:"10px 0 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,color:isActive?T.text:T.muted}}
+            style={{flex:1,border:"none",background:"none",padding:"10px 0 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+              color: isPink ? (isActive ? "#E8186A" : "#CF6A9C") : (isActive?T.text:T.muted)
+            }}
             onClick={()=>onChange(tab.id)}
           >
-            <span style={{fontSize:18,lineHeight:1}}>{tab.icon}</span>
+            <span style={{
+              fontSize:18, lineHeight:1,
+              filter: isPink && isActive ? "drop-shadow(0 0 6px #E8186A80)" : "none",
+              transition:"filter 0.2s",
+            }}>{tab.icon}</span>
             <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
-            <span style={{width:isActive?18:0,height:2,borderRadius:99,background:T.accent||"#348FFF",transition:"width 0.22s ease",marginTop:1}}/>
+            <span style={{
+              width:isActive?22:0,height:isPink?3:2,borderRadius:99,
+              background: isPink ? "linear-gradient(90deg,#FF4D94,#E8186A)" : (T.accent||"#348FFF"),
+              boxShadow: isPink && isActive ? "0 0 8px #E8186A80" : "none",
+              transition:"width 0.22s ease",marginTop:1
+            }}/>
           </button>
         );
       })}
@@ -2191,7 +2312,7 @@ export default function App() {
   const [showRotaciones, setShowRotaciones] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
 
-  const ACCENT = theme === "pink" ? "#D4397A" : "#348FFF";
+  const ACCENT = theme === "pink" ? "#E8186A" : "#348FFF";
   const T = { ...THEMES[theme], accent: ACCENT };
 
   const handleTabChange = (tab) => {
@@ -2278,7 +2399,7 @@ export default function App() {
     <div style={{
       minHeight:"100vh",
       background: theme === "pink"
-        ? "linear-gradient(160deg, #FDF2F7 0%, #FFF8FB 40%, #FAE8F2 100%)"
+        ? "linear-gradient(145deg, #FFD6EA 0%, #FEE6F2 35%, #FCDAED 70%, #FFB3D1 100%)"
         : T.bg,
       maxWidth:480,
       margin:"0 auto",
