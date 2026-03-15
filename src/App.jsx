@@ -206,19 +206,26 @@ function purgeCacheStorage() {
   } catch { return 0; }
 }
 
-// ── Caché inteligente con TTL dinámico ───────────────────────────────────────
+// ── Caché inteligente con TTL largo ──────────────────────────────────────────
+// Los datos cambian 1-2 veces al mes. Usamos TTL de 7 días para todo.
+// Cuando tú editas el Sheet, el backend bumpa un "dataVersion" y el frontend
+// lo detecta al abrir la app → limpia todo automáticamente.
+
+const CACHE_7D = 7 * 24 * 60 * 60 * 1000;
+
 function cacheTTL(params) {
   const route = (params.route || "").toLowerCase();
   if (route === "daily") {
+    // Para el día de hoy, expira a medianoche (podría haber cambio de turno)
     const dateStr = params.date || todayISO();
-    const [y,m,d] = dateStr.split("-").map(Number);
-    const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
-    return midnight - Date.now();
+    if (dateStr === todayISO()) {
+      const [y,m,d] = dateStr.split("-").map(Number);
+      const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
+      return midnight - Date.now();
+    }
+    return CACHE_7D; // Días pasados/futuros → 7 días
   }
-  if (route === "summary")  return 24 * 60 * 60 * 1000;
-  if (route === "monthly")  return 24 * 60 * 60 * 1000;
-  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000;
-  return 24 * 60 * 60 * 1000;
+  return CACHE_7D; // Todo lo demás → 7 días
 }
 
 function cacheKey(params) {
@@ -315,7 +322,9 @@ function cacheAge(params) {
   } catch { return Infinity; }
 }
 
-const SWR_REVALIDATE_AFTER = 5 * 60 * 1000;
+// Con TTL de 7 días + version check, la revalidación en background es menos urgente.
+// Solo revalidar si el caché tiene más de 1 hora (por si el version check no corrió aún)
+const SWR_REVALIDATE_AFTER = 60 * 60 * 1000; // 1 hora
 
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
@@ -364,6 +373,34 @@ function prefetchWeek(becado, mondayISO) {
           cacheSet({route:"daily", becado, date:day.date, token:API_TOKEN}, day);
         }
       });
+    })
+    .catch(() => {});
+}
+
+// ── Version check — sincronización con el backend ────────────────────────────
+// Cuando tú editas el Google Sheet, el backend actualiza un "dataVersion".
+// Esta función se llama una vez al abrir la app. Si la versión cambió,
+// limpia todo el localStorage para forzar datos frescos.
+let _versionChecked = false;
+
+function checkDataVersion() {
+  if (_versionChecked) return;
+  _versionChecked = true;
+  const url = new URL(API_URL);
+  url.searchParams.set("route", "version");
+  url.searchParams.set("token", API_TOKEN);
+  fetch(url.toString())
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const serverVersion = data.version;
+      const localVersion = safeStorage.get("dataVersion");
+      if (localVersion && localVersion !== serverVersion) {
+        // ¡El Sheet fue editado! No borrar caché — los datos viejos siguen
+        // visibles. Solo forzar que SWR revalide todo en background.
+        _revalidatedThisSession.clear();
+      }
+      safeStorage.set("dataVersion", serverVersion);
     })
     .catch(() => {});
 }
@@ -433,6 +470,8 @@ const CSS = `
   }
   .anim  { animation: fadeUp 0.28s ease both; }
   .fade  { animation: fadeIn 0.2s ease both; }
+  .tab-in { animation: tabFadeIn 0.18s ease both; }
+  @keyframes tabFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   .press { transition: transform 0.1s, opacity 0.1s; -webkit-tap-highlight-color: transparent; cursor: pointer; user-select: none; }
   .press:active { transform: scale(0.96); opacity: 0.82; }
   ::-webkit-scrollbar { width: 0; }
@@ -1882,9 +1921,11 @@ function SwapTurnos({ becados, onClose, T }) {
       });
       const data = await res.json();
       if (data.ok) {
+        // No borrar caché — datos viejos visibles hasta que SWR revalide.
+        // Solo marcar que estas claves necesitan refetch.
         [{route:"daily",becado:selA.becado,date:selA.date,token:API_TOKEN},
          {route:"daily",becado:selB.becado,date:selB.date,token:API_TOKEN}]
-          .forEach(p => safeStorage.remove(cacheKey(p)));
+          .forEach(p => _revalidatedThisSession.delete(cacheKey(p)));
         setResult({ ok:true, msg:"✓ Cambio aplicado correctamente" });
         setPin(""); setSelA(null); setSelB(null);
       } else {
@@ -2861,7 +2902,7 @@ function TabTurnos({ onBack, T }) {
     apiGet({ route:"invalidate_cache", token: API_TOKEN })
       .catch(() => {})
       .finally(() => {
-        safeStorage.remove(cacheKey(params));
+        // No borrar caché local — datos viejos visibles hasta que lleguen los nuevos
         apiGet(params)
           .then(fresh => {
             if (!fresh?.ok) { setRefreshing(false); return; }
@@ -3038,7 +3079,7 @@ function TabMes({ becado, T }) {
     apiGet({ route:"invalidate_cache", token: API_TOKEN })
       .catch(() => {})
       .finally(() => {
-        safeStorage.remove(cacheKey(params));
+        // No borrar caché local — datos viejos visibles hasta que lleguen los nuevos
         apiGet(params)
           .then(fresh => { cacheSet(params, fresh); applyMonthData(fresh); setRefreshingMes(false); })
           .catch(() => { setRefreshingMes(false); });
@@ -3393,6 +3434,8 @@ export default function App() {
     } else {
       setTimeout(() => purgeCacheStorage(), 2000);
     }
+    // Chequear si el Sheet fue editado — si sí, limpia caché local
+    checkDataVersion();
   }, []);
 
   useEffect(() => {
@@ -3475,9 +3518,9 @@ export default function App() {
 
       ) : (
         <>
-          <div style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} T={T}/></div>
+          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
