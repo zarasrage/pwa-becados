@@ -75,10 +75,31 @@ const THEMES = {
     text:"#F0E6FF", sub:"#9050E0", muted:"#3A1060", tabBg:"rgba(3,0,10,0.96)",
     skeleton:"#0D0024", skeletonShine:"#140030", accent:"#CC00FF", glow:"#CC00FF",
   },
+  synthwave: {
+    bg:"#0A0015", surface:"#130028", surface2:"#1C0038", border:"#3D0070",
+    text:"#FFE8FF", sub:"#D070E0", muted:"#6A2080", tabBg:"rgba(10,0,21,0.95)",
+    skeleton:"#1C0038", skeletonShine:"#260050", accent:"#FF006E", glow:"#FF006E",
+  },
+  cryo: {
+    bg:"#020D1A", surface:"#061828", surface2:"#0A2438", border:"#103858",
+    text:"#E8F8FF", sub:"#60C8E8", muted:"#1A4860", tabBg:"rgba(2,13,26,0.95)",
+    skeleton:"#0A2438", skeletonShine:"#0E2E48", accent:"#00CFFF", glow:"#00CFFF",
+  },
+  cosmos: {
+    bg:"#020008", surface:"#080018", surface2:"#0E0028", border:"#220048",
+    text:"#F8E8FF", sub:"#C060F0", muted:"#501880", tabBg:"rgba(2,0,8,0.96)",
+    skeleton:"#0E0028", skeletonShine:"#160038", accent:"#FF6BF5", glow:"#FF6BF5",
+  },
+  tormenta: {
+    bg:"#04060E", surface:"#0A1020", surface2:"#0E1830", border:"#152040",
+    text:"#E0EAFF", sub:"#5080B0", muted:"#1A3050", tabBg:"rgba(4,6,14,0.95)",
+    skeleton:"#0E1830", skeletonShine:"#152848", accent:"#00E5FF", glow:"#00E5FF",
+  },
 };
 const THEME_BG = {
   dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2",
   ocean:"#04080F", sunset:"#0F0500", forest:"#020A04", aurora:"#020510", neon:"#03000A",
+  synthwave:"#0A0015", cryo:"#020D1A", cosmos:"#020008", tormenta:"#04060E",
 };
 
 // ── Colores institucionales por rotación ──────────────────────────────────────
@@ -148,7 +169,6 @@ const safeStorage = {
   },
   set(key, value) {
     try { localStorage.setItem(key, value); } catch(e) {
-      // localStorage lleno → limpiar caché expirado e intentar de nuevo
       purgeCacheStorage();
       try { localStorage.setItem(key, value); } catch {}
     }
@@ -161,8 +181,6 @@ const safeStorage = {
   },
 };
 
-// Elimina entradas de caché expiradas del localStorage
-// Se llama al iniciar la app y cuando el storage se llena
 function purgeCacheStorage() {
   try {
     const keys = safeStorage.keys().filter(k => k.startsWith("cache:"));
@@ -173,7 +191,6 @@ function purgeCacheStorage() {
         if (!raw) continue;
         const { ts, ttl } = JSON.parse(raw);
         const expired = Date.now() - ts > (ttl || 30 * 60 * 1000);
-        // También eliminar entradas de días pasados aunque no hayan expirado
         const isOldDaily = key.includes("route=daily") && (() => {
           const m = key.match(/date=(\d{4}-\d{2}-\d{2})/);
           if (!m) return false;
@@ -189,26 +206,19 @@ function purgeCacheStorage() {
   } catch { return 0; }
 }
 
-// ── Sistema de caché ──────────────────────────────────────────────────────────
 // ── Caché inteligente con TTL dinámico ───────────────────────────────────────
-// daily → expira a medianoche (los horarios no cambian durante el día)
-// summary/monthly → expira en 4h (rotaciones cambian poco)
-// becados → expira en 24h (la lista rara vez cambia)
-// Por defecto → 1h
-
 function cacheTTL(params) {
   const route = (params.route || "").toLowerCase();
   if (route === "daily") {
-    // Expira a medianoche del día pedido
     const dateStr = params.date || todayISO();
     const [y,m,d] = dateStr.split("-").map(Number);
     const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
     return midnight - Date.now();
   }
-  if (route === "summary")  return 24 * 60 * 60 * 1000; // 24h
-  if (route === "monthly")  return 24 * 60 * 60 * 1000; // 24h
-  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000; // 7 días
-  return 24 * 60 * 60 * 1000; // 24h por defecto
+  if (route === "summary")  return 24 * 60 * 60 * 1000;
+  if (route === "monthly")  return 24 * 60 * 60 * 1000;
+  if (route === "becados")  return  7 * 24 * 60 * 60 * 1000;
+  return 24 * 60 * 60 * 1000;
 }
 
 function cacheKey(params) {
@@ -226,7 +236,7 @@ function cacheGet(params) {
 function cacheSet(params, data) {
   try {
     const ttl = cacheTTL(params);
-    if (ttl <= 0) return; // ya expiró (ej. día pasado)
+    if (ttl <= 0) return;
     safeStorage.set(cacheKey(params), JSON.stringify({ data, ts: Date.now(), ttl }));
   } catch {}
 }
@@ -294,8 +304,6 @@ async function apiGet(params) {
   return res.json();
 }
 
-// Cache-first: mostrar caché instantáneamente, revalidar en background
-// solo UNA vez por sesión por clave (no en cada cambio de tab)
 const _revalidatedThisSession = new Set();
 
 function cacheAge(params) {
@@ -307,33 +315,25 @@ function cacheAge(params) {
   } catch { return Infinity; }
 }
 
-// SWR_REVALIDATE_AFTER ya no se usa para tabs — solo para decidir si
-// vale la pena revalidar en segundo plano por primera vez en la sesión
-const SWR_REVALIDATE_AFTER = 5 * 60 * 1000; // 5 min mínimo para revalidar
+const SWR_REVALIDATE_AFTER = 5 * 60 * 1000;
 
 async function apiSWR(params, onImmediate, onFresh) {
   const cached = cacheGet(params);
   const key    = cacheKey(params);
 
   if (cached) {
-    // Mostrar caché inmediatamente — el usuario no espera nada
     onImmediate(cached, true);
-
-    // Revalidar en background solo si:
-    // 1) No lo hemos revalidado ya en esta sesión, Y
-    // 2) El caché tiene más de 5 minutos (evita calls al abrir recién)
     if (!_revalidatedThisSession.has(key) && cacheAge(params) > SWR_REVALIDATE_AFTER) {
       _revalidatedThisSession.add(key);
       apiGet(params)
         .then(fresh => { cacheSet(params, fresh); onFresh(fresh, false); })
-        .catch(() => { onFresh(cached, false); }); // silencioso, ya tiene datos
+        .catch(() => { onFresh(cached, false); });
     } else {
       onFresh(cached, false);
     }
     return cached;
   }
 
-  // Sin caché → fetch obligatorio
   try {
     const fresh = await apiGet(params);
     cacheSet(params, fresh);
@@ -345,7 +345,6 @@ async function apiSWR(params, onImmediate, onFresh) {
   }
 }
 
-// Prefetch silencioso (día individual)
 function prefetch(params) {
   if (cacheGet(params)) return;
   apiGet(params)
@@ -353,14 +352,10 @@ function prefetch(params) {
     .catch(() => {});
 }
 
-// Prefetch de semana completa en UNA llamada al backend
-// — usa ruta "week" que devuelve 7 días de una vez
 function prefetchWeek(becado, mondayISO) {
-  // Si ya tenemos los 7 días en caché, no hacer nada
   const weekDates = getWeekDates(mondayISO);
   const allCached = weekDates.every(d => !!cacheGet({route:"daily",becado,date:d,token:API_TOKEN}));
   if (allCached) return;
-  // Una sola llamada para los 7 días
   apiGet({ route:"week", becado, start:mondayISO, token:API_TOKEN })
     .then(res => {
       if (!res.ok || !res.days) return;
@@ -446,6 +441,8 @@ const CSS = `
     position: fixed; pointer-events: none; z-index: 999;
     animation: petalFall linear infinite, petalSway ease-in-out infinite;
     user-select: none;
+    will-change: transform;
+    backface-visibility: hidden;
   }
   @keyframes bubbleRise {
     0%   { transform: translateY(0) scale(1); opacity: 0; }
@@ -494,14 +491,114 @@ const CSS = `
     0%   { opacity:0; transform: translate(-50%,-50%) scale(0.88); }
     100% { opacity:1; transform: translate(-50%,-50%) scale(1); }
   }
+  @keyframes rainFall {
+    0%   { transform: translateY(-5vh) translateX(0px); opacity: 0; }
+    8%   { opacity: 1; }
+    85%  { opacity: 0.6; }
+    100% { transform: translateY(112vh) translateX(-20px); opacity: 0; }
+  }
+  @keyframes lightningFlashA {
+    0%,93%,100% { opacity: 0; }
+    94%   { opacity: 0.85; }
+    95%   { opacity: 0; }
+    95.5% { opacity: 0.5; }
+    96.5% { opacity: 0; }
+  }
+  @keyframes lightningFlashB {
+    0%,91%,100% { opacity: 0; }
+    92%   { opacity: 0.7; }
+    92.8% { opacity: 0; }
+    93.2% { opacity: 0.45; }
+    94%   { opacity: 0; }
+  }
+  @keyframes lightningFlashC {
+    0%,88%,100% { opacity: 0; }
+    89%   { opacity: 0.6; }
+    89.5% { opacity: 0.1; }
+    90%   { opacity: 0.75; }
+    90.8% { opacity: 0; }
+  }
+  @keyframes boltStrike {
+    0%,92%,100% { opacity: 0; transform: scaleY(0.7); }
+    93%   { opacity: 1; transform: scaleY(1); }
+    94%   { opacity: 0.15; transform: scaleY(1); }
+    94.5% { opacity: 0.8; transform: scaleY(1.02); }
+    96%   { opacity: 0; transform: scaleY(1); }
+  }
+  @keyframes cloudDrift1 {
+    0%   { transform: translateX(-8%) scaleX(1); }
+    100% { transform: translateX(8%) scaleX(1.05); }
+  }
+  @keyframes cloudDrift2 {
+    0%   { transform: translateX(6%); }
+    100% { transform: translateX(-10%); }
+  }
+  @keyframes windGust {
+    0%,100% { transform: rotate(4deg); }
+    40%     { transform: rotate(8deg); }
+    70%     { transform: rotate(2deg); }
+  }
+  @keyframes gridScroll {
+    0%   { background-position: 0 0; }
+    100% { background-position: 0 80px; }
+  }
+  @keyframes sunSink {
+    0%   { transform: translateX(-50%) translateY(0); }
+    100% { transform: translateX(-50%) translateY(12px); }
+  }
+  @keyframes starPop {
+    0%,100% { opacity: 0.3; transform: scale(1); }
+    50%     { opacity: 1; transform: scale(1.5); }
+  }
+  @keyframes glitchJolt {
+    0%,90%,100% { transform: translateX(0); clip-path: inset(0); }
+    92%  { transform: translateX(-8px); clip-path: inset(10% 0 80% 0); }
+    93%  { transform: translateX(12px); clip-path: inset(40% 0 30% 0); }
+    94%  { transform: translateX(-4px); clip-path: inset(70% 0 5% 0); }
+    95%  { transform: translateX(0); clip-path: inset(0); }
+  }
+  @keyframes glitchJoltB {
+    0%,85%,100% { transform: translateX(0); clip-path: inset(0); }
+    87%  { transform: translateX(10px); clip-path: inset(5% 0 70% 0); }
+    88%  { transform: translateX(-14px); clip-path: inset(45% 0 25% 0); }
+    89%  { transform: translateX(6px); clip-path: inset(75% 0 10% 0); }
+    90%  { transform: translateX(0); clip-path: inset(0); }
+  }
+  @keyframes corruptBlock {
+    0%,88%,96%,100% { opacity: 0; }
+    90% { opacity: 0.8; }
+    92% { opacity: 0.15; }
+    93% { opacity: 0.65; }
+    95% { opacity: 0; }
+  }
+  @keyframes corruptBlockB {
+    0%,82%,92%,100% { opacity: 0; }
+    84% { opacity: 0.7; }
+    86% { opacity: 0; }
+    87% { opacity: 0.55; }
+    90% { opacity: 0; }
+  }
+  @keyframes scanlineFlicker {
+    0%   { opacity: 0.04; }
+    50%  { opacity: 0.08; }
+    100% { opacity: 0.04; }
+  }
+  @keyframes neonFlicker {
+    0%,100% { opacity: 1; }
+    92%     { opacity: 1; }
+    93%     { opacity: 0.2; }
+    94%     { opacity: 0.9; }
+    95%     { opacity: 0.1; }
+    96%     { opacity: 1; }
+  }
 `;
 
 
 // ── Sakura petals SVG ────────────────────────────────────────────────────────
-// Pétalo SVG: forma orgánica de cerezo
+// ✦ OPTIMIZADO: drop-shadow removido del SVG, glow via box-shadow en padre
 function PetalSVG({ size, color, opacity }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block",filter:`drop-shadow(0 0 ${size*0.3}px ${color}90)`}}>
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block"}}>
       <path d="M12 2 C14 5, 19 6, 20 10 C21 14, 18 19, 12 22 C6 19, 3 14, 4 10 C5 6, 10 5, 12 2Z"
         fill={color} opacity={opacity}/>
       <path d="M12 2 C12 8, 14 14, 12 22" stroke="white" strokeWidth="0.4" opacity="0.35" fill="none"/>
@@ -526,13 +623,13 @@ const PETALS_CONFIG = Array.from({length: 18}, (_, i) => ({
   rotate:   i * 37,
 }));
 
+// ✦ OPTIMIZADO: blur→gradiente más ancho, glow via box-shadow en petal div
 function SakuraPetals() {
   return (
     <>
-      {/* Glow ambiental en esquinas */}
-      <div style={{position:"fixed",top:-80,left:-80,width:280,height:280,borderRadius:"50%",background:"radial-gradient(circle, #FF4D9440 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
-      <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"radial-gradient(circle, #E8186A30 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
-      <div style={{position:"fixed",bottom:80,right:-40,width:180,height:180,borderRadius:"50%",background:"radial-gradient(circle, #FF69B428 0%, transparent 70%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",top:-120,left:-120,width:420,height:420,borderRadius:"50%",background:"radial-gradient(circle, #FF4D9440 0%, transparent 50%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",top:-100,right:-100,width:340,height:340,borderRadius:"50%",background:"radial-gradient(circle, #E8186A30 0%, transparent 50%)",pointerEvents:"none",zIndex:0}}/>
+      <div style={{position:"fixed",bottom:40,right:-80,width:280,height:280,borderRadius:"50%",background:"radial-gradient(circle, #FF69B428 0%, transparent 50%)",pointerEvents:"none",zIndex:0}}/>
       {PETALS_CONFIG.map(p => (
         <div key={p.id} className="petal" style={{
           left: `${p.left}%`,
@@ -542,6 +639,7 @@ function SakuraPetals() {
           animationDuration: `${p.duration}s, ${p.swayDur}s`,
           animationDelay: `${p.delay}s, ${p.delay * 0.6}s`,
           transform: `rotate(${p.rotate}deg)`,
+          boxShadow: `0 0 ${p.size*0.5}px ${p.color}70`,
         }}>
           <PetalSVG size={p.size} color={p.color} opacity={p.opacity}/>
         </div>
@@ -551,6 +649,9 @@ function SakuraPetals() {
 }
 
 // ── Efectos ambientales por tema ─────────────────────────────────────────────
+// ✦ OPTIMIZADOS: filter:blur→gradientes más anchos, box-shadow dobles→simples,
+//   will-change+backfaceVisibility en partículas, contain en wrappers,
+//   conteo reducido donde no se nota
 
 function OceanBubbles() {
   const bubbles = Array.from({length:22},(_,i)=>({
@@ -566,31 +667,27 @@ function OceanBubbles() {
     id:i, x:10+i*18, rot:-15+i*6, dur:8+i*2.5, delay:-(i*1.8),
   }));
   return (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-      {/* Deep water gradient */}
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
       <div style={{position:"fixed",inset:0,
         background:"linear-gradient(to bottom, #001830 0%, #04080F 40%, #001025 100%)",
         opacity:0.6}}/>
-      {/* Light rays from above */}
       {rays.map(r=>(
         <div key={r.id} style={{
           position:"absolute",top:-60,left:`${r.x}%`,
-          width:30,height:"70%",
+          width:44,height:"70%",
           background:`linear-gradient(to bottom, #00C8FF18, transparent)`,
           transform:`rotate(${r.rot}deg)`,
           transformOrigin:"top center",
-          filter:"blur(8px)",
           animation:`neonPulseA ${r.dur}s ${r.delay}s ease-in-out infinite`,
+          willChange:"opacity,transform",
         }}/>
       ))}
-      {/* Ambient glow orbs */}
-      <div style={{position:"fixed",top:-60,left:"5%",width:400,height:400,borderRadius:"50%",
-        background:"radial-gradient(circle, #00C8FF0D 0%, transparent 70%)",filter:"blur(60px)",
+      <div style={{position:"fixed",top:-80,left:"2%",width:600,height:600,borderRadius:"50%",
+        background:"radial-gradient(circle, #00C8FF0D 0%, transparent 50%)",
         animation:"neonPulseA 12s ease-in-out infinite"}}/>
-      <div style={{position:"fixed",bottom:-80,right:"-5%",width:350,height:350,borderRadius:"50%",
-        background:"radial-gradient(circle, #0055FF0F 0%, transparent 70%)",filter:"blur(70px)",
+      <div style={{position:"fixed",bottom:-120,right:"-8%",width:540,height:540,borderRadius:"50%",
+        background:"radial-gradient(circle, #0055FF0F 0%, transparent 50%)",
         animation:"neonPulseB 15s ease-in-out infinite"}}/>
-      {/* Bubbles: big/medium/small */}
       {bubbles.map(b=>(
         <div key={b.id} style={{
           position:"absolute",bottom:-20,left:`${b.x}%`,
@@ -599,56 +696,54 @@ function OceanBubbles() {
           border:`1px solid #00C8FF${Math.round(b.opacity*120).toString(16).padStart(2,"0")}`,
           boxShadow: b.size>12 ? `0 0 ${b.size}px #00C8FF20` : "none",
           animation:`bubbleRise ${b.dur}s ${b.delay}s infinite ease-in, bubbleSway ${b.swayDur}s ${b.delay*0.4}s infinite ease-in-out`,
+          willChange:"transform,opacity",
+          backfaceVisibility:"hidden",
         }}/>
       ))}
     </div>
   );
 }
 
+// ✦ OPTIMIZADO: stars 40→30, blur→gradiente ancho en curtains
 function AuroraEffect() {
-  const stars = Array.from({length:40},(_,i)=>({
+  const stars = Array.from({length:30},(_,i)=>({
     id:i, x:Math.sin(i*137.5)*50+50, y:Math.cos(i*97.3)*40+20,
     size:Math.sin(i*1.7)*0.8+1.2, dur:2+Math.cos(i)*1.5, delay:-(i*0.3),
   }));
   return (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-      {/* Star field */}
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
       {stars.map(s=>(
         <div key={s.id} style={{
           position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
           width:s.size,height:s.size,borderRadius:"50%",
           background:"#C8D8FF",
-          boxShadow:`0 0 ${s.size*2}px #8A5CF680`,
+          boxShadow:`0 0 ${s.size*3}px #8A5CF660`,
           animation:`neonPulseA ${s.dur}s ${s.delay}s ease-in-out infinite`,
           opacity:0.6,
+          willChange:"opacity",
         }}/>
       ))}
-      {/* Aurora curtains — violet */}
-      <div style={{position:"absolute",top:"-30%",left:"-20%",width:"80%",height:"70%",
-        background:"radial-gradient(ellipse, #8A5CF630 0%, #4F46E514 45%, transparent 70%)",
-        filter:"blur(50px)",animation:"auroraShift1 12s ease-in-out infinite alternate"}}/>
-      {/* Aurora curtains — cyan/teal */}
-      <div style={{position:"absolute",top:"0%",right:"-30%",width:"90%",height:"60%",
-        background:"radial-gradient(ellipse, #06B6D422 0%, #0EA5E910 45%, transparent 70%)",
-        filter:"blur(60px)",animation:"auroraShift2 16s ease-in-out infinite alternate"}}/>
-      {/* Aurora curtains — green */}
-      <div style={{position:"absolute",top:"20%",left:"-10%",width:"70%",height:"50%",
-        background:"radial-gradient(ellipse, #22D45A18 0%, #4ADE8008 45%, transparent 70%)",
-        filter:"blur(65px)",animation:"auroraShift3 19s ease-in-out infinite alternate"}}/>
-      {/* Aurora curtains — deep rose */}
-      <div style={{position:"absolute",bottom:"-20%",right:"5%",width:"75%",height:"60%",
-        background:"radial-gradient(ellipse, #C026D316 0%, #8A5CF608 50%, transparent 70%)",
-        filter:"blur(70px)",animation:"auroraShift1 22s 4s ease-in-out infinite alternate-reverse"}}/>
-      {/* Top vignette glow */}
+      <div style={{position:"absolute",top:"-35%",left:"-25%",width:"90%",height:"75%",
+        background:"radial-gradient(ellipse, #8A5CF630 0%, #4F46E514 35%, transparent 55%)",
+        animation:"auroraShift1 12s ease-in-out infinite alternate"}}/>
+      <div style={{position:"absolute",top:"-5%",right:"-35%",width:"100%",height:"65%",
+        background:"radial-gradient(ellipse, #06B6D422 0%, #0EA5E910 35%, transparent 55%)",
+        animation:"auroraShift2 16s ease-in-out infinite alternate"}}/>
+      <div style={{position:"absolute",top:"15%",left:"-15%",width:"80%",height:"55%",
+        background:"radial-gradient(ellipse, #22D45A18 0%, #4ADE8008 35%, transparent 55%)",
+        animation:"auroraShift3 19s ease-in-out infinite alternate"}}/>
+      <div style={{position:"absolute",bottom:"-25%",right:"0%",width:"85%",height:"65%",
+        background:"radial-gradient(ellipse, #C026D316 0%, #8A5CF608 40%, transparent 55%)",
+        animation:"auroraShift1 22s 4s ease-in-out infinite alternate-reverse"}}/>
       <div style={{position:"absolute",inset:0,
         background:"radial-gradient(ellipse at 50% -10%, #8A5CF612, transparent 55%)"}}/>
-      {/* Bottom fade to solid bg */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,height:"30%",
         background:"linear-gradient(to top, #020510, transparent)"}}/>
     </div>
   );
 }
 
+// ✦ OPTIMIZADO: blur→gradiente ancho en niebla/canopy, box-shadow simple en fireflies
 function ForestFireflies() {
   const flies = Array.from({length:24},(_,i)=>({
     id:i,
@@ -657,51 +752,47 @@ function ForestFireflies() {
     dur: 2.5+Math.sin(i)*2+1.5,
     delay: -(i*0.42),
     size: 1.5+Math.cos(i*1.3)*1.8+2,
-    bright: i%5===0 ? 1 : i%3===0 ? 0.7 : 0.35,  // some brighter
-    hue: i%7===0 ? "#AAFF70" : i%5===0 ? "#00FF88" : "#22D45A", // slight hue variation
+    bright: i%5===0 ? 1 : i%3===0 ? 0.7 : 0.35,
+    hue: i%7===0 ? "#AAFF70" : i%5===0 ? "#00FF88" : "#22D45A",
   }));
-  const mistLayers = [
-    {bottom:"5%", opacity:0.18, dur:25, delay:0},
-    {bottom:"12%", opacity:0.10, dur:32, delay:-8},
-    {bottom:"20%", opacity:0.06, dur:40, delay:-15},
-  ];
   return (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-      {/* Deep forest canopy top */}
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
       <div style={{position:"fixed",top:0,left:0,right:0,height:"25%",
         background:"linear-gradient(to bottom, #010602, transparent)"}}/>
-      {/* Ground fog layers */}
-      {mistLayers.map((m,i)=>(
+      {[
+        {bottom:"3%", opacity:0.18, dur:25, delay:0},
+        {bottom:"10%", opacity:0.10, dur:32, delay:-8},
+        {bottom:"18%", opacity:0.06, dur:40, delay:-15},
+      ].map((m,i)=>(
         <div key={i} style={{
-          position:"fixed",bottom:m.bottom,left:"-20%",right:"-20%",height:80,
-          background:"radial-gradient(ellipse at 50% 100%, #22D45A12, transparent 70%)",
-          filter:"blur(20px)",
+          position:"fixed",bottom:m.bottom,left:"-30%",right:"-30%",height:120,
+          background:"radial-gradient(ellipse at 50% 100%, #22D45A14, transparent 55%)",
           opacity:m.opacity,
           animation:`auroraShift1 ${m.dur}s ${m.delay}s ease-in-out infinite alternate`,
         }}/>
       ))}
-      {/* Bottom solid vignette */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,height:"40%",
         background:"linear-gradient(to top, #020A04 15%, transparent)"}}/>
-      {/* Ambient canopy glow */}
-      <div style={{position:"fixed",top:-60,left:"20%",width:380,height:300,
-        background:"radial-gradient(ellipse, #22D45A0A, transparent 70%)",filter:"blur(55px)",
+      <div style={{position:"fixed",top:-80,left:"15%",width:560,height:450,
+        background:"radial-gradient(ellipse, #22D45A0A, transparent 50%)",
         animation:"neonPulseA 18s ease-in-out infinite"}}/>
-      {/* Fireflies */}
       {flies.map(f=>(
         <div key={f.id} style={{
           position:"absolute",left:`${f.x}%`,top:`${f.y}%`,
           width:f.size,height:f.size,borderRadius:"50%",
           background:f.hue,
-          boxShadow:`0 0 ${f.size*4}px ${f.size}px ${f.hue}${Math.round(f.bright*180).toString(16).padStart(2,"0")}, 0 0 ${f.size*10}px ${f.hue}40`,
+          boxShadow:`0 0 ${f.size*6}px ${f.hue}${Math.round(f.bright*160).toString(16).padStart(2,"0")}`,
           opacity:f.bright,
           animation:`fireflyFloat ${f.dur}s ${f.delay}s ease-in-out infinite`,
+          willChange:"transform,opacity",
+          backfaceVisibility:"hidden",
         }}/>
       ))}
     </div>
   );
 }
 
+// ✦ OPTIMIZADO: blur→gradiente ancho en glows, box-shadow simple en embers
 function SunsetEmbers() {
   const embers = Array.from({length:20},(_,i)=>({
     id:i,
@@ -711,120 +802,621 @@ function SunsetEmbers() {
     color: i%4===0 ? "#FFDD00" : i%3===0 ? "#FFAA40" : "#FF5500",
   }));
   return (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-      {/* Volcanic sky gradient */}
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
       <div style={{position:"fixed",inset:0,
         background:"linear-gradient(to bottom, #200800 0%, #0F0500 35%, transparent 65%)",
         opacity:0.7}}/>
-      {/* Lava horizon glow */}
-      <div style={{position:"fixed",bottom:"15%",left:"-10%",right:"-10%",height:120,
-        background:"radial-gradient(ellipse at 50% 100%, #FF3300 0%, #FF550030 40%, transparent 70%)",
-        filter:"blur(30px)",
+      <div style={{position:"fixed",bottom:"12%",left:"-15%",right:"-15%",height:180,
+        background:"radial-gradient(ellipse at 50% 100%, #FF3300 0%, #FF550030 30%, transparent 55%)",
         animation:"neonPulseA 4s ease-in-out infinite"}}/>
-      {/* Heat halo — pulsing crown */}
-      <div style={{position:"fixed",top:"-20%",left:"10%",right:"10%",height:"60%",
-        background:"radial-gradient(ellipse at 50% 0%, #FF220018 0%, #FF550008 40%, transparent 70%)",
-        filter:"blur(40px)",
+      <div style={{position:"fixed",top:"-25%",left:"5%",right:"5%",height:"65%",
+        background:"radial-gradient(ellipse at 50% 0%, #FF220018 0%, #FF550008 30%, transparent 55%)",
         animation:"neonPulseB 6s ease-in-out infinite"}}/>
-      {/* Side lava walls */}
-      <div style={{position:"fixed",top:0,left:0,width:"15%",height:"100%",
-        background:"linear-gradient(to right, #FF220008, transparent)",
-        filter:"blur(20px)"}}/>
-      <div style={{position:"fixed",top:0,right:0,width:"15%",height:"100%",
-        background:"linear-gradient(to left, #FF220008, transparent)",
-        filter:"blur(20px)"}}/>
-      {/* Ground */}
+      <div style={{position:"fixed",top:0,left:0,width:"20%",height:"100%",
+        background:"linear-gradient(to right, #FF220010, transparent)"}}/>
+      <div style={{position:"fixed",top:0,right:0,width:"20%",height:"100%",
+        background:"linear-gradient(to left, #FF220010, transparent)"}}/>
       <div style={{position:"fixed",bottom:0,left:0,right:0,height:"45%",
         background:"linear-gradient(to top, #0F0500 20%, transparent)"}}/>
-      {/* Embers */}
       {embers.map(e=>(
         <div key={e.id} style={{
           position:"absolute",bottom:-10,left:`${e.x}%`,
           width:e.size,height:e.size*(1.2+Math.sin(e.id)*0.6),borderRadius:"50% 50% 40% 40%",
           background:`radial-gradient(circle at 40% 30%, #FFEE80, ${e.color})`,
-          boxShadow:`0 0 ${e.size*5}px ${e.size*2.5}px ${e.color}70`,
+          boxShadow:`0 0 ${e.size*6}px ${e.color}80`,
           animation:`emberRise ${e.dur}s ${e.delay}s infinite ease-out`,
+          willChange:"transform,opacity",
+          backfaceVisibility:"hidden",
         }}/>
       ))}
     </div>
   );
 }
 
+// ✦ GLITCH V2 — Aggressive digital corruption: displacement jolts, data blocks,
+//   heavy scanlines, flickering neon orbs, chaotic not clean
 function NeonGrid() {
-  const hLines = [15, 32, 50, 68, 84];
-  const vLines = [20, 40, 60, 80];
-  const glitchBars = Array.from({length:3},(_,i)=>({
-    id:i, top:15+i*28, dur:0.12, delay:3+i*5.5, height:2+i,
+  // Grid lines — kept but made more visible
+  const hLines = [12, 28, 44, 58, 72, 86];
+  const vLines = [15, 30, 50, 70, 85];
+  // Corruption blocks — rectangles that flash like broken VRAM
+  const corruptBlocks = [
+    { x:"5%",  y:"12%", w:120, h:8,  dur:7,  delay:0,    anim:"corruptBlock" },
+    { x:"55%", y:"35%", w:80,  h:12, dur:11, delay:-3,   anim:"corruptBlockB" },
+    { x:"20%", y:"62%", w:140, h:6,  dur:9,  delay:-5,   anim:"corruptBlock" },
+    { x:"65%", y:"78%", w:100, h:10, dur:13, delay:-8,   anim:"corruptBlockB" },
+    { x:"10%", y:"48%", w:60,  h:14, dur:8,  delay:-2,   anim:"corruptBlock" },
+    { x:"72%", y:"18%", w:90,  h:7,  dur:15, delay:-6,   anim:"corruptBlockB" },
+    { x:"38%", y:"88%", w:110, h:5,  dur:10, delay:-4,   anim:"corruptBlock" },
+  ];
+  // Pixel clusters — tiny squares like dead pixels
+  const pixels = Array.from({length:16},(_,i)=>({
+    id:i,
+    x: Math.sin(i*137.5)*45+50,
+    y: Math.cos(i*97.3)*40+45,
+    size: 2+Math.sin(i*2.3)*2,
+    dur: 6+Math.cos(i)*4,
+    delay: -(i*0.6),
+    color: i%4===0?"#FF00FF":i%3===0?"#00FFFF":i%2===0?"#CC00FF":"#FFFFFF",
   }));
   return (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-      {/* Scanlines */}
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
+      {/* Heavy scanlines — actually visible */}
       <div style={{position:"absolute",inset:0,
-        backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.05) 3px,rgba(0,0,0,0.05) 4px)",
+        backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.12) 2px,rgba(0,0,0,0.12) 3px)",
+        animation:"scanlineFlicker 3s ease-in-out infinite",
         pointerEvents:"none"}}/>
-      {/* Tron horizontal grid lines */}
+
+      {/* Tron horizontal grid lines — brighter */}
       {hLines.map((t,i)=>(
-        <div key={i} style={{
+        <div key={`h${i}`} style={{
           position:"fixed",top:`${t}%`,left:0,right:0,height:1,
-          background:`linear-gradient(90deg, transparent 5%, #CC00FF${i===2?"28":"14"} 50%, transparent 95%)`,
-          animation:`neonPulseB ${5+i*1.5}s ${-i*2}s ease-in-out infinite`,
+          background:`linear-gradient(90deg, transparent 3%, #CC00FF${i%2===0?"38":"20"} 50%, transparent 97%)`,
+          animation:`neonPulseB ${4+i*1.2}s ${-i*1.5}s ease-in-out infinite`,
         }}/>
       ))}
       {/* Tron vertical grid lines */}
       {vLines.map((l,i)=>(
-        <div key={i} style={{
+        <div key={`v${i}`} style={{
           position:"fixed",left:`${l}%`,top:0,bottom:0,width:1,
-          background:`linear-gradient(180deg, transparent 5%, #FF00FF10 50%, transparent 95%)`,
-          animation:`neonPulseA ${7+i*2}s ${-i*1.8}s ease-in-out infinite`,
+          background:`linear-gradient(180deg, transparent 3%, #FF00FF18 50%, transparent 97%)`,
+          animation:`neonPulseA ${6+i*1.5}s ${-i*1.3}s ease-in-out infinite`,
         }}/>
       ))}
-      {/* Glitch displacement bars */}
-      {glitchBars.map(g=>(
-        <div key={g.id} style={{
-          position:"fixed",top:`${g.top}%`,left:0,right:0,height:g.height,
-          background:`linear-gradient(90deg, transparent, #CC00FF30, #FF00FF20, transparent)`,
-          filter:"blur(1px)",
-          animation:`neonPulseB ${g.dur}s ${g.delay}s step-end infinite`,
+
+      {/* ═══ GLITCH DISPLACEMENT LAYERS ═══ */}
+      {/* Full-screen copies of the glow shifted horizontally — creates the "broken screen" look */}
+      <div style={{
+        position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 35% 25%, #CC00FF25, transparent 50%)",
+        animation:"glitchJolt 7s linear infinite",
+        willChange:"transform",
+      }}/>
+      <div style={{
+        position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 65% 70%, #00FFFF18, transparent 50%)",
+        animation:"glitchJoltB 11s linear infinite",
+        willChange:"transform",
+      }}/>
+
+      {/* ═══ CORRUPTION BLOCKS ═══ */}
+      {/* VRAM-corruption rectangles that flash in and out */}
+      {corruptBlocks.map((b,i)=>(
+        <div key={`cb${i}`} style={{
+          position:"fixed",left:b.x,top:b.y,
+          width:b.w,height:b.h,
+          background:`linear-gradient(90deg, #CC00FF${i%2===0?"50":"35"}, #FF00FF30, #00FFFF${i%3===0?"40":"20"}, transparent)`,
+          animation:`${b.anim} ${b.dur}s ${b.delay}s linear infinite`,
           opacity:0,
         }}/>
       ))}
-      {/* Main glow orbs */}
-      <div style={{position:"fixed",top:"8%",left:"-10%",width:320,height:320,borderRadius:"50%",
-        background:"radial-gradient(circle, #CC00FF20, transparent 70%)",filter:"blur(40px)",
-        animation:"neonPulseA 6s ease-in-out infinite"}}/>
-      <div style={{position:"fixed",bottom:"12%",right:"-14%",width:380,height:380,borderRadius:"50%",
-        background:"radial-gradient(circle, #FF00FF18, transparent 70%)",filter:"blur(50px)",
-        animation:"neonPulseB 8s ease-in-out infinite"}}/>
-      <div style={{position:"fixed",top:"42%",left:"35%",width:200,height:200,borderRadius:"50%",
-        background:"radial-gradient(circle, #7700FF16, transparent 70%)",filter:"blur(30px)",
+
+      {/* ═══ DEAD PIXEL CLUSTERS ═══ */}
+      {pixels.map(p=>(
+        <div key={`px${p.id}`} style={{
+          position:"absolute",left:`${p.x}%`,top:`${p.y}%`,
+          width:p.size,height:p.size,
+          background:p.color,
+          boxShadow:`0 0 ${p.size*3}px ${p.color}80`,
+          animation:`corruptBlock ${p.dur}s ${p.delay}s linear infinite`,
+          opacity:0,
+        }}/>
+      ))}
+
+      {/* ═══ NEON GLOW ORBS — with flicker ═══ */}
+      <div style={{position:"fixed",top:"5%",left:"-12%",width:480,height:480,borderRadius:"50%",
+        background:"radial-gradient(circle, #CC00FF22, transparent 50%)",
+        animation:"neonPulseA 6s ease-in-out infinite, neonFlicker 7s linear infinite"}}/>
+      <div style={{position:"fixed",bottom:"8%",right:"-15%",width:540,height:540,borderRadius:"50%",
+        background:"radial-gradient(circle, #FF00FF1A, transparent 50%)",
+        animation:"neonPulseB 8s ease-in-out infinite, neonFlicker 11s linear infinite"}}/>
+      <div style={{position:"fixed",top:"40%",left:"32%",width:280,height:280,borderRadius:"50%",
+        background:"radial-gradient(circle, #7700FF18, transparent 50%)",
         animation:"neonPulseA 10s 2s ease-in-out infinite reverse"}}/>
-      {/* Cyan accent orb */}
-      <div style={{position:"fixed",top:"60%",left:"-5%",width:220,height:220,borderRadius:"50%",
-        background:"radial-gradient(circle, #00FFFF0C, transparent 70%)",filter:"blur(40px)",
-        animation:"neonPulseB 13s 1s ease-in-out infinite"}}/>
-      {/* Bright corner flare */}
-      <div style={{position:"fixed",top:0,right:0,width:180,height:180,
-        background:"radial-gradient(circle at 100% 0%, #CC00FF18, transparent 70%)",
-        filter:"blur(30px)"}}/>
+      {/* Cyan accent — flickers independently */}
+      <div style={{position:"fixed",top:"58%",left:"-6%",width:320,height:320,borderRadius:"50%",
+        background:"radial-gradient(circle, #00FFFF10, transparent 50%)",
+        animation:"neonPulseB 13s 1s ease-in-out infinite, neonFlicker 13s 3s linear infinite"}}/>
+
+      {/* Corner flare */}
+      <div style={{position:"fixed",top:-30,right:-30,width:260,height:260,
+        background:"radial-gradient(circle at 100% 0%, #CC00FF1A, transparent 50%)"}}/>
+
+      {/* RGB split line — a signature horizontal neon strip that jolts */}
+      <div style={{
+        position:"fixed",top:"50%",left:0,right:0,height:2,
+        background:"linear-gradient(90deg, transparent, #FF00FF80, #00FFFF60, #FF00FF80, transparent)",
+        boxShadow:"0 0 12px #FF00FF, 0 -1px 0 #00FFFF, 0 1px 0 #FF006E",
+        animation:"glitchJolt 7s linear infinite",
+      }}/>
     </div>
   );
 }
 
-// ── ThemePicker ───────────────────────────────────────────────────────────────
+// ✦ SYNTHWAVE V2 — Sliced venetian-blind sun sinking, perspective grid scrolling,
+//   scattered stars, sun reflection on the ground, rich atmospheric glow
+function SynthwaveEffect() {
+  // Perspective grid — horizontal lines get closer together toward horizon
+  // Simulating depth: lines at 52%, 56%, 60%, 64%, 68%, 73%, 78%, 84%, 91%, 98%
+  const gridH = [52,55,58,62,66,71,77,83,90,97];
+  // Vertical lines converging to center vanishing point
+  const gridV = Array.from({length:12},(_,i)=>{
+    const spread = (i - 5.5) / 5.5; // -1 to +1
+    return { left: 50 + spread * 48, skew: -spread * 12 };
+  });
+  // Stars — scattered in the sky (top half)
+  const stars = Array.from({length:20},(_,i)=>({
+    id:i,
+    x: Math.sin(i*137.5)*45+50,
+    y: Math.cos(i*97.3)*20+12,
+    size: i%6===0 ? 2.5 : i%3===0 ? 1.8 : 1,
+    dur: 1.5+Math.cos(i)*1,
+    delay: -(i*0.35),
+  }));
+  // Sun slices — 5 horizontal gaps cut through the sun
+  const sunSlices = [22,34,46,58,70]; // percentage positions within the sun
+
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
+      {/* Sky gradient — deep purple → magenta at horizon */}
+      <div style={{position:"fixed",inset:0,
+        background:"linear-gradient(to bottom, #06001A 0%, #12002A 30%, #2D0050 48%, #0A0015 100%)",
+        opacity:0.9}}/>
+
+      {/* ═══ STARS ═══ */}
+      {stars.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
+          width:s.size,height:s.size,borderRadius:"50%",
+          background:"#FFFFFF",
+          boxShadow:`0 0 ${s.size*3}px #FFFFFF80`,
+          animation:`starPop ${s.dur}s ${s.delay}s ease-in-out infinite`,
+          opacity:0.3,
+          willChange:"opacity",
+        }}/>
+      ))}
+
+      {/* ═══ SUN — sliced venetian-blind style ═══ */}
+      {/* Sun body */}
+      <div style={{
+        position:"fixed",top:"28%",left:"50%",
+        width:130,height:130,borderRadius:"50%",
+        background:"linear-gradient(to bottom, #FF006E 0%, #FF4800 35%, #FF8C00 60%, #FFD700 100%)",
+        boxShadow:"0 0 50px #FF006E90, 0 0 100px #FF006E50, 0 0 150px #FF480030",
+        transform:"translateX(-50%)",
+        animation:"sunSink 30s ease-in-out infinite alternate, neonPulseA 4s ease-in-out infinite",
+        overflow:"hidden",
+      }}>
+        {/* Venetian blind slices — horizontal black bars across the sun */}
+        {sunSlices.map((pct,i)=>(
+          <div key={i} style={{
+            position:"absolute",left:0,right:0,top:`${pct}%`,height: i%2===0 ? 4 : 3,
+            background:"#0A0015",
+            opacity:0.7 + (i*0.05),
+          }}/>
+        ))}
+      </div>
+
+      {/* Sun upper glow */}
+      <div style={{position:"fixed",top:"18%",left:"30%",right:"30%",height:200,
+        background:"radial-gradient(ellipse at 50% 80%, #FF006E30 0%, #FF480015 40%, transparent 70%)"}}/>
+
+      {/* ═══ HORIZON LINE — bright neon strip ═══ */}
+      <div style={{position:"fixed",top:"50%",left:"-10%",right:"-10%",height:3,
+        background:"linear-gradient(90deg, transparent, #FF006E, #00F5FF, #FF006E, transparent)",
+        boxShadow:"0 0 30px #FF006E, 0 0 60px #00F5FF60"}}/>
+
+      {/* ═══ SUN REFLECTION below horizon ═══ */}
+      <div style={{
+        position:"fixed",top:"51%",left:"50%",transform:"translateX(-50%) scaleY(-0.5)",
+        width:160,height:130,borderRadius:"50%",
+        background:"radial-gradient(ellipse, #FF006E35 0%, #FF880020 40%, transparent 65%)",
+        animation:"neonPulseB 4s ease-in-out infinite",
+        opacity:0.6,
+      }}/>
+      {/* Reflection streak — elongated glow */}
+      <div style={{position:"fixed",top:"52%",left:"35%",right:"35%",height:120,
+        background:"radial-gradient(ellipse at 50% 0%, #FF006E20, #FF880010 40%, transparent 70%)",
+        animation:"neonPulseA 5s ease-in-out infinite"}}/>
+
+      {/* ═══ PERSPECTIVE GRID — FLOOR ═══ */}
+      {/* Horizontal lines — spacing increases toward viewer (bottom) */}
+      {gridH.map((t,i)=>{
+        const proximity = i / gridH.length; // 0=far, 1=near
+        const brightness = Math.round(20 + proximity * 50);
+        const alpha = Math.round(proximity * 80 + 20).toString(16).padStart(2,"0");
+        return (
+          <div key={`gh${i}`} style={{
+            position:"fixed",top:`${t}%`,left:0,right:0,height:1,
+            background:`linear-gradient(90deg, transparent 3%, #FF006E${alpha} 50%, transparent 97%)`,
+            animation:`neonPulseA ${4+i*0.8}s ease-in-out infinite`,
+            opacity: 0.3 + proximity * 0.6,
+          }}/>
+        );
+      })}
+      {/* Vertical lines — converge to vanishing point at horizon center */}
+      {gridV.map((v,i)=>(
+        <div key={`gv${i}`} style={{
+          position:"fixed",
+          left:`${v.left}%`,
+          top:"50%",bottom:0,
+          width:1,
+          background:`linear-gradient(to bottom, #00F5FF50, #00F5FF20 40%, transparent)`,
+          transform:`skewX(${v.skew}deg)`,
+          transformOrigin:"top center",
+          animation:`neonPulseB ${5+i*0.4}s ease-in-out infinite`,
+          opacity:0.4,
+        }}/>
+      ))}
+
+      {/* Grid scroll overlay — gives illusion of forward movement */}
+      <div style={{
+        position:"fixed",left:0,right:0,top:"50%",bottom:0,
+        backgroundImage:"repeating-linear-gradient(0deg, transparent, transparent 38px, #00F5FF10 38px, #00F5FF10 40px)",
+        backgroundSize:"100% 80px",
+        animation:"gridScroll 3s linear infinite",
+        opacity:0.4,
+      }}/>
+
+      {/* Atmospheric glow — top sky shimmer */}
+      <div style={{position:"fixed",top:"-10%",left:"20%",right:"20%",height:250,
+        background:"radial-gradient(ellipse, #FF006E18 0%, transparent 55%)"}}/>
+      {/* Bottom floor glow */}
+      <div style={{position:"fixed",bottom:"-5%",left:"5%",right:"5%",height:200,
+        background:"radial-gradient(ellipse at 50% 100%, #00F5FF14 0%, transparent 55%)"}}/>
+      {/* Side atmosphere */}
+      <div style={{position:"fixed",top:"45%",left:"-5%",width:"30%",height:"30%",
+        background:"radial-gradient(circle, #FF006E0A, transparent 60%)",
+        animation:"neonPulseB 9s ease-in-out infinite"}}/>
+      <div style={{position:"fixed",top:"45%",right:"-5%",width:"30%",height:"30%",
+        background:"radial-gradient(circle, #00F5FF0A, transparent 60%)",
+        animation:"neonPulseA 11s ease-in-out infinite"}}/>
+    </div>
+  );
+}
+
+// ✦ OPTIMIZADO: shards 28→20, flakes 40→25, blur→gradiente, box-shadow simple
+function CryoEffect() {
+  const shards = Array.from({length:20},(_,i)=>({
+    id:i, x:2+i*4.8+Math.sin(i*2.7)*12, y:Math.cos(i*1.9)*45+45,
+    w:4+Math.abs(Math.sin(i*1.3))*18, h:8+Math.abs(Math.cos(i*2.1))*32,
+    rot:i*29, dur:3+Math.sin(i)*2, delay:-(i*0.45),
+    bright:i%4===0?1:i%3===0?0.7:0.4,
+  }));
+  const flakes = Array.from({length:25},(_,i)=>({
+    id:i, x:i*4+Math.sin(i*3)*8, size:1+Math.cos(i*1.7)*1.5+1.5,
+    dur:2.5+Math.sin(i)*1.5, delay:-(i*0.35),
+  }));
+  const orbs = [
+    {x:"12%",y:"8%",w:420,h:420,col:"#00CFFF",op:0.18,dur:5},
+    {x:"62%",y:"3%",w:340,h:340,col:"#7BE8FF",op:0.14,dur:7},
+    {x:"35%",y:"50%",w:480,h:480,col:"#00CFFF",op:0.10,dur:9},
+    {x:"78%",y:"55%",w:280,h:280,col:"#C0F8FF",op:0.16,dur:6},
+    {x:"-8%",y:"45%",w:300,h:300,col:"#00A8FF",op:0.12,dur:8},
+  ];
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
+      <div style={{position:"fixed",inset:0,
+        background:"linear-gradient(135deg, #020D1A 0%, #041C30 40%, #020D1A 100%)",opacity:0.85}}/>
+      {orbs.map((o,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:o.x,top:o.y,width:o.w,height:o.h,borderRadius:"50%",
+          background:`radial-gradient(circle, ${o.col} 0%, transparent 50%)`,
+          opacity:o.op,
+          animation:`neonPulseA ${o.dur}s ${-i*1.2}s ease-in-out infinite`,
+        }}/>
+      ))}
+      {shards.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
+          width:s.w,height:s.h,
+          background:`linear-gradient(${s.rot}deg, rgba(0,207,255,${s.bright*0.7}) 0%, rgba(200,248,255,${s.bright*0.9}) 40%, rgba(0,168,255,${s.bright*0.5}) 70%, transparent 100%)`,
+          clipPath:"polygon(50% 0%, 90% 25%, 100% 75%, 70% 100%, 30% 100%, 0% 75%, 10% 25%)",
+          boxShadow:`0 0 ${s.w*0.8}px rgba(0,207,255,${s.bright*0.5})`,
+          animation:`fireflyFloat ${s.dur}s ${s.delay}s ease-in-out infinite`,
+          transform:`rotate(${s.rot}deg)`,
+          willChange:"transform,opacity",
+          backfaceVisibility:"hidden",
+        }}/>
+      ))}
+      {flakes.map(f=>(
+        <div key={f.id} style={{
+          position:"absolute",top:-8,left:`${f.x}%`,
+          width:f.size,height:f.size,borderRadius:"50%",
+          background:"#E8F8FF",
+          boxShadow:`0 0 ${f.size*5}px #00CFFF90`,
+          animation:`bubbleRise ${f.dur}s ${f.delay}s infinite linear`,
+          opacity:0.9,
+          willChange:"transform,opacity",
+          backfaceVisibility:"hidden",
+        }}/>
+      ))}
+      {[15,35,55,72,88].map((t,i)=>(
+        <div key={i} style={{
+          position:"fixed",top:`${t}%`,left:0,right:0,height:1,
+          background:`linear-gradient(90deg, transparent 10%, #00CFFF${i%2===0?"50":"30"} 50%, transparent 90%)`,
+          animation:`neonPulseB ${4+i*1.5}s ${-i*1.1}s ease-in-out infinite`,
+        }}/>
+      ))}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"30%",
+        background:"linear-gradient(to top, #020D1A 20%, transparent)"}}/>
+      <div style={{position:"fixed",top:-40,left:"15%",right:"15%",height:180,
+        background:"radial-gradient(ellipse, #00CFFF22 0%, transparent 50%)",
+        animation:"auroraShift1 8s ease-in-out infinite alternate"}}/>
+    </div>
+  );
+}
+
+// ✦ OPTIMIZADO: stars 70→50, blur→gradiente, box-shadow simple
+function CosmosEffect() {
+  const stars = Array.from({length:50},(_,i)=>({
+    id:i, x:Math.sin(i*137.508)*50+50, y:Math.cos(i*97.31)*45+45,
+    size:i%12===0?3.5:i%5===0?2.2:Math.sin(i*1.7)*0.6+1.2,
+    dur:1+Math.abs(Math.cos(i))*2.5, delay:-(i*0.18),
+    color:i%9===0?"#FFFFFF":i%6===0?"#FF6BF5":i%4===0?"#C8A0FF":i%3===0?"#FFB8F0":"#9B6FFF",
+    glow:i%9===0?"#FF6BF5":i%6===0?"#FF6BF5":"#7B2FFF",
+    bright:i%9===0?1:i%5===0?0.85:0.55,
+  }));
+  const shoots = Array.from({length:5},(_,i)=>({
+    id:i, startX:10+i*18, startY:5+i*8, dur:3+i*1.5, delay:-(i*2.8),
+  }));
+  const nebulas = [
+    {x:"-18%",y:"-25%",w:"95%",h:"70%",c1:"#FF6BF5",c2:"#7B2FFF",dur:16,dir:"alternate"},
+    {x:"38%", y:"5%", w:"85%",h:"60%",c1:"#7B2FFF",c2:"#FF6BF5",dur:20,dir:"alternate-reverse"},
+    {x:"5%",  y:"45%",w:"80%",h:"60%",c1:"#FF4AE8",c2:"#4400FF",dur:24,dir:"alternate"},
+    {x:"48%", y:"50%",w:"70%",h:"55%",c1:"#CC00FF",c2:"#FF6BF5",dur:18,dir:"alternate-reverse"},
+  ];
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
+      <div style={{position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 25% 15%, #1A0040 0%, #020008 55%, #080018 100%)",opacity:0.9}}/>
+      {nebulas.map((n,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:n.x,top:n.y,width:n.w,height:n.h,
+          background:`radial-gradient(ellipse, ${n.c1}28 0%, ${n.c2}14 35%, transparent 55%)`,
+          animation:`auroraShift${(i%3)+1} ${n.dur}s ease-in-out infinite ${n.dir}`,
+        }}/>
+      ))}
+      <div style={{position:"fixed",top:"5%",left:"25%",width:300,height:300,
+        background:"radial-gradient(circle, #FF6BF535 0%, #7B2FFF18 35%, transparent 55%)",
+        animation:"neonPulseA 5s ease-in-out infinite"}}/>
+      {stars.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.x}%`,top:`${s.y}%`,
+          width:s.size,height:s.size,borderRadius:"50%",background:s.color,
+          boxShadow:`0 0 ${s.size*5}px ${s.glow}${Math.round(s.bright*160).toString(16).padStart(2,"0")}`,
+          opacity:s.bright,
+          animation:`neonPulseA ${s.dur}s ${s.delay}s ease-in-out infinite`,
+          willChange:"opacity",
+        }}/>
+      ))}
+      {shoots.map(s=>(
+        <div key={s.id} style={{
+          position:"absolute",left:`${s.startX}%`,top:`${s.startY}%`,
+          width:60,height:2,borderRadius:99,
+          background:"linear-gradient(90deg, #FFFFFF, #FF6BF560, transparent)",
+          animation:`shimmerLine ${s.dur}s ${s.delay}s linear infinite`,
+          boxShadow:"0 0 6px #FF6BF5",
+        }}/>
+      ))}
+      {[{x:"20%",y:"15%"},{x:"75%",y:"8%"},{x:"55%",y:"40%"}].map((p,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:p.x,top:p.y,
+          width:i===2?10:6,height:i===2?10:6,borderRadius:"50%",background:"#FFFFFF",
+          boxShadow:"0 0 20px #FF6BF5, 0 0 40px #7B2FFF60",
+          animation:`neonPulseA ${2+i}s ease-in-out infinite`,
+        }}/>
+      ))}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"30%",
+        background:"linear-gradient(to top, #020008, transparent)"}}/>
+      <div style={{position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 60% 30%, #FF6BF508, transparent 60%)",
+        animation:"neonPulseB 7s ease-in-out infinite"}}/>
+    </div>
+  );
+}
+
+// ── ⛈️ TORMENTA — Electric storm with lightning strikes, rain, wind ─────────
+// El único tema con "eventos": relámpagos que iluminan todo de golpe.
+// 3 capas de flash con duraciones primas (7s, 11s, 17s) → patrón no se repite
+// en 22 minutos. Lluvia diagonal con ráfagas de viento. Nubes rodando.
+
+function LightningBoltSVG({ x, w, h, delay, dur }) {
+  // Cada rayo es un zigzag SVG con glow
+  return (
+    <svg style={{
+      position:"absolute",left:`${x}%`,top:0,width:w,height:h,
+      animation:`boltStrike ${dur}s ${delay}s linear infinite`,
+      opacity:0,willChange:"opacity,transform",
+    }} viewBox="0 0 60 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 0 L22 120 L38 130 L18 260 L34 270 L12 400"
+        stroke="#E0F4FF" strokeWidth="3" strokeLinecap="round"
+        fill="none" opacity="0.9"/>
+      <path d="M32 0 L22 120 L38 130 L18 260 L34 270 L12 400"
+        stroke="#00E5FF" strokeWidth="6" strokeLinecap="round"
+        fill="none" opacity="0.4"/>
+      {/* Branch */}
+      <path d="M22 120 L4 200" stroke="#C0F0FF" strokeWidth="1.5" fill="none" opacity="0.6"/>
+      <path d="M18 260 L40 320" stroke="#C0F0FF" strokeWidth="1.5" fill="none" opacity="0.5"/>
+    </svg>
+  );
+}
+
+function StormEffect() {
+  // Rain config: 40 drops, fast fall, slight wind angle
+  const drops = Array.from({length:40},(_,i)=>({
+    id:i,
+    x: (i*2.5 + Math.sin(i*3.7)*6) % 100,
+    h: 16 + Math.sin(i*1.3)*12,      // 4-28px tall
+    w: i%5===0 ? 2 : 1,               // most thin, some thicker
+    dur: 0.5 + Math.sin(i*0.7)*0.25 + (i%3)*0.15,  // 0.25-0.9s (very fast)
+    delay: -(i*0.12 + Math.cos(i)*0.3),
+    opacity: i%4===0 ? 0.6 : i%3===0 ? 0.4 : 0.25,
+  }));
+
+  // Cloud config: 5 dark masses drifting at top
+  const clouds = [
+    { x:"-15%", y:"-8%", w:"55%", h:140, opacity:0.35, dur:28, dir:"alternate", anim:"cloudDrift1" },
+    { x:"30%",  y:"-12%",w:"50%", h:120, opacity:0.25, dur:35, dir:"alternate-reverse", anim:"cloudDrift2" },
+    { x:"55%",  y:"-5%", w:"45%", h:100, opacity:0.30, dur:22, dir:"alternate", anim:"cloudDrift1" },
+    { x:"-5%",  y:"2%",  w:"40%", h:80,  opacity:0.18, dur:40, dir:"alternate-reverse", anim:"cloudDrift2" },
+    { x:"65%",  y:"0%",  w:"35%", h:90,  opacity:0.22, dur:32, dir:"alternate", anim:"cloudDrift1" },
+  ];
+
+  // Electric arc orbs: brief glow points
+  const arcs = [
+    { x:"15%", y:"20%", size:240, dur:7,  delay:0 },
+    { x:"70%", y:"35%", size:200, dur:11, delay:-3 },
+    { x:"40%", y:"60%", size:180, dur:17, delay:-8 },
+  ];
+
+  return (
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden",contain:"layout style paint"}}>
+      {/* Storm sky gradient — deep navy → near-black */}
+      <div style={{position:"fixed",inset:0,
+        background:"linear-gradient(175deg, #0A1228 0%, #04060E 35%, #020410 70%, #060818 100%)",
+        opacity:0.9}}/>
+
+      {/* Cloud layers — no blur, wide soft gradients */}
+      {clouds.map((c,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:c.x,top:c.y,width:c.w,height:c.h,
+          background:"radial-gradient(ellipse at 50% 80%, #0A1428 0%, #06101E80 40%, transparent 70%)",
+          borderRadius:"50%",
+          opacity:c.opacity,
+          animation:`${c.anim} ${c.dur}s ease-in-out infinite ${c.dir}`,
+        }}/>
+      ))}
+
+      {/* Undercloud ambient light — reflects lightning color faintly */}
+      <div style={{position:"fixed",top:0,left:"10%",right:"10%",height:"20%",
+        background:"radial-gradient(ellipse at 50% 100%, #00E5FF06, transparent 60%)",
+        animation:"neonPulseA 8s ease-in-out infinite"}}/>
+
+      {/* ═══ LIGHTNING FLASH LAYERS ═══ */}
+      {/* Three overlapping full-screen flashes at prime-number intervals */}
+      {/* → combined pattern doesn't repeat for ~22 minutes */}
+      <div style={{
+        position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 30% 15%, #C0E8FF, #4080C060 40%, transparent 70%)",
+        animation:"lightningFlashA 7s linear infinite",
+        opacity:0,
+      }}/>
+      <div style={{
+        position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 65% 10%, #E0F4FF, #6090D050 40%, transparent 70%)",
+        animation:"lightningFlashB 11s linear infinite",
+        opacity:0,
+      }}/>
+      <div style={{
+        position:"fixed",inset:0,
+        background:"radial-gradient(ellipse at 45% 20%, #D0EEFF, #5088C040 40%, transparent 70%)",
+        animation:"lightningFlashC 17s linear infinite",
+        opacity:0,
+      }}/>
+
+      {/* ═══ LIGHTNING BOLTS ═══ */}
+      {/* SVG zigzag bolts that appear during flash windows */}
+      <LightningBoltSVG x={22} w={60} h="55%" delay={0} dur={7}/>
+      <LightningBoltSVG x={62} w={50} h="48%" delay={-2} dur={11}/>
+      <LightningBoltSVG x={42} w={55} h="52%" delay={-5} dur={17}/>
+
+      {/* ═══ ELECTRIC ARC GLOWS ═══ */}
+      {/* Brief illumination at bolt strike points */}
+      {arcs.map((a,i)=>(
+        <div key={i} style={{
+          position:"fixed",left:a.x,top:a.y,
+          width:a.size,height:a.size,borderRadius:"50%",
+          background:"radial-gradient(circle, #00E5FF18 0%, #00A0FF08 30%, transparent 55%)",
+          animation:`lightningFlashA ${a.dur}s ${a.delay}s linear infinite`,
+          opacity:0,
+        }}/>
+      ))}
+
+      {/* ═══ RAIN ═══ */}
+      {/* Wind container — tilts all rain slightly, with gusting */}
+      <div style={{
+        position:"fixed",inset:"-10% -5% 0 -5%",
+        animation:"windGust 6s ease-in-out infinite",
+        transformOrigin:"top center",
+      }}>
+        {drops.map(d=>(
+          <div key={d.id} style={{
+            position:"absolute",
+            left:`${d.x}%`,
+            top:-30,
+            width:d.w,
+            height:d.h,
+            borderRadius:d.w,
+            background:`linear-gradient(to bottom, transparent, #80C8E8${Math.round(d.opacity*255).toString(16).padStart(2,"0")} 30%, #B0DEFF${Math.round(d.opacity*200).toString(16).padStart(2,"0")} 70%, transparent)`,
+            animation:`rainFall ${d.dur}s ${d.delay}s linear infinite`,
+            willChange:"transform,opacity",
+            backfaceVisibility:"hidden",
+          }}/>
+        ))}
+      </div>
+
+      {/* Ground splash zone — subtle reflected glow at bottom */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"18%",
+        background:"linear-gradient(to top, #00E5FF06, transparent)"}}/>
+
+      {/* Horizon glow — distant storm light */}
+      <div style={{position:"fixed",bottom:"8%",left:"-10%",right:"-10%",height:100,
+        background:"radial-gradient(ellipse at 50% 100%, #102040 0%, transparent 60%)",
+        animation:"neonPulseB 12s ease-in-out infinite"}}/>
+
+      {/* Top darkening — storm ceiling */}
+      <div style={{position:"fixed",top:0,left:0,right:0,height:"15%",
+        background:"linear-gradient(to bottom, #02040A, transparent)"}}/>
+
+      {/* Bottom ground fade */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,height:"25%",
+        background:"linear-gradient(to top, #04060E 15%, transparent)"}}/>
+    </div>
+  );
+}
+
+// ── Theme options & picker ───────────────────────────────────────────────────
+
 const THEME_OPTIONS = [
-  { id:"dark",   name:"Void",    desc:"El original",          preview:["#0D1117","#161B22","#348FFF"], emoji:"⬛", tag:null },
-  { id:"light",  name:"Blanco",  desc:"Claridad total",        preview:["#F4F7FB","#FFFFFF","#348FFF"], emoji:"☀️", tag:null },
-  { id:"pink",   name:"Sakura",  desc:"Pétalos de cerezo",     preview:["#FEE6F2","#FFF0F8","#E8186A"], emoji:"🌸", tag:"✦ SECRET" },
-  { id:"ocean",  name:"Abismo",  desc:"Profundidades del mar", preview:["#04080F","#071424","#00C8FF"], emoji:"🌊", tag:"✦ SECRET" },
-  { id:"sunset", name:"Volcán",  desc:"Calor y brasa",         preview:["#0F0500","#1C0A05","#FF5500"], emoji:"🌋", tag:"✦ SECRET" },
-  { id:"forest", name:"Bosque",  desc:"Luciérnagas nocturnas", preview:["#020A04","#071510","#22D45A"], emoji:"🌿", tag:"✦ SECRET" },
-  { id:"aurora", name:"Aurora",  desc:"Luces del norte",       preview:["#020510","#060B1C","#8A5CF6"], emoji:"🔮", tag:"✦ SECRET" },
-  { id:"neon",   name:"Glitch",  desc:"Ciudad cyberpunk",      preview:["#03000A","#080018","#CC00FF"], emoji:"⚡", tag:"✦ SECRET" },
+  { id:"dark",      name:"Void",       desc:"El original",            preview:["#0D1117","#161B22","#348FFF"], emoji:"⬛", tag:null },
+  { id:"light",     name:"Blanco",     desc:"Claridad total",         preview:["#F4F7FB","#FFFFFF","#348FFF"], emoji:"☀️", tag:null },
+  { id:"pink",      name:"Sakura",     desc:"Petalos de cerezo",      preview:["#FEE6F2","#FFF0F8","#E8186A"], emoji:"🌸", tag:"✦ SECRET" },
+  { id:"ocean",     name:"Abismo",     desc:"Profundidades del mar",  preview:["#04080F","#071424","#00C8FF"], emoji:"🌊", tag:"✦ SECRET" },
+  { id:"sunset",    name:"Volcan",     desc:"Calor y brasa",          preview:["#0F0500","#1C0A05","#FF5500"], emoji:"🌋", tag:"✦ SECRET" },
+  { id:"forest",    name:"Bosque",     desc:"Luciernagas nocturnas",  preview:["#020A04","#071510","#22D45A"], emoji:"🌿", tag:"✦ SECRET" },
+  { id:"aurora",    name:"Aurora",     desc:"Luces del norte",        preview:["#020510","#060B1C","#8A5CF6"], emoji:"🔮", tag:"✦ SECRET" },
+  { id:"neon",      name:"Glitch",     desc:"Ciudad cyberpunk",       preview:["#03000A","#080018","#CC00FF"], emoji:"⚡", tag:"✦ SECRET" },
+  { id:"synthwave", name:"Synthwave",  desc:"Horizonte retro 80s",    preview:["#0A0015","#130028","#FF006E"], emoji:"🌅", tag:"✦ SECRET" },
+  { id:"cryo",      name:"Cryo",       desc:"Cristal glacial",        preview:["#020D1A","#061828","#00CFFF"], emoji:"❄️", tag:"✦ SECRET" },
+  { id:"cosmos",    name:"Cosmos",     desc:"Nebulosa y estrellas",   preview:["#020008","#080018","#FF6BF5"], emoji:"🌌", tag:"✦ SECRET" },
+  { id:"tormenta", name:"Tormenta",   desc:"Rayos y lluvia eléctrica",preview:["#04060E","#0A1020","#00E5FF"], emoji:"⛈️", tag:"✦ SECRET" },
 ];
 
 const ACCENT_MAP = {
   dark:"#348FFF", light:"#348FFF", pink:"#E8186A",
   ocean:"#00C8FF", sunset:"#FF5500", forest:"#22D45A", aurora:"#8A5CF6", neon:"#CC00FF",
+  synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
 };
 
 function ThemePicker({ current, onSelect, onClose }) {
@@ -1154,7 +1746,6 @@ function monthNameLabel(m) {
   return new Date(y, mo-1, 1).toLocaleDateString("es-CL", { month:"long" });
 }
 
-// Sub-componente: selector de becado + turnos de este mes Y el siguiente
 function TurnoSelector({ label, becados, curMonth, tipoCode, selected, onSelect, T }) {
   const [becado,   setBecado]   = useState("");
   const [turnos,   setTurnos]   = useState([]);
@@ -1184,7 +1775,6 @@ function TurnoSelector({ label, becados, curMonth, tipoCode, selected, onSelect,
 
   useEffect(() => { onSelect(null); }, [becado, tipoCode]);
 
-  // Agrupar por mes
   const byMonth = turnos.reduce((acc, t) => {
     if (!acc[t.month]) acc[t.month] = [];
     acc[t.month].push(t);
@@ -1257,7 +1847,7 @@ function TurnoSelector({ label, becados, curMonth, tipoCode, selected, onSelect,
 
 function SwapTurnos({ becados, onClose, T }) {
   const today   = useMemo(() => todayISO(), []);
-  const curMonth = today.slice(0, 7); // YYYY-MM
+  const curMonth = today.slice(0, 7);
 
   const TIPO_OPTS = [
     { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
@@ -1265,7 +1855,7 @@ function SwapTurnos({ becados, onClose, T }) {
     { id:"N", label:"Noche", sheet:"Noche", color:"#4F6EFF" },
   ];
   const [tipo,    setTipo]    = useState("P");
-  const [selA,    setSelA]    = useState(null); // {date, becado, code}
+  const [selA,    setSelA]    = useState(null);
   const [selB,    setSelB]    = useState(null);
   const [pin,     setPin]     = useState("");
   const [loading, setLoading] = useState(false);
@@ -1316,7 +1906,6 @@ function SwapTurnos({ becados, onClose, T }) {
         fontFamily:"'Inter',sans-serif",
         maxHeight:"92vh", display:"flex", flexDirection:"column",
       }}>
-        {/* Header fijo */}
         <div style={{padding:"12px 20px 16px", flexShrink:0, borderBottom:`1px solid ${T.border}`}}>
           <div style={{width:40,height:4,borderRadius:99,background:T.border,margin:"0 auto 14px"}}/>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -1331,10 +1920,7 @@ function SwapTurnos({ becados, onClose, T }) {
           </div>
         </div>
 
-        {/* Cuerpo scrollable */}
         <div style={{overflowY:"auto",padding:"16px 20px",flex:1,display:"flex",flexDirection:"column",gap:20}}>
-
-          {/* Tipo de turno */}
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>Tipo de turno</div>
             <div style={{display:"flex",gap:8}}>
@@ -1347,28 +1933,16 @@ function SwapTurnos({ becados, onClose, T }) {
             </div>
           </div>
 
-          {/* Becado A */}
-          <TurnoSelector
-            label="Becado A"
-            becados={becados} curMonth={curMonth} tipoCode={tipo}
-            selected={selA} onSelect={setSelA} T={T}
-          />
+          <TurnoSelector label="Becado A" becados={becados} curMonth={curMonth} tipoCode={tipo} selected={selA} onSelect={setSelA} T={T}/>
 
-          {/* Divisor */}
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{flex:1,height:1,background:T.border}}/>
             <div style={{width:32,height:32,borderRadius:8,background:T.surface2,border:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:T.muted}}>⇅</div>
             <div style={{flex:1,height:1,background:T.border}}/>
           </div>
 
-          {/* Becado B */}
-          <TurnoSelector
-            label="Becado B"
-            becados={becados} curMonth={curMonth} tipoCode={tipo}
-            selected={selB} onSelect={setSelB} T={T}
-          />
+          <TurnoSelector label="Becado B" becados={becados} curMonth={curMonth} tipoCode={tipo} selected={selB} onSelect={setSelB} T={T}/>
 
-          {/* Resumen selección */}
           {selA && selB && (
             <div style={{background:T.surface2,border:`1px solid ${tipoObj.color}30`,borderRadius:12,padding:"12px 14px"}}>
               <div style={{fontSize:11,fontWeight:700,color:tipoObj.color,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>Confirmando cambio</div>
@@ -1380,7 +1954,6 @@ function SwapTurnos({ becados, onClose, T }) {
             </div>
           )}
 
-          {/* PIN */}
           <div>
             <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:8}}>PIN de administrador</div>
             <input
@@ -1390,7 +1963,6 @@ function SwapTurnos({ becados, onClose, T }) {
             />
           </div>
 
-          {/* Resultado */}
           {result && (
             <div style={{padding:"11px 14px",borderRadius:10,background:result.ok?"#13C04518":"#F8717118",border:`1px solid ${result.ok?"#13C04540":"#F8717140"}`,fontSize:13,color:result.ok?"#13C045":"#F87171",lineHeight:1.4}}>
               {result.msg}
@@ -1400,7 +1972,6 @@ function SwapTurnos({ becados, onClose, T }) {
           <div style={{height:4}}/>
         </div>
 
-        {/* Botón fijo abajo */}
         <div style={{padding:`12px 20px calc(var(--sab) + 16px)`,flexShrink:0,borderTop:`1px solid ${T.border}`}}>
           <button className="press" onClick={handleSwap} disabled={!canSubmit}
             style={{width:"100%",height:50,borderRadius:13,border:"none",background:canSubmit?(T?.accent||"#348FFF"):(T?.accent||"#348FFF")+"38",color:canSubmit?"#fff":"#ffffff80",fontSize:15,fontWeight:700,transition:"all 0.15s",cursor:canSubmit?"pointer":"default"}}>
@@ -1548,7 +2119,6 @@ function ActivityCard({ from, to, activity, accent, light, glow, index, T }) {
   );
 }
 
-
 // ── Colores de turno ──────────────────────────────────────────────────────────
 const TURNO = {
   P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Poli",  desde:"14:00", hasta:"17:59" },
@@ -1556,7 +2126,6 @@ const TURNO = {
   N: { accent:"#4F6EFF", light:"#4F6EFF12", glow:"#4F6EFF28", label:"Noche", desde:"20:00", hasta:"--"    },
 };
 
-// ── Section divider ───────────────────────────────────────────────────────────
 function SectionDivider({ label, T }) {
   return (
     <div style={{display:"flex",alignItems:"center",gap:8,margin:"8px 0 4px"}}>
@@ -1567,7 +2136,6 @@ function SectionDivider({ label, T }) {
   );
 }
 
-// ── Turno card ────────────────────────────────────────────────────────────────
 function TurnoCard({ tipo, index, T }) {
   const t = TURNO[tipo];
   if (!t) return null;
@@ -1605,9 +2173,8 @@ function TurnoCard({ tipo, index, T }) {
   );
 }
 
-
 // ── Seminario card ────────────────────────────────────────────────────────────
-const SEMINAR_ACCENT = "#E879F9"; // violeta-rosa brillante
+const SEMINAR_ACCENT = "#E879F9";
 function SemCard({ presenter, title, tag, index, T }) {
   const [pressed, setPressed] = useState(false);
   return (
@@ -1668,7 +2235,6 @@ const UNIVERSIDADES = {
       { label:"2do año", color:"#13C045" },
       { label:"1er año", color:"#348FFF" },
     ],
-    // Los becados se asignan por posición desde la lista de la API: primeros 15
     getGroups: (becados) => [
       becados.slice(0,5),
       becados.slice(5,10),
@@ -1682,7 +2248,6 @@ const UNIVERSIDADES = {
       { label:"2do año", color:"#13C045" },
       { label:"1er año", color:"#348FFF" },
     ],
-    // UANDES: posiciones 15-32 (18 becados, 6 por año)
     getGroups: (becados) => [
       becados.slice(15,21),
       becados.slice(21,27),
@@ -1694,7 +2259,6 @@ const UNIVERSIDADES = {
     groups: [
       { label:"Becados IST", color:"#FB923C" },
     ],
-    // IST: posiciones 33-35
     getGroups: (becados) => [
       becados.slice(33,36),
     ].filter(g => g.length > 0),
@@ -1720,7 +2284,6 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
           Elige tu nombre para ver tu horario del día.
         </p>
 
-        {/* Pill selector universidades */}
         <div style={{display:"flex",gap:6,marginBottom:14,background:T.surface2,borderRadius:12,padding:4}}>
           {UNIV_ORDER.map(u => (
             <button key={u} className="press" onClick={() => setUniv(u)}
@@ -1737,7 +2300,6 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
           ))}
         </div>
 
-        {/* Botones de acceso rápido */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <button className="press anim" onClick={onShowRotaciones}
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"80ms"}}>
@@ -1784,7 +2346,6 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
           );
         })}
 
-        {/* Becado demo — separado al fondo */}
         <div className="anim" style={{marginBottom:20,animationDelay:"320ms"}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
             <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:T.muted}}/>
@@ -1819,7 +2380,6 @@ function TabHorario({ becado, onChangeBecado, T }) {
   const load = useCallback((targetDate) => {
     const params = {route:"daily",becado,date:targetDate,token:API_TOKEN};
     setError("");
-    // Timeout de seguridad: si en 12s no llegó nada, salir del skeleton
     const bail = setTimeout(() => {
       setDaily(prev => prev ?? { ok:false, rotationCode:"", items:[] });
       setError("No se pudo conectar. Comprueba tu conexión.");
@@ -1833,11 +2393,9 @@ function TabHorario({ becado, onChangeBecado, T }) {
 
   useEffect(() => { load(date); }, [date, load]);
 
-  // Prefetch semana en UNA llamada + siguiente semana + día siguiente si es tarde
   useEffect(() => {
     const monday = getWeekDates(today)[0];
     prefetchWeek(becado, monday);
-    // Prefetch semana siguiente también
     const nextMonday = offsetDate(monday, 7);
     setTimeout(() => prefetchWeek(becado, nextMonday), 2000);
     if (new Date().getHours() >= 18) {
@@ -1846,8 +2404,6 @@ function TabHorario({ becado, onChangeBecado, T }) {
   }, [becado, today]);
 
   const ptr = usePullToRefresh(() => {
-    // Fetch fresco sin borrar caché antes — solo se reemplaza si tiene éxito
-    // Si no hay conexión, los datos actuales y el caché quedan intactos
     const params = {route:"daily",becado,date,token:API_TOKEN};
     setError("");
     apiGet(params)
@@ -1967,7 +2523,6 @@ function TabRotaciones({ onChangeBecado, T }) {
   }, [today]);
 
   const ptr = usePullToRefresh(() => {
-    // Fetch fresco sin borrar caché antes — solo se reemplaza si tiene éxito
     const params = {route:"summary",date,token:API_TOKEN};
     setError("");
     apiGet(params)
@@ -2058,15 +2613,13 @@ function TabRotaciones({ onChangeBecado, T }) {
 function TabSemana({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(today);
-  const [lookup, setLookup] = useState({});   // date → daily data
+  const [lookup, setLookup] = useState({});
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
-  // Cargar semana: UNA llamada "week" que devuelve 7 días a la vez
   const loadWeek = (dates, force = false) => {
-    // Mostrar caché inmediatamente
     const cached = {};
     dates.forEach(date => {
       const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
@@ -2096,10 +2649,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
 
   useEffect(() => { loadWeek(weekDates); }, [becado, weekDates]);
 
-  // Pull-to-refresh
   const ptr = usePullToRefresh(() => {
-    // Fetch fresco — caché solo se reemplaza si tiene éxito
-    // Sin conexión: datos actuales y caché quedan intactos
     const monday = weekDates[0];
     apiGet({ route:"week", becado, start:monday, token:API_TOKEN })
       .then(res => {
@@ -2117,7 +2667,6 @@ function TabSemana({ becado, onChangeBecado, T }) {
   }, scrollRef);
 
   const isThisWeek = weekDates.includes(today);
-  // Construir array de días desde lookup para el render
   const days = weekDates.map(date => {
     const d = lookup[date];
     if (!d) return {date, rotationCode:"", items:[], turno:{diaCode:null,nocheCode:null}, seminario:null};
@@ -2225,15 +2774,12 @@ function TabSemana({ becado, onChangeBecado, T }) {
   );
 }
 
-
-// Abrevia un apellido a máximo 6 caracteres (sin puntos)
 function abbrevName(name) {
   if (!name) return "";
   return name.length > 6 ? name.slice(0, 6) : name;
 }
 
 // ── Tab: Turnos del mes ───────────────────────────────────────────────────────
-// ── Colores de turnos ─────────────────────────────────────────────────────────
 const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF" };
 const SEMINAR_COLOR = "#E879F9";
 const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
@@ -2258,7 +2804,6 @@ function monthLabel(year, month) {
   return new Date(year, month, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
 }
 
-// ── Componente grid calendario reutilizable ───────────────────────────────────
 function CalendarGrid({ slots, today, renderCell, T }) {
   return (
     <>
@@ -2274,7 +2819,6 @@ function CalendarGrid({ slots, today, renderCell, T }) {
   );
 }
 
-// ── Tab: Turnos generales (para pantalla de selección) ────────────────────────
 const TURNO_TABS = [
   { id:"P", label:"Poli",      color:"#06B6D4" },
   { id:"D", label:"Día",       color:"#F59E0B" },
@@ -2292,15 +2836,13 @@ function TabTurnos({ onBack, T }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [selectedSem, setSelectedSem] = useState(null); // { date, sem } for detail panel
+  const [selectedSem, setSelectedSem] = useState(null);
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
 
   const loadData = (mStr) => {
     const params = { route:"monthly", month: mStr, token: API_TOKEN };
     setError("");
-    // Mostrar caché inmediatamente si existe, fetch en background
-    // Si no hay caché → spinner hasta que lleguen datos
     const cached = cacheGet(params);
     if (!cached) setLoading(true);
     apiSWR(params,
@@ -2309,7 +2851,6 @@ function TabTurnos({ onBack, T }) {
     ).catch(e => { setError(String(e.message||e)); setLoading(false); });
   };
 
-  // Load turno data (Poli/Día/Noche)
   useEffect(() => { loadData(monthStr); }, [monthStr]);
 
   const handleRefresh = () => {
@@ -2317,13 +2858,10 @@ function TabTurnos({ onBack, T }) {
     setRefreshing(true);
     setError("");
     const params = { route:"monthly", month: monthStr, token: API_TOKEN };
-    // 1) Invalidar caché del servidor (Apps Script CacheService)
-    // 2) Pedir datos frescos
-    // Si falla: datos y caché del cliente quedan intactos
     apiGet({ route:"invalidate_cache", token: API_TOKEN })
-      .catch(() => {}) // si falla la invalidación, igual intentamos el fetch
+      .catch(() => {})
       .finally(() => {
-        safeStorage.remove(cacheKey(params)); // limpiar caché cliente también
+        safeStorage.remove(cacheKey(params));
         apiGet(params)
           .then(fresh => {
             if (!fresh?.ok) { setRefreshing(false); return; }
@@ -2335,16 +2873,12 @@ function TabTurnos({ onBack, T }) {
       });
   };
 
-
-
   const prevMonth = () => { setSelectedSem(null); month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1); };
   const nextMonth = () => { setSelectedSem(null); month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1); };
 
   const slots  = useMemo(() => getMonthDates(year, month), [year, month]);
   const turnoColor = TURNO_TABS.find(t=>t.id===sub)?.color || "#64748B";
 
-  // Para P/D/N: map date → [names]
-  // Para S:     map date → { presenter, title, tag, time }
   const lookup = useMemo(() => {
     if (!data?.ok) return {};
     const map = {};
@@ -2363,7 +2897,7 @@ function TabTurnos({ onBack, T }) {
   const SEM_COLOR = "#E879F9";
 
   return (
-    <div style={{minHeight:"100vh",background:T.bg,paddingBottom:24}}>
+    <div style={{minHeight:"100vh",paddingBottom:24,position:"relative",zIndex:1}}>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
         <div style={{marginBottom:12}}>
@@ -2380,7 +2914,6 @@ function TabTurnos({ onBack, T }) {
             <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:refreshing?"#348FFF":T.muted,borderRadius:"50%",animation:refreshing?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
           </button>
         </div>
-        {/* Sub-tabs */}
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           {TURNO_TABS.map(t => (
             <button key={t.id} className="press" onClick={() => { setSub(t.id); setSelectedSem(null); }}
@@ -2394,7 +2927,6 @@ function TabTurnos({ onBack, T }) {
       <div style={{padding:"0 16px"}}>
         <ErrorBox msg={error} T={T}/>
 
-        {/* ── Seminarios grid ── */}
         {sub === "S" ? (
           loading && !data ? <Spinner color={SEM_COLOR}/> : (
             <>
@@ -2424,7 +2956,6 @@ function TabTurnos({ onBack, T }) {
                 );
               }}/>
 
-              {/* Detail panel — aparece al tocar un día con seminario */}
               {selectedSem && (
                 <div className="anim" style={{marginTop:14,background:T.surface,border:`1px solid ${SEM_COLOR}40`,borderLeft:`3px solid ${SEM_COLOR}`,borderRadius:12,padding:"14px 16px",position:"relative"}}>
                   <button className="press" onClick={() => setSelectedSem(null)}
@@ -2448,7 +2979,6 @@ function TabTurnos({ onBack, T }) {
             </>
           )
         ) : (
-          /* ── Turnos grid (Poli / Día / Noche) ── */
           loading && !data ? <Spinner color={turnoColor}/> : (
             <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
               const dayNum  = Number(iso.split("-")[2]);
@@ -2472,7 +3002,7 @@ function TabTurnos({ onBack, T }) {
   );
 }
 
-// ── Tab: Mi mes (calendario personal del becado) ──────────────────────────────
+// ── Tab: Mi mes ───────────────────────────────────────────────────────────────
 function TabMes({ becado, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
@@ -2495,7 +3025,6 @@ function TabMes({ becado, T }) {
   useEffect(() => {
     setError("");
     const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
-    // Spinner solo si no hay caché para este mes
     const cached = cacheGet(params);
     if (!cached) setLoading(true);
     apiSWR(params, applyMonthData, applyMonthData)
@@ -2522,7 +3051,7 @@ function TabMes({ becado, T }) {
   const slots = useMemo(() => getMonthDates(year, month), [year, month]);
 
   return (
-    <div style={{minHeight:"100vh",background:T.bg,paddingBottom:90}}>
+    <div style={{minHeight:"100vh",paddingBottom:90,position:"relative",zIndex:1}}>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12,textTransform:"capitalize"}}>
@@ -2538,7 +3067,6 @@ function TabMes({ becado, T }) {
           </button>
         </div>
 
-        {/* Leyenda */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
           {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#4F6EFF"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
             <div key={id} style={{display:"flex",alignItems:"center",gap:4}}>
@@ -2556,7 +3084,6 @@ function TabMes({ becado, T }) {
             const dayNum  = Number(iso.split("-")[2]);
             const isToday = iso === today;
             const day     = lookup[iso] || {};
-            // personal-month devuelve diaCode/nocheCode/hasSeminar directamente
             const diaCode   = day.diaCode   || day.turno?.diaCode   || null;
             const nocheCode = day.nocheCode || day.turno?.nocheCode || null;
             const hasSem    = day.hasSeminar || !!day.seminario;
@@ -2633,9 +3160,8 @@ function TabBar({ active, onChange, T }) {
   );
 }
 
-
 // ── Splash screen ─────────────────────────────────────────────────────────────
-const SPLASH_TTL = 8 * 60 * 60 * 1000; // 8 horas
+const SPLASH_TTL = 8 * 60 * 60 * 1000;
 
 function useSplash() {
   const [visible, setVisible] = useState(() => {
@@ -2648,13 +3174,11 @@ function useSplash() {
 
   useEffect(() => {
     if (!visible) return;
-    // Marcar timestamp al mostrar el splash
     try { localStorage.setItem("lastSeen", String(Date.now())); } catch {}
     const t = setTimeout(() => setVisible(false), 2600);
     return () => clearTimeout(t);
   }, [visible]);
 
-  // Al volver a la app después de mucho tiempo
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
@@ -2673,7 +3197,6 @@ function useSplash() {
   return visible;
 }
 
-// Partícula individual animada
 function Particle({ angle, distance, delay, size, color }) {
   const x = Math.cos(angle) * distance;
   const y = Math.sin(angle) * distance;
@@ -2692,10 +3215,9 @@ function Particle({ angle, distance, delay, size, color }) {
 }
 
 function MimeFace({ phase }) {
-  const fill = "#E6EDF3"; // color del mimo
+  const fill = "#E6EDF3";
   return (
     <div style={{position:"relative", width:160, height:160, display:"flex", alignItems:"center", justifyContent:"center"}}>
-      {/* Partículas */}
       {phase >= 1 && Array.from({length:14}).map((_,i) => {
         const angle  = (i / 14) * Math.PI * 2 + 0.2;
         const dist   = 78 + (i % 4) * 10;
@@ -2726,7 +3248,6 @@ function MimeFace({ phase }) {
 
 function SplashScreen() {
   const [phase, setPhase] = useState(0);
-  // phase 0→1: entrada, 1→2: salida
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 80);
     const t2 = setTimeout(() => setPhase(2), 2400);
@@ -2763,7 +3284,6 @@ function SplashScreen() {
         }
       `}</style>
 
-      {/* Glow pulsante */}
       <div style={{
         position:"absolute", top:"40%", left:"50%",
         width:300, height:300, borderRadius:"50%",
@@ -2774,10 +3294,8 @@ function SplashScreen() {
         pointerEvents:"none",
       }}/>
 
-      {/* Mimo */}
       <MimeFace phase={phase}/>
 
-      {/* MimApp — entra con rebote y escala */}
       <div style={{
         fontFamily:"'Bricolage Grotesque',sans-serif",
         fontSize:40, fontWeight:800,
@@ -2791,7 +3309,6 @@ function SplashScreen() {
         MimApp
       </div>
 
-      {/* created by Mimo — letras que se abren */}
       <div style={{
         fontFamily:"'Inter',sans-serif",
         fontSize:11, fontWeight:400,
@@ -2841,13 +3358,13 @@ export default function App() {
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
     document.body.classList.toggle("theme-pink", next === "pink");
-    ["ocean","sunset","forest","aurora","neon"].forEach(t =>
+    ["ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].forEach(t =>
       document.body.classList.toggle("theme-"+t, next === t)
     );
   };
 
   const toggleTheme = () => {
-    const isSecret = ["pink","ocean","sunset","forest","aurora","neon"].includes(theme);
+    const isSecret = ["pink","ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].includes(theme);
     if (!isSecret) {
       toggleTapCount.current += 1;
       clearTimeout(toggleTapTimer.current);
@@ -2858,7 +3375,6 @@ export default function App() {
       }
       toggleTapTimer.current = setTimeout(() => { toggleTapCount.current = 0; }, 3000);
     }
-    // Toggle normal dark ↔ light (desde tema secreto vuelve a dark)
     const next = theme === "light" ? "dark" : "light";
     applyTheme(next);
   };
@@ -2869,7 +3385,7 @@ export default function App() {
     if (meta) meta.setAttribute("content", bg);
     document.body.style.background = bg;
     document.body.classList.toggle("theme-pink", theme === "pink");
-    ["ocean","sunset","forest","aurora","neon"].forEach(t =>
+    ["ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].forEach(t =>
       document.body.classList.toggle("theme-"+t, theme === t)
     );
     if (typeof requestIdleCallback !== "undefined") {
@@ -2879,7 +3395,6 @@ export default function App() {
     }
   }, []);
 
-  // Cargar lista de becados con caché (SWR)
   useEffect(() => {
     const params = {route:"becados",token:API_TOKEN};
     apiSWR(
@@ -2889,7 +3404,6 @@ export default function App() {
     ).catch(e => { setInitError(String(e.message||e)); setLoadingInit(false); });
   }, []);
 
-  // Prefetch rotaciones de hoy en background
   useEffect(() => {
     prefetch({route:"summary",date:todayISO(),token:API_TOKEN});
   }, []);
@@ -2909,7 +3423,6 @@ export default function App() {
       <style>{CSS}</style><Spinner/>
     </div>
   );
-
 
   return (
     <div style={{
@@ -2937,7 +3450,11 @@ export default function App() {
       {theme === "aurora" && <AuroraEffect/>}
       {theme === "forest" && <ForestFireflies/>}
       {theme === "sunset" && <SunsetEmbers/>}
-      {theme === "neon"   && <NeonGrid/>}
+      {theme === "neon"      && <NeonGrid/>}
+      {theme === "synthwave" && <SynthwaveEffect/>}
+      {theme === "cryo"      && <CryoEffect/>}
+      {theme === "cosmos"    && <CosmosEffect/>}
+      {theme === "tormenta" && <StormEffect/>}
 
       {!becado ? (
         showRotaciones
