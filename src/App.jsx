@@ -278,7 +278,7 @@ function demoDaily(dateStr) {
 function demoPersonalMonth(monthStr) {
   const [y, m] = monthStr.split("-").map(Number);
   const daysInMonth = new Date(y, m, 0).getDate();
-  const TURNO_SEQ = [null,"P",null,null,"D",null,"N",null,null,"P",null,"D",null,null,"N",null,"P",null,null,null,"D",null,"N",null,null,"P",null,null,"D",null,null];
+  const TURNO_SEQ = [null,"P",null,"A","D",null,"N",null,null,"P","A",null,"D",null,"N",null,"P",null,"A",null,"D",null,"N",null,null,"P",null,"A","D",null,null];
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const d   = i + 1;
     const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
@@ -289,6 +289,7 @@ function demoPersonalMonth(monthStr) {
       date: iso, rotationCode: rotCode,
       diaCode:   turno === "P" ? "P" : turno === "D" ? "D" : null,
       nocheCode: turno === "N" ? "N" : null,
+      artroCode: turno === "A" ? "A" : null,
       hasSeminar: false,
     };
   });
@@ -439,9 +440,10 @@ function resolveItems(rotationCode, items, dateISO) {
 const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); }
-  html, body { background: #0D1117; }
+  html, body { background: #0D1117; height: 100%; overflow: hidden; margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
-  body { overscroll-behavior-y: contain; }
+  body { overscroll-behavior-y: contain; touch-action: manipulation; }
+  #root { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
   @keyframes fadeUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
   @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
   @keyframes spin      { to{transform:rotate(360deg)} }
@@ -1713,24 +1715,28 @@ function usePullToRefresh(onRefresh, scrollRef) {
   const startY = useRef(null);
   const pulling = useRef(false);
 
+  // El scroll container real es #root (no el tab div)
+  const getScrollTop = () => {
+    const root = document.getElementById("root");
+    return root ? root.scrollTop : 0;
+  };
+
   const onTouchStart = useCallback((e) => {
-    const el = scrollRef?.current;
-    if (el && el.scrollTop > 0) return;
+    if (getScrollTop() > 0) return;
     startY.current = e.touches[0].clientY;
     pulling.current = true;
-  }, [scrollRef]);
+  }, []);
 
   const onTouchMove = useCallback((e) => {
     if (!pulling.current || startY.current === null) return;
-    const el = scrollRef?.current;
-    if (el && el.scrollTop > 0) { pulling.current = false; startY.current = null; return; }
+    if (getScrollTop() > 0) { pulling.current = false; startY.current = null; return; }
     const delta = e.touches[0].clientY - startY.current;
     if (delta < 0) return;
     const y = Math.min(delta * 0.45, PTR_THRESHOLD + 20);
     setPullY(y);
     if (y >= PTR_THRESHOLD && !triggered) setTriggered(true);
     if (y < PTR_THRESHOLD && triggered) setTriggered(false);
-  }, [triggered, scrollRef]);
+  }, [triggered]);
 
   const onTouchEnd = useCallback(() => {
     if (triggered) onRefresh();
@@ -1790,12 +1796,12 @@ function TurnoSelector({ label, becados, curMonth, tipoCode, selected, onSelect,
   const [turnos,   setTurnos]   = useState([]);
   const [loadingT, setLoadingT] = useState(false);
 
-  const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF" };
+  const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
   const col = TIPO_COLOR[tipoCode] || "#64748B";
   const DIAS_ES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 
   const filterDays = (days, month) => (days || [])
-    .filter(day => tipoCode === "N" ? day.nocheCode === "N" : day.diaCode === tipoCode)
+    .filter(day => tipoCode === "N" ? day.nocheCode === "N" : tipoCode === "A" ? day.artroCode === "A" : day.diaCode === tipoCode)
     .map(day => ({ date: day.date, code: tipoCode, month }));
 
   useEffect(() => {
@@ -1889,9 +1895,10 @@ function SwapTurnos({ becados, onClose, T }) {
   const curMonth = today.slice(0, 7);
 
   const TIPO_OPTS = [
-    { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
-    { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
-    { id:"N", label:"Noche", sheet:"Noche", color:"#4F6EFF" },
+    { id:"P", label:"Poli",  sheet:"Dia",          color:"#06B6D4" },
+    { id:"D", label:"Día",   sheet:"Dia",          color:"#F59E0B" },
+    { id:"N", label:"Noche", sheet:"Noche",        color:"#4F6EFF" },
+    { id:"A", label:"Artro", sheet:"Artroscopia",   color:"#72FF00" },
   ];
   const [tipo,    setTipo]    = useState("P");
   const [selA,    setSelA]    = useState(null);
@@ -2165,6 +2172,7 @@ const TURNO = {
   P: { accent:"#06B6D4", light:"#06B6D412", glow:"#06B6D428", label:"Poli",  desde:"14:00", hasta:"17:59" },
   D: { accent:"#F59E0B", light:"#F59E0B12", glow:"#F59E0B28", label:"Día",   desde:"14:00", hasta:"19:59" },
   N: { accent:"#4F6EFF", light:"#4F6EFF12", glow:"#4F6EFF28", label:"Noche", desde:"20:00", hasta:"--"    },
+  A: { accent:"#72FF00", light:"#72FF0012", glow:"#72FF0028", label:"Artroscopía", desde:"13:00", hasta:"13:59" },
 };
 
 function SectionDivider({ label, T }) {
@@ -2500,11 +2508,13 @@ function TabHorario({ becado, onChangeBecado, T }) {
             {[0,1,2,3].map(i => <SkeletonCard key={i} index={i} T={T}/>)}
           </div>
         ) : (() => {
-          const manana   = grouped.filter(it => t2m(it.from) < t2m("14:00"));
+          const manana   = grouped.filter(it => t2m(it.from) < t2m("13:00"));
+          const mediodia = grouped.filter(it => t2m(it.from) >= t2m("13:00") && t2m(it.from) < t2m("14:00"));
           const tarde    = grouped.filter(it => t2m(it.from) >= t2m("14:00"));
           const diaCode  = daily?.turno?.diaCode  || null;
           const nocheCode= daily?.turno?.nocheCode || null;
-          const hasAny   = manana.length || tarde.length || diaCode || nocheCode;
+          const artroCode= daily?.turno?.artroCode || null;
+          const hasAny   = manana.length || mediodia.length || tarde.length || diaCode || nocheCode || artroCode;
           if (!hasAny && !error) return (
             <div style={{textAlign:"center",padding:"60px 0"}}>
               <div style={{fontSize:38,marginBottom:10,opacity:0.2}}>📭</div>
@@ -2518,6 +2528,10 @@ function TabHorario({ becado, onChangeBecado, T }) {
               {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} index={cardIdx++} T={T}/>}
               {manana.length > 0 && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
+
+              {(mediodia.length > 0 || artroCode) && <SectionDivider label="Mediodía" T={T}/>}
+              {mediodia.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
+              {artroCode && <TurnoCard key="turno-artro" tipo={artroCode} index={cardIdx++} T={T}/>}
 
               {(tarde.length > 0 || diaCode) && <SectionDivider label="Tarde" T={T}/>}
               {tarde.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
@@ -2588,7 +2602,10 @@ function TabRotaciones({ onChangeBecado, T }) {
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Vista general</div>
         <div style={{marginBottom:12}}>
-          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Rotaciones</div>
+          <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Rotaciones</div>
+            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para volver</div>
+          </button>
         </div>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
@@ -2710,8 +2727,8 @@ function TabSemana({ becado, onChangeBecado, T }) {
   const isThisWeek = weekDates.includes(today);
   const days = weekDates.map(date => {
     const d = lookup[date];
-    if (!d) return {date, rotationCode:"", items:[], turno:{diaCode:null,nocheCode:null}, seminario:null};
-    return {date, ok:d.ok!==false, rotationCode:d.rotationCode||"", items:d.items||[], turno:d.turno||{diaCode:null,nocheCode:null}, seminario:d.seminario||null};
+    if (!d) return {date, rotationCode:"", items:[], turno:{diaCode:null,nocheCode:null,artroCode:null}, seminario:null};
+    return {date, ok:d.ok!==false, rotationCode:d.rotationCode||"", items:d.items||[], turno:d.turno||{diaCode:null,nocheCode:null,artroCode:null}, seminario:d.seminario||null};
   });
   const hasAnyData = Object.keys(lookup).some(k => weekDates.includes(k));
 
@@ -2780,6 +2797,7 @@ function TabSemana({ becado, onChangeBecado, T }) {
                       )}
                       {day.turno?.diaCode && (() => { const t=TURNO[day.turno.diaCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
                       {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.artroCode && (() => { const t=TURNO[day.turno.artroCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
                     </div>
                   </div>
                   {day.seminario && (
@@ -2821,7 +2839,7 @@ function abbrevName(name) {
 }
 
 // ── Tab: Turnos del mes ───────────────────────────────────────────────────────
-const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF" };
+const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
 const SEMINAR_COLOR = "#E879F9";
 const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
 
@@ -2864,6 +2882,7 @@ const TURNO_TABS = [
   { id:"P", label:"Poli",      color:"#06B6D4" },
   { id:"D", label:"Día",       color:"#F59E0B" },
   { id:"N", label:"Noche",     color:"#4F6EFF" },
+  { id:"A", label:"Artro",     color:"#72FF00" },
   { id:"S", label:"Seminarios",color:"#E879F9" },
 ];
 
@@ -2942,9 +2961,12 @@ function TabTurnos({ onBack, T }) {
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
         <div style={{marginBottom:12}}>
-          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
-            {monthLabel(year, month)}
-          </div>
+          <button className="press" onClick={onBack} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
+              {monthLabel(year, month)}
+            </div>
+            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para volver</div>
+          </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
@@ -3044,7 +3066,7 @@ function TabTurnos({ onBack, T }) {
 }
 
 // ── Tab: Mi mes ───────────────────────────────────────────────────────────────
-function TabMes({ becado, T }) {
+function TabMes({ becado, onChangeBecado, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
@@ -3095,9 +3117,10 @@ function TabMes({ becado, T }) {
     <div style={{minHeight:"100vh",paddingBottom:90,position:"relative",zIndex:1}}>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
-        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12,textTransform:"capitalize"}}>
-          {monthLabel(year, month)}
-        </div>
+        <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left",marginBottom:12}}>
+          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
+          <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
+        </button>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
@@ -3109,7 +3132,7 @@ function TabMes({ becado, T }) {
         </div>
 
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-          {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#4F6EFF"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
+          {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#4F6EFF"],["A","Artro","#72FF00"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
             <div key={id} style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:color}}/>
               <span style={{fontSize:10,color:T.muted}}>{label}</span>
@@ -3127,10 +3150,12 @@ function TabMes({ becado, T }) {
             const day     = lookup[iso] || {};
             const diaCode   = day.diaCode   || day.turno?.diaCode   || null;
             const nocheCode = day.nocheCode || day.turno?.nocheCode || null;
+            const artroCode = day.artroCode || day.turno?.artroCode || null;
             const hasSem    = day.hasSeminar || !!day.seminario;
             const badges  = [];
             if (diaCode === "P") badges.push({ label:"P", color:"#06B6D4" });
             if (diaCode === "D") badges.push({ label:"D", color:"#F59E0B" });
+            if (artroCode === "A") badges.push({ label:"A", color:"#72FF00" });
             if (nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
             if (hasSem) badges.push({ label:"S", color:"#E879F9" });
             const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
@@ -3386,6 +3411,10 @@ export default function App() {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     safeStorage.set("activeTab", tab);
+    // Scroll al top al cambiar de tab
+    const root = document.getElementById("root");
+    if (root) root.scrollTop = 0;
+    window.scrollTo(0, 0);
   };
 
   const toggleTapCount = useRef(0);
@@ -3429,6 +3458,9 @@ export default function App() {
     ["ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].forEach(t =>
       document.body.classList.toggle("theme-"+t, theme === t)
     );
+    // Bloquear zoom — PWA no lo necesita
+    const vp = document.querySelector("meta[name='viewport']");
+    if (vp) vp.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover");
     if (typeof requestIdleCallback !== "undefined") {
       requestIdleCallback(() => purgeCacheStorage());
     } else {
@@ -3501,26 +3533,16 @@ export default function App() {
 
       {!becado ? (
         showRotaciones
-          ? <>
-              <div style={{paddingBottom:80}}><TabRotaciones onChangeBecado={handleChange} T={T}/></div>
-              <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 16px calc(var(--sab) + 20px)",background:T.tabBg,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,zIndex:50}}>
-                <button className="press" onClick={()=>setShowRotaciones(false)} style={{width:"100%",height:40,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,fontSize:13,fontWeight:600,color:T.sub}}>&#8592; Volver</button>
-              </div>
-            </>
+          ? <TabRotaciones onChangeBecado={()=>setShowRotaciones(false)} T={T}/>
         : showTurnos
-          ? <>
-              <div style={{paddingBottom:80}}><TabTurnos onBack={() => setShowTurnos(false)} T={T}/></div>
-              <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,padding:"12px 16px calc(var(--sab) + 20px)",background:T.tabBg,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",borderTop:`1px solid ${T.border}`,zIndex:50}}>
-                <button className="press" onClick={()=>setShowTurnos(false)} style={{width:"100%",height:40,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,fontSize:13,fontWeight:600,color:T.sub}}>&#8592; Volver</button>
-              </div>
-            </>
+          ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
           : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} error={initError} T={T}/>
 
       ) : (
         <>
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} T={T}/></div>
+          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
