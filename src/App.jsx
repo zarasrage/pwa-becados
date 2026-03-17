@@ -250,6 +250,7 @@ function cacheSet(params, data) {
 
 // ── Demo mode ─────────────────────────────────────────────────────────────────
 const DEMO_BECADO = "— Demo —";
+const DEMO_MAP_NAMES = ["García","Muñoz","López","Rojas","Díaz","Torres","Soto","Herrera","Vargas","Núñez","Reyes","Mora"];
 const DEMO_ROTATIONS = ["H","M","CyP","R","TyP","Col","H","M","CyP","R","TyP","Col","","",""];
 const DEMO_ACTIVITIES = {
   H:   [["07:30","Pase de visita Hombro"],["08:30","Pabellón Artroscopía"],["12:00","Almuerzo"],["14:00","Policlínico Hombro"],["16:30","Revisión casos"]],
@@ -260,6 +261,46 @@ const DEMO_ACTIVITIES = {
   Col: [["07:30","Pase de visita Columna"],["08:00","Pabellón Columna"],["12:00","Almuerzo"],["14:00","Policlínico Columna"],["16:00","Revisión casos clínicos"]],
   "": [],
 };
+
+// Demo data generators for the map
+function demoSummary(dateStr) {
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dow = new Date(y,m-1,d).getDay();
+  if (dow === 0 || dow === 6) return { ok:true, date:dateStr, groups:{"":[...DEMO_MAP_NAMES]} };
+  const groups = {};
+  DEMO_MAP_NAMES.forEach((name, i) => {
+    const rotCode = DEMO_ROTATIONS[((d-1) + i * 2) % DEMO_ROTATIONS.length] || "";
+    if (!groups[rotCode]) groups[rotCode] = [];
+    groups[rotCode].push(name);
+  });
+  return { ok:true, date:dateStr, groups };
+}
+
+function demoMonthly(monthStr) {
+  const [y, m] = monthStr.split("-").map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const TURNO_PATTERNS = [
+    [null,"P",null,"A","D",null,"N"],
+    [null,null,"D",null,"N",null,"P"],
+    ["A",null,"N",null,null,"P",null],
+    [null,"D",null,"P",null,"A","N"],
+  ];
+  const entries = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const dow = new Date(y, m-1, d).getDay();
+    if (dow === 0 || dow === 6) continue;
+    DEMO_MAP_NAMES.forEach((name, ni) => {
+      const pat = TURNO_PATTERNS[ni % TURNO_PATTERNS.length];
+      const turno = pat[(d-1) % pat.length];
+      if (turno === "P") entries.push({ date:iso, name, type:"P" });
+      if (turno === "D") entries.push({ date:iso, name, type:"D" });
+      if (turno === "N") entries.push({ date:iso, name, type:"N" });
+      if (turno === "A") entries.push({ date:iso, name, type:"A" });
+    });
+  }
+  return { ok:true, month:monthStr, entries };
+}
 
 function demoDaily(dateStr) {
   const dow = new Date(dateStr).getDay();
@@ -449,6 +490,7 @@ const CSS = `
   @keyframes spin      { to{transform:rotate(360deg)} }
   @keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:none} }
   @keyframes shimmer   { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  @keyframes doctorWalk { from{background-position-x:0} to{background-position-x:-400%} }
   @keyframes petalFall {
     0%   { transform: translateY(-30px) rotate(0deg) scale(1.1); opacity: 0; }
     8%   { opacity: 1; }
@@ -1460,7 +1502,7 @@ const ACCENT_MAP = {
   synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
 };
 
-function ThemePicker({ current, onSelect, onClose }) {
+function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
   const [hovered, setHovered] = useState(null);
   const accent = ACCENT_MAP[current] || "#348FFF";
   const isDark = !["light"].includes(current);
@@ -1597,6 +1639,21 @@ function ThemePicker({ current, onSelect, onClose }) {
             );
           })}
         </div>
+
+        {/* Secret: Mapa en vivo */}
+        {onShowMapa && (
+          <button className="press" onClick={() => { onClose(); onShowMapa(); }}
+            style={{
+              width:"100%",marginTop:14,
+              display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+              background: isDark ? "#ffffff06" : "#00000006",
+              border:`1px dashed ${isDark?"#ffffff18":"#00000015"}`,
+              borderRadius:12,padding:"10px 14px",cursor:"pointer",
+            }}>
+            <span style={{fontSize:14}}>🗺</span>
+            <span style={{fontSize:11,fontWeight:600,color: isDark ? "#556080" : "#94A3B8"}}>Mapa en vivo (beta)</span>
+          </button>
+        )}
 
         <div style={{marginTop:16,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
           <div style={{height:1,flex:1,background: isDark ? "#ffffff10" : "#00000010"}}/>
@@ -2315,6 +2372,671 @@ const UNIVERSIDADES = {
 };
 const UNIV_ORDER = ["UNAB","UANDES","IST"];
 
+// ── Mapa en Vivo — pixel art hospital ────────────────────────────────────────
+
+const MAP_BUILDINGS = [
+  { id:"pabellones",   label:"Pabellones",  accent:"#13C045", desc:"Cirugía",
+    sprite:"/sprites/pabellones.png",
+    floorSpots:[
+      {x:26,y:67},{x:39,y:75},{x:51,y:83},{x:70,y:76},
+      {x:56,y:66},{x:44,y:58},{x:53,y:52},{x:69,y:59},{x:81,y:68},
+    ],
+  },
+  { id:"jofre",        label:"Jofré",        accent:"#FBBF24", desc:"Artroscopía · Seminarios",
+    sprite:"/sprites/jofre.png",
+    floorSpots:[
+      {x:22,y:71},{x:37,y:64},{x:49,y:56},{x:38,y:79},
+      {x:51,y:71},{x:65,y:64},{x:51,y:85},{x:67,y:77},{x:79,y:70},
+    ],
+  },
+  { id:"policlinicos", label:"Policlínicos", accent:"#348FFF", desc:"Consultas",
+    sprite:"/sprites/policlinicos.png",
+    floorSpots:[
+      {x:51,y:62},{x:32,y:69},{x:50,y:79},{x:71,y:71},
+    ],
+  },
+  { id:"urgencia",     label:"Urgencia",     accent:"#F87171", desc:"Turnos Día · Noche",
+    sprite:"/sprites/urgencia.png",
+    floorSpots:[
+      {x:66,y:57},{x:76,y:71},{x:61,y:81},{x:49,y:85},{x:28,y:73},
+    ],
+  },
+];
+
+// Pixel art building sprites — detailed, 80x64 viewBox
+function PixelBuilding({ accent, type }) {
+  // Helper: R(x,y,w,h,fill) — compact rect
+  const R = (x,y,w,h,f) => <rect x={x} y={y} width={w} height={h} fill={f}/>;
+
+  if (type === "pabellones") {
+    // 2-story green hospital, cross on roof, double doors, awning, plants
+    return (
+      <svg viewBox="0 0 80 64" width="96" height="77" style={{imageRendering:"pixelated",display:"block"}}>
+        {/* Ground shadow */}
+        {R(6,58,68,6,"#00000015")}
+        {/* Main wall */}
+        {R(8,16,64,42,"#1A3D2A")} {R(10,16,60,42,"#1E4D30")}
+        {/* Wall texture — brick lines */}
+        {R(10,24,60,1,"#16382590")} {R(10,32,60,1,"#16382590")} {R(10,40,60,1,"#16382590")} {R(10,48,60,1,"#16382590")}
+        {/* Roof */}
+        {R(6,14,68,4,"#2D6B3F")} {R(4,12,72,3,"#13C045")} {R(4,11,72,2,"#0FA038")}
+        {/* Cross on roof */}
+        {R(36,2,8,10,"#FFFFFF")} {R(33,5,14,4,"#FFFFFF")} {R(37,3,6,8,"#13C045")} {R(34,6,12,2,"#13C045")}
+        {/* Floor separator */}
+        {R(10,34,60,2,"#2D6B3F50")}
+        {/* Windows — top floor */}
+        {R(14,18,10,7,"#0A1C12")} {R(15,19,8,5,"#80FFB040")} {R(15,19,8,1,"#80FFB020")}
+        {R(28,18,10,7,"#0A1C12")} {R(29,19,8,5,"#80FFB040")} {R(29,19,8,1,"#80FFB020")}
+        {R(42,18,10,7,"#0A1C12")} {R(43,19,8,5,"#80FFB040")} {R(43,19,8,1,"#80FFB020")}
+        {R(56,18,10,7,"#0A1C12")} {R(57,19,8,5,"#80FFB040")} {R(57,19,8,1,"#80FFB020")}
+        {/* Operating light in top-left window */}
+        {R(17,20,4,2,"#FFEE80")} {R(18,22,2,1,"#FFD700")}
+        {/* Windows — bottom floor */}
+        {R(14,37,10,7,"#0A1C12")} {R(15,38,8,5,"#80FFB030")}
+        {R(56,37,10,7,"#0A1C12")} {R(57,38,8,5,"#80FFB030")}
+        {/* Double door */}
+        {R(30,42,20,16,"#0D2818")} {R(31,43,8,15,"#1A5030")} {R(41,43,8,15,"#1E5A36")}
+        {R(38,49,4,4,"#FFD700")} {/* door handle */}
+        {/* Awning over door */}
+        {R(26,40,28,3,"#13C045")} {R(27,40,2,3,"#FFFFFF60")} {R(31,40,2,3,"#FFFFFF60")} {R(35,40,2,3,"#FFFFFF60")}
+        {R(39,40,2,3,"#FFFFFF60")} {R(43,40,2,3,"#FFFFFF60")} {R(47,40,2,3,"#FFFFFF60")} {R(51,40,2,3,"#FFFFFF60")}
+        {/* Plants */}
+        {R(10,52,4,6,"#5D4037")} {R(8,48,8,5,"#2E7D32")} {R(9,46,6,3,"#388E3C")}
+        {R(66,52,4,6,"#5D4037")} {R(64,48,8,5,"#2E7D32")} {R(65,46,6,3,"#388E3C")}
+        {/* Steps */}
+        {R(28,56,24,2,"#2D6B3F80")} {R(26,57,28,2,"#2D6B3F50")}
+      </svg>
+    );
+  }
+
+  if (type === "jofre") {
+    // Amber/gold building, scope detail, sign "JOFRÉ", seminar room hint
+    return (
+      <svg viewBox="0 0 80 64" width="96" height="77" style={{imageRendering:"pixelated",display:"block"}}>
+        {R(6,58,68,6,"#00000015")}
+        {/* Main wall */}
+        {R(8,22,64,36,"#4A3520")} {R(10,22,60,36,"#5C4429")}
+        {/* Wall texture */}
+        {R(10,30,60,1,"#4A352080")} {R(10,38,60,1,"#4A352080")} {R(10,46,60,1,"#4A352080")}
+        {/* Roof */}
+        {R(6,20,68,4,"#6B4F30")} {R(4,18,72,3,"#FBBF24")} {R(4,17,72,2,"#E5A91F")}
+        {/* Sign on roof — "JOFRÉ" */}
+        {R(22,8,36,10,"#3D2B15")} {R(23,9,34,8,"#5C4429")}
+        <text x="40" y="15.5" textAnchor="middle" fontSize="6" fontWeight="900" fill="#FBBF24" fontFamily="monospace">JOFRÉ</text>
+        {/* Scope decoration on sign */}
+        {R(18,9,4,6,"#FBBF24")} {R(17,8,6,2,"#FBBF24")} {R(19,14,2,4,"#FBBF24AA")}
+        {/* Big windows — seminar room (left) */}
+        {R(13,25,18,14,"#0D0800")} {R(14,26,16,12,"#FBBF2420")}
+        {/* Chairs visible inside */}
+        {R(16,34,3,2,"#FBBF2440")} {R(21,34,3,2,"#FBBF2440")} {R(26,34,3,2,"#FBBF2440")}
+        {/* Big window — arthro room (right) */}
+        {R(49,25,18,14,"#0D0800")} {R(50,26,16,12,"#FBBF2420")}
+        {/* Arthroscope detail inside */}
+        {R(56,28,2,8,"#FBBF2450")} {R(54,28,6,2,"#FBBF2460")} {R(57,35,3,2,"#88FF8840")}
+        {/* Door */}
+        {R(34,38,12,20,"#0D0800")} {R(35,39,10,19,"#3D2B15")} {R(43,48,2,3,"#FFD700")}
+        {/* Awning — striped */}
+        {R(30,36,20,3,"#FBBF24")} {R(31,36,2,3,"#FFFFFF50")} {R(35,36,2,3,"#FFFFFF50")}
+        {R(39,36,2,3,"#FFFFFF50")} {R(43,36,2,3,"#FFFFFF50")} {R(47,36,2,3,"#FFFFFF50")}
+        {/* Side lamp */}
+        {R(10,38,2,12,"#6B4F30")} {R(9,36,4,3,"#FBBF2480")}
+        {/* Barrel */}
+        {R(68,48,6,10,"#6B4F30")} {R(68,50,6,1,"#5C4429")} {R(68,54,6,1,"#5C4429")} {R(69,47,4,2,"#7B5F38")}
+        {/* Small plant */}
+        {R(64,52,4,6,"#5D4037")} {R(62,49,8,4,"#F9A825")} {R(63,47,6,3,"#FDD835")}
+      </svg>
+    );
+  }
+
+  if (type === "policlinicos") {
+    // Blue, long building, many windows, reception-style door
+    return (
+      <svg viewBox="0 0 80 64" width="96" height="77" style={{imageRendering:"pixelated",display:"block"}}>
+        {R(6,58,68,6,"#00000015")}
+        {/* Main wall */}
+        {R(4,24,72,34,"#0F2A4A")} {R(6,24,68,34,"#153660")}
+        {/* Wall texture */}
+        {R(6,32,68,1,"#0F2A4A80")} {R(6,40,68,1,"#0F2A4A80")} {R(6,48,68,1,"#0F2A4A80")}
+        {/* Roof */}
+        {R(2,22,76,4,"#1A4C80")} {R(0,20,80,3,"#348FFF")} {R(0,19,80,2,"#2B7AE0")}
+        {/* Sign */}
+        {R(14,10,52,10,"#0F2A4A")} {R(15,11,50,8,"#153660")}
+        <text x="40" y="17.5" textAnchor="middle" fontSize="5.5" fontWeight="900" fill="#348FFF" fontFamily="monospace">POLICLÍNICO</text>
+        {/* Stethoscope on sign */}
+        {R(8,11,5,2,"#348FFF")} {R(7,13,3,4,"#348FFF")} {R(11,13,3,4,"#348FFF")} {R(8,16,5,2,"#348FFFAA")}
+        {/* Many windows — row 1 */}
+        {R(8,27,8,6,"#061220")} {R(9,28,6,4,"#348FFF20")} {R(9,28,6,1,"#348FFF15")}
+        {R(20,27,8,6,"#061220")} {R(21,28,6,4,"#348FFF20")}
+        {R(32,27,8,6,"#061220")} {R(33,28,6,4,"#348FFF20")}
+        {R(44,27,8,6,"#061220")} {R(45,28,6,4,"#348FFF20")}
+        {R(56,27,8,6,"#061220")} {R(57,28,6,4,"#348FFF20")}
+        {R(68,27,6,6,"#061220")} {R(69,28,4,4,"#348FFF20")}
+        {/* Windows — row 2 */}
+        {R(8,41,8,6,"#061220")} {R(9,42,6,4,"#348FFF15")}
+        {R(56,41,8,6,"#061220")} {R(57,42,6,4,"#348FFF15")}
+        {R(68,41,6,6,"#061220")} {R(69,42,4,4,"#348FFF15")}
+        {/* Reception door — glass */}
+        {R(26,40,28,18,"#061220")} {R(27,41,12,17,"#348FFF12")} {R(41,41,12,17,"#348FFF12")}
+        {R(39,48,2,6,"#FFD700")} {/* handle */}
+        {/* Awning */}
+        {R(22,38,36,3,"#348FFF")} {R(23,38,2,3,"#FFFFFF40")} {R(27,38,2,3,"#FFFFFF40")} {R(31,38,2,3,"#FFFFFF40")}
+        {R(35,38,2,3,"#FFFFFF40")} {R(39,38,2,3,"#FFFFFF40")} {R(43,38,2,3,"#FFFFFF40")}
+        {R(47,38,2,3,"#FFFFFF40")} {R(51,38,2,3,"#FFFFFF40")} {R(55,38,2,3,"#FFFFFF40")}
+        {/* Bench outside */}
+        {R(6,54,12,2,"#1A4C80")} {R(6,52,2,3,"#1A4C80")} {R(16,52,2,3,"#1A4C80")}
+        {/* Small plant */}
+        {R(70,52,4,6,"#5D4037")} {R(68,49,8,4,"#1B5E20")} {R(69,47,6,3,"#2E7D32")}
+      </svg>
+    );
+  }
+
+  if (type === "urgencia") {
+    // Red emergency building, big red cross, wide entrance, ambulance bay hint
+    return (
+      <svg viewBox="0 0 80 64" width="96" height="77" style={{imageRendering:"pixelated",display:"block"}}>
+        {R(6,58,68,6,"#00000015")}
+        {/* Main wall */}
+        {R(8,18,64,40,"#4A1010")} {R(10,18,60,40,"#5C1515")}
+        {/* Wall texture */}
+        {R(10,26,60,1,"#4A101080")} {R(10,34,60,1,"#4A101080")} {R(10,42,60,1,"#4A101080")}
+        {/* Roof */}
+        {R(6,16,68,4,"#7A2020")} {R(4,14,72,3,"#F87171")} {R(4,13,72,2,"#E05555")}
+        {/* Red cross on roof — bigger */}
+        {R(34,2,12,12,"#FFFFFF")} {R(31,5,18,6,"#FFFFFF")} {R(35,3,10,10,"#F87171")} {R(32,6,16,4,"#F87171")}
+        {/* Emergency light */}
+        {R(22,3,4,4,"#FF0000")} {R(23,2,2,2,"#FF4444")}
+        {R(54,3,4,4,"#3344FF")} {R(55,2,2,2,"#5566FF")}
+        {/* Windows — top row */}
+        {R(14,21,10,7,"#200505")} {R(15,22,8,5,"#F8717118")} {R(15,22,8,1,"#F8717110")}
+        {R(28,21,10,7,"#200505")} {R(29,22,8,5,"#F8717118")}
+        {R(42,21,10,7,"#200505")} {R(43,22,8,5,"#F8717118")}
+        {R(56,21,10,7,"#200505")} {R(57,22,8,5,"#F8717118")}
+        {/* Windows — bottom row */}
+        {R(14,36,10,7,"#200505")} {R(15,37,8,5,"#F8717115")}
+        {R(56,36,10,7,"#200505")} {R(57,37,8,5,"#F8717115")}
+        {/* Wide ambulance entrance */}
+        {R(26,34,28,24,"#200505")} {R(27,35,26,23,"#5C151510")}
+        {/* Red/white striped awning */}
+        {R(22,32,36,3,"#F87171")} {R(23,32,3,3,"#FFFFFF70")} {R(29,32,3,3,"#FFFFFF70")} {R(35,32,3,3,"#FFFFFF70")}
+        {R(41,32,3,3,"#FFFFFF70")} {R(47,32,3,3,"#FFFFFF70")} {R(53,32,3,3,"#FFFFFF70")}
+        {/* URGENCIA sign above door */}
+        {R(28,29,24,4,"#CC0000")}
+        <text x="40" y="32" textAnchor="middle" fontSize="3.5" fontWeight="900" fill="#FFFFFF" fontFamily="monospace">URGENCIA</text>
+        {/* Ambulance stripes on ground */}
+        {R(30,56,8,2,"#F8717140")} {R(42,56,8,2,"#F8717140")}
+        {/* Cone */}
+        {R(10,52,4,6,"#FF6600")} {R(10,52,4,2,"#FFFFFF80")} {R(11,50,2,3,"#FF6600")}
+      </svg>
+    );
+  }
+
+  return null;
+}
+
+// Pixel art doctor avatar — 12x16 with lab coat
+function PixelAvatar({ color, initial, size = 28, selected, onClick, name }) {
+  const skin = "#FFD5B0";
+  const hair = "#3D2B1F";
+  const coat = "#FFFFFF";
+  const accent = color;
+  return (
+    <div className="press" onClick={onClick} style={{
+      display:"inline-flex",flexDirection:"column",alignItems:"center",gap:2,
+      width: size + 12,
+      transition:"transform 0.15s",
+      transform: selected ? "scale(1.18)" : "none",
+    }}>
+      <svg viewBox="0 0 12 18" width={size} height={size*1.5} style={{imageRendering:"pixelated",display:"block"}}>
+        {/* Hair */}
+        <rect x="3" y="0" width="6" height="2" fill={hair}/>
+        <rect x="2" y="1" width="8" height="1" fill={hair}/>
+        {/* Head */}
+        <rect x="3" y="2" width="6" height="5" fill={skin}/>
+        <rect x="2" y="3" width="1" height="3" fill={skin}/>
+        <rect x="9" y="3" width="1" height="3" fill={skin}/>
+        {/* Eyes */}
+        <rect x="4" y="3" width="1" height="2" fill="#2D1B0E"/>
+        <rect x="7" y="3" width="1" height="2" fill="#2D1B0E"/>
+        {/* Mouth */}
+        <rect x="5" y="6" width="2" height="1" fill="#C4956A"/>
+        {/* Lab coat body */}
+        <rect x="2" y="7" width="8" height="6" fill={coat}/>
+        {/* Colored accent stripe (stethoscope/collar) */}
+        <rect x="4" y="7" width="4" height="1" fill={accent}/>
+        <rect x="5" y="8" width="2" height="2" fill={accent+"80"}/>
+        {/* Arms — coat sleeves */}
+        <rect x="0" y="8" width="2" height="4" fill={coat}/>
+        <rect x="10" y="8" width="2" height="4" fill={coat}/>
+        {/* Hands */}
+        <rect x="0" y="12" width="2" height="1" fill={skin}/>
+        <rect x="10" y="12" width="2" height="1" fill={skin}/>
+        {/* Coat buttons */}
+        <rect x="6" y="10" width="1" height="1" fill={accent+"60"}/>
+        <rect x="6" y="12" width="1" height="1" fill={accent+"60"}/>
+        {/* Pants */}
+        <rect x="3" y="13" width="3" height="3" fill={accent+"CC"}/>
+        <rect x="7" y="13" width="3" height="3" fill={accent+"CC"}/>
+        {/* Shoes */}
+        <rect x="2" y="16" width="3" height="2" fill="#1A1A1A"/>
+        <rect x="7" y="16" width="3" height="2" fill="#1A1A1A"/>
+      </svg>
+      {/* Name label */}
+      <div style={{
+        fontSize: selected ? 8 : 7,
+        fontWeight: selected ? 800 : 600,
+        color: selected ? accent : color+"BB",
+        fontFamily:"'JetBrains Mono',monospace",
+        lineHeight:1,
+        whiteSpace:"nowrap",
+        maxWidth: size + 12,
+        overflow:"hidden",
+        textOverflow:"ellipsis",
+        textAlign:"center",
+        transition:"all 0.12s",
+      }}>
+        {name || initial}
+      </div>
+    </div>
+  );
+}
+
+function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected }) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const speed = 200 + (i % 4) * 50; // vary speed per doctor
+    const interval = setInterval(() => setFrame(f => (f + 1) % 4), speed);
+    return () => clearInterval(interval);
+  }, [i]);
+
+  return (
+    <div className="press"
+      onClick={() => onSelect(isSel ? null : av)}
+      style={{
+        position:"absolute",
+        left:`${spot.x}%`, top:`${spot.y}%`,
+        transform:"translate(-50%,-100%)",
+        transition:"all 0.15s",
+        zIndex: isSel ? 100 : Math.round(spot.y),
+      }}>
+      <img src={`/sprites/doctor/frame_00${frame}.png`} alt={av.name}
+        width={sz} height={sz}
+        style={{
+          imageRendering:"pixelated", display:"block",
+          filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none",
+        }}/>
+      {isSel && (
+        <div style={{
+          position:"absolute",top:-18,left:"50%",transform:"translateX(-50%)",
+          background:av.color,color:"#fff",fontSize:10,fontWeight:800,
+          padding:"2px 8px",borderRadius:4,whiteSpace:"nowrap",
+          fontFamily:"'JetBrains Mono',monospace",
+          boxShadow:`0 2px 6px ${av.color}80`,
+        }}>
+          {av.name.split(" ").slice(-1)[0]}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BuildingCard({ building, avatars, selected, onSelect, T }) {
+  const { id, label, accent, desc, sprite, floorSpots } = building;
+  const count = avatars.length;
+
+  // ── Sprite-based scene ──
+  if (sprite && floorSpots) {
+    return (
+      <div className="anim" style={{position:"relative"}}>
+        {/* Name — simple text */}
+        <div style={{fontSize:11,fontWeight:700,color:T.text,fontFamily:"'Bricolage Grotesque',sans-serif",marginBottom:4,textAlign:"center"}}>
+          {label}
+        </div>
+
+        {/* Scene: building + avatars, transparent bg */}
+        <div style={{position:"relative"}}>
+          <img src={sprite} alt={label} style={{
+            width:"100%",height:"auto",display:"block",
+            imageRendering:"pixelated",
+          }}/>
+          {avatars.slice(0, floorSpots.length).map((av, i) => {
+            const spot = floorSpots[i];
+            const isSel = selected?.name === av.name;
+            const sz = isSel ? 72 : 60;
+            // Cycle through 4 frames with different speed per doctor
+            const frameIdx = Math.floor(Date.now() / (180 + i * 30)) % 4;
+            return (
+              <DoctorSprite key={av.name} av={av} spot={spot} isSel={isSel} sz={sz} i={i}
+                onSelect={onSelect} selected={selected}/>
+            );
+          })}
+          {avatars.length > floorSpots.length && (
+            <div style={{
+              position:"absolute",bottom:4,right:4,
+              background:"#00000088",color:"#fff",fontSize:8,fontWeight:700,
+              padding:"2px 5px",borderRadius:4,
+              fontFamily:"'JetBrains Mono',monospace",
+            }}>
+              +{avatars.length - floorSpots.length}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Fallback: no sprite yet ──
+  return (
+    <div className="anim" style={{position:"relative"}}>
+      <div style={{fontSize:11,fontWeight:700,color:T.text,fontFamily:"'Bricolage Grotesque',sans-serif",marginBottom:4,textAlign:"center"}}>
+        {label}
+      </div>
+      <div style={{
+        aspectRatio:"1",display:"flex",alignItems:"center",justifyContent:"center",
+        borderRadius:10,border:`1px dashed ${T.border}`,background:T.surface+"40",
+      }}>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:10,color:T.muted}}>{count > 0 ? count+" becado"+(count!==1?"s":"") : "Vac\u00edo"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+function getBecadoColor(name, allBecados) {
+  const idx = allBecados.indexOf(name);
+  if (idx < 0) return "#64748B";
+  if (idx < 5) return "#8B73FF";
+  if (idx < 10) return "#13C045";
+  if (idx < 15) return "#348FFF";
+  if (idx < 21) return "#8B73FF";
+  if (idx < 27) return "#13C045";
+  if (idx < 33) return "#348FFF";
+  return "#FB923C";
+}
+
+function getCurrentActivity(items, nowMin) {
+  if (!items?.length) return null;
+  let cur = null;
+  for (const it of items) {
+    if (t2m(it.time) <= nowMin) cur = it; else break;
+  }
+  return cur;
+}
+
+function activityToBuilding(text) {
+  if (!text) return null;
+  const a = text.toLowerCase();
+  if (a.includes("almuerzo") || a.includes("fin de jornada") || a.includes("pase de visita")) return null;
+  if (a.includes("artroscop")) return "jofre";
+  if (a.includes("pabellón") || a.includes("pabellon")) return "pabellones";
+  if (a.includes("policlínico") || a.includes("policlinico")) return "policlinicos";
+  if (a.includes("seminario") || a.includes("reunión") || a.includes("reunion")) return "jofre";
+  return "pabellones";
+}
+
+function resolveBecadoBuilding(schedItems, turno, seminario, nowMin) {
+  if (seminario && nowMin >= 450 && nowMin < 480) return "jofre";
+  if (turno?.artroCode === "A" && nowMin >= 780 && nowMin < 840) return "jofre";
+  if (turno?.diaCode === "P" && nowMin >= 840 && nowMin < 1080) return "policlinicos";
+  if (turno?.diaCode === "D" && nowMin >= 840 && nowMin < 1200) return "urgencia";
+  if (turno?.nocheCode === "N" && nowMin >= 1200) return "urgencia";
+  const act = getCurrentActivity(schedItems, nowMin);
+  return act ? activityToBuilding(act.activity) : null;
+}
+
+function MapaVivo({ becados, T, onBack }) {
+  const realToday = useMemo(() => todayISO(), []);
+  const [date, setDate] = useState(realToday);
+  const [simMin, setSimMin] = useState(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  });
+  const [rawData, setRawData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [demoMode, setDemoMode] = useState(false);
+
+  const isLive = !demoMode && date === realToday && (() => {
+    const now = new Date();
+    return Math.abs(simMin - (now.getHours()*60+now.getMinutes())) < 5;
+  })();
+
+  const goToday = () => {
+    const now = new Date();
+    setDate(realToday);
+    setSimMin(now.getHours()*60+now.getMinutes());
+  };
+
+  const activeBecados = demoMode ? DEMO_MAP_NAMES : becados;
+
+  // Fetch data only when DATE or demoMode changes — not on time slider
+  useEffect(() => {
+    setLoading(true);
+    setSelected(null);
+    (async () => {
+      try {
+        let summary, monthly;
+
+        if (demoMode) {
+          await new Promise(r => setTimeout(r, 150));
+          summary = demoSummary(date);
+          monthly = demoMonthly(date.slice(0,7));
+        } else {
+          [summary, monthly] = await Promise.all([
+            apiGet({ route:"summary", date, token:API_TOKEN }),
+            apiGet({ route:"monthly", month:date.slice(0,7), token:API_TOKEN }),
+          ]);
+        }
+
+        if (!summary.ok || !summary.groups) { setRawData(null); setLoading(false); return; }
+
+        const turnoLookup = {};
+        if (monthly.ok !== false) {
+          (monthly.entries || []).forEach(e => {
+            if (e.date !== date) return;
+            if (!turnoLookup[e.name]) turnoLookup[e.name] = {};
+            if (e.type === "P" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
+            if (e.type === "N") turnoLookup[e.name].nocheCode = "N";
+            if (e.type === "A") turnoLookup[e.name].artroCode = "A";
+          });
+        }
+
+        const scheduledRots = ["H","M","CyP","R","TyP","Col"];
+        const rotSchedules = {};
+
+        if (demoMode) {
+          scheduledRots.forEach(r => {
+            if (!summary.groups[r]?.length) return;
+            const acts = DEMO_ACTIVITIES[r] || [];
+            const [dy,dm,dd] = date.split("-").map(Number);
+            const dow = new Date(dy,dm-1,dd).getDay();
+            const hasSem = [2,3,4].includes(dow);
+            rotSchedules[r] = {
+              items: acts.map(([time, activity]) => ({ time, activity })),
+              seminario: hasSem ? { presenter:summary.groups[r][0], title:"Presentación demo", tag:"Seminario", time:"07:30" } : null,
+            };
+          });
+        } else {
+          await Promise.all(
+            scheduledRots.filter(r => summary.groups[r]?.length > 0).map(async r => {
+              try {
+                const daily = await apiGet({ route:"daily", becado:summary.groups[r][0], date, token:API_TOKEN });
+                if (daily.ok !== false) rotSchedules[r] = { items:daily.items||[], seminario:daily.seminario||null };
+              } catch {}
+            })
+          );
+        }
+
+        setRawData({ summary, turnoLookup, rotSchedules });
+      } catch(e) {
+        console.error("Map error:", e);
+        setRawData(null);
+      }
+      setLoading(false);
+    })();
+  }, [date, becados, demoMode]);
+
+  // Resolve buildings from time — instant, no API calls
+  const buildingMap = useMemo(() => {
+    const result = {};
+    MAP_BUILDINGS.forEach(b => { result[b.id] = []; });
+    if (!rawData?.summary?.groups) return result;
+
+    for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
+      const sched = rawData.rotSchedules[rotCode] || { items:[], seminario:null };
+      for (const name of names) {
+        if (name === DEMO_BECADO) continue;
+        const turno = rawData.turnoLookup[name] || {};
+        const building = resolveBecadoBuilding(sched.items, turno, sched.seminario, simMin);
+        if (building && result[building]) {
+          result[building].push({
+            name,
+            initial: name.charAt(0).toUpperCase(),
+            color: getBecadoColor(name, activeBecados),
+            rotation: rotCode,
+            rotName: ROT[rotCode]?.name || rotCode,
+          });
+        }
+      }
+    }
+    return result;
+  }, [rawData, simMin, activeBecados]);
+
+  const totalVisible = Object.values(buildingMap).reduce((s, a) => s + a.length, 0);
+  const selectedBuilding = selected
+    ? MAP_BUILDINGS.find(b => (buildingMap[b.id]||[]).some(a => a.name === selected.name))
+    : null;
+
+  // Time presets
+  const TIME_PRESETS = [
+    { label:"07:30", min:450 },
+    { label:"09:00", min:540 },
+    { label:"12:00", min:720 },
+    { label:"13:00", min:780 },
+    { label:"14:00", min:840 },
+    { label:"17:00", min:1020 },
+    { label:"20:00", min:1200 },
+  ];
+
+  return (
+    <div style={{minHeight:"100vh",position:"relative",zIndex:1}}>
+      <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>
+          {isLive ? "En vivo" : "Simulación"}
+        </div>
+        <button className="press" onClick={onBack} style={{background:"none",border:"none",padding:0,textAlign:"left",marginBottom:10}}>
+          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>Mapa del Hospital</div>
+          <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para volver</div>
+        </button>
+
+        {/* Date nav */}
+        <DateNav date={date} today={realToday}
+          onPrev={() => setDate(d => offsetDate(d, -1))}
+          onNext={() => setDate(d => offsetDate(d, 1))}
+          onToday={goToday} T={T}/>
+
+        {/* Time control */}
+        <div style={{marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+            <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:18,fontWeight:600,color:T.accent||"#348FFF",minWidth:48}}>
+              {m2t(simMin)}
+            </span>
+            <input type="range" min={420} max={1380} step={15} value={simMin}
+              onChange={e => setSimMin(Number(e.target.value))}
+              style={{flex:1,height:4,appearance:"none",WebkitAppearance:"none",background:`linear-gradient(to right, ${T.accent||"#348FFF"} ${((simMin-420)/(1380-420))*100}%, ${T.border} ${((simMin-420)/(1380-420))*100}%)`,borderRadius:99,outline:"none",cursor:"pointer",accentColor:T.accent||"#348FFF"}}
+            />
+          </div>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+            {TIME_PRESETS.map(tp => {
+              const active = Math.abs(simMin - tp.min) < 15;
+              return (
+                <button key={tp.label} className="press" onClick={() => setSimMin(tp.min)}
+                  style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${active ? (T.accent||"#348FFF")+"60" : T.border}`,background:active ? (T.accent||"#348FFF")+"18" : T.surface2,fontSize:10,fontWeight:active?700:400,fontFamily:"'JetBrains Mono',monospace",color:active ? (T.accent||"#348FFF") : T.muted,transition:"all 0.12s"}}>
+                  {tp.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Status bar */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+          {isLive ? (
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:"#13C045",boxShadow:"0 0 8px #13C045",animation:"neonPulseA 2s ease-in-out infinite"}}/>
+              <span style={{fontSize:11,fontWeight:600,color:"#13C045"}}>En vivo</span>
+            </div>
+          ) : (
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:T.accent||"#348FFF"}}/>
+              <span style={{fontSize:11,fontWeight:600,color:T.accent||"#348FFF"}}>{m2t(simMin)}</span>
+            </div>
+          )}
+          <span style={{fontSize:11,color:T.muted}}>·</span>
+          <span style={{fontSize:11,color:T.muted}}>{totalVisible} becado{totalVisible!==1?"s":""} en el hospital</span>
+          <span style={{fontSize:11,color:T.muted}}>·</span>
+          <button className="press" onClick={() => setDemoMode(d => !d)}
+            style={{fontSize:10,fontWeight:600,color:demoMode?T.accent||"#348FFF":T.muted,background:demoMode?(T.accent||"#348FFF")+"18":"transparent",border:`1px solid ${demoMode?(T.accent||"#348FFF")+"50":T.border}`,borderRadius:6,padding:"2px 8px"}}>
+            {demoMode ? "✦ Demo" : "Demo"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{padding:"0 16px",paddingBottom:40}}>
+        {loading ? <Spinner color={T.accent||"#348FFF"}/> : (
+          <>
+            {/* Building cards — 2x2 grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {MAP_BUILDINGS.map((b, i) => (
+                <BuildingCard
+                  key={b.id}
+                  building={b}
+                  avatars={buildingMap[b.id] || []}
+                  selected={selected}
+                  onSelect={setSelected}
+                  T={T}
+                />
+              ))}
+            </div>
+
+            {/* Selected avatar detail */}
+            {selected && selectedBuilding && (
+              <div className="anim" style={{
+                marginTop:10,
+                background:T.surface,
+                border:`1px solid ${selected.color}40`,
+                borderLeft:`3px solid ${selected.color}`,
+                borderRadius:12,
+                padding:"12px 16px",
+                position:"relative",
+              }}>
+                <button className="press" onClick={() => setSelected(null)}
+                  style={{position:"absolute",top:8,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1}}>✕</button>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                  <PixelAvatar color={selected.color} initial={selected.initial} name={selected.name.split(" ").slice(-1)[0]} size={32} selected={false} onClick={()=>{}}/>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700,color:T.text}}>{selected.name}</div>
+                    <div style={{fontSize:11,color:T.muted}}>{selected.rotName}</div>
+                  </div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:selectedBuilding.accent,boxShadow:`0 0 6px ${selectedBuilding.accent}`}}/>
+                  <span style={{fontSize:12,fontWeight:600,color:selectedBuilding.accent}}>{selectedBuilding.label}</span>
+                  <span style={{fontSize:11,color:T.muted}}>· {selectedBuilding.desc}</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ── SelectScreen ──────────────────────────────────────────────────────────────
 function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error, T }) {
   const [univ, setUniv] = useState("UNAB");
@@ -2355,7 +3077,7 @@ function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error
             <span>⊞</span> Rotaciones de hoy
           </button>
           <button className="press anim" onClick={onShowTurnos}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"130ms"}}>
+            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"180ms"}}>
             <span>◷</span> Turnos del mes
           </button>
         </div>
@@ -3402,6 +4124,7 @@ export default function App() {
   const [activeTab, setActiveTab]     = useState(() => safeStorage.get("activeTab") || "horario");
   const [showTurnos, setShowTurnos]       = useState(false);
   const [showRotaciones, setShowRotaciones] = useState(false);
+  const [showMapa, setShowMapa]           = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -3492,6 +4215,7 @@ export default function App() {
   };
   const handleShowRotaciones = () => { setShowRotaciones(true); };
   const handleShowTurnos     = () => { setShowTurnos(true); };
+  const handleShowMapa       = () => { setShowMapa(true); };
 
   if (loadingInit) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",maxWidth:480,margin:"0 auto"}}>
@@ -3520,7 +4244,7 @@ export default function App() {
         <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
-      {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
+      {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)} onShowMapa={()=>{setShowThemePicker(false);setShowMapa(true);}}/>}
       {theme === "ocean"  && <OceanBubbles/>}
       {theme === "aurora" && <AuroraEffect/>}
       {theme === "forest" && <ForestFireflies/>}
@@ -3536,6 +4260,8 @@ export default function App() {
           ? <TabRotaciones onChangeBecado={()=>setShowRotaciones(false)} T={T}/>
         : showTurnos
           ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
+        : showMapa
+          ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
           : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} error={initError} T={T}/>
 
       ) : (
