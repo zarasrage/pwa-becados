@@ -115,9 +115,10 @@ const ROT = {
   rx:  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Radiología" },
   F:   { accent:"#94A3B8", glow:"#94A3B828", light:"#94A3B812", dark:"#94A3B822", name:"Fisiatría" },
   V:   { accent:"#334155", glow:"#33415528", light:"#33415512", dark:"#33415522", name:"Vacaciones" },
+ CPQ:  { accent:"#D2A679", glow:"#D2A67933", light:"#D2A6791A", dark:"#D2A67926", name:"Vacaciones" },
   "":  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Sin rotación" },
 };
-const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I","A","rx","F","V",""];
+const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I","A","rx","F","V","CPQ",""];
 
 const YEAR_COLORS = ["#8B73FF","#13C045","#348FFF"];
 const YEAR_LABELS = ["3er año","2do año","1er año"];
