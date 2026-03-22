@@ -3,7 +3,7 @@ import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { DEMO_BECADO } from "../data/demo.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
-export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, error, T }) {
   const [univ, setUniv] = useState("UNAB");
   const univCfg  = UNIVERSIDADES[univ];
   const groups   = univCfg.getGroups(becados);
@@ -96,6 +96,16 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
             </span>
             <span style={{fontSize:14,fontWeight:500,color:T.sub,flex:1}}>{DEMO_BECADO}</span>
             <span style={{fontSize:15,color:T.muted}}>›</span>
+          </button>
+          <button className="press"
+            style={{display:"flex",alignItems:"center",gap:11,background:T.surface,border:`1px dashed ${T.border}`,borderRadius:12,padding:"10px 13px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif",marginTop:6}}
+            onClick={onShowMapa}
+          >
+            <span style={{width:32,height:32,borderRadius:8,background:`${T.muted}18`,color:T.muted,fontWeight:700,fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              🗺
+            </span>
+            <span style={{fontSize:14,fontWeight:500,color:T.sub,flex:1}}>Mapa en vivo</span>
+            <span style={{fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"2px 7px",border:`1px solid ${T.border}`}}>beta</span>
           </button>
         </div>
       </div>

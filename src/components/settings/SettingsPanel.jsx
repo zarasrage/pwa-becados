@@ -1,4 +1,4 @@
-export function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, onSwapTurnos, T }) {
+export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowThemePicker, T }) {
   return (
     <>
       <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:90,background:"rgba(0,0,0,0.3)"}}/>
@@ -23,16 +23,10 @@ export function SettingsPanel({ theme, onToggle, onClose, onPreviewSplash, onSwa
           <span style={{fontSize:15}}>🎭</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Ver intro</span>
         </button>
-        <button className="press"
-          onClick={onToggle}
-          style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <span style={{fontSize:16}}>{theme==="dark"||theme==="pink" ? "🌙" : "☀️"}</span>
-            <span style={{fontSize:13,fontWeight:500,color:T.text}}>{theme==="dark"||theme==="pink" ? "Dark" : "Light"}</span>
-          </div>
-          <div style={{width:36,height:20,borderRadius:99,background:theme==="light"?T.border:(T.accent||"#348FFF"),position:"relative",transition:"background 0.2s",flexShrink:0}}>
-            <div style={{position:"absolute",top:2,left:theme==="light"?2:18,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left 0.2s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-          </div>
+        <button className="press" onClick={onShowThemePicker}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
+          <span style={{fontSize:15}}>🎨</span>
+          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Temas</span>
         </button>
       </div>
     </>

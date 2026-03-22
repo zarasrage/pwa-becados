@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { API_TOKEN } from "./constants/api.js";
 import { THEMES, THEME_BG } from "./constants/themes.js";
 import { todayISO } from "./utils/dates.js";
@@ -56,9 +56,6 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
-  const toggleTapCount = useRef(0);
-  const toggleTapTimer = useRef(null);
-
   const applyTheme = (next) => {
     setTheme(next);
     safeStorage.set("theme", next);
@@ -70,22 +67,6 @@ export default function App() {
     ["ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].forEach(t =>
       document.body.classList.toggle("theme-"+t, next === t)
     );
-  };
-
-  const toggleTheme = () => {
-    const isSecret = ["pink","ocean","sunset","forest","aurora","neon","synthwave","cryo","cosmos","tormenta"].includes(theme);
-    if (!isSecret) {
-      toggleTapCount.current += 1;
-      clearTimeout(toggleTapTimer.current);
-      if (toggleTapCount.current >= 5) {
-        toggleTapCount.current = 0;
-        setShowThemePicker(true);
-        return;
-      }
-      toggleTapTimer.current = setTimeout(() => { toggleTapCount.current = 0; }, 3000);
-    }
-    const next = theme === "light" ? "dark" : "light";
-    applyTheme(next);
   };
 
   useEffect(() => {
@@ -157,10 +138,10 @@ export default function App() {
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel theme={theme} onToggle={toggleTheme} onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} T={T}/>
+        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
-      {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)} onShowMapa={()=>{setShowThemePicker(false);setShowMapa(true);}}/>}
+      {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
       {theme === "ocean"  && <OceanBubbles/>}
       {theme === "aurora" && <AuroraEffect/>}
       {theme === "forest" && <ForestFireflies/>}
@@ -178,7 +159,7 @@ export default function App() {
           ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
         : showMapa
           ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
-          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} error={initError} T={T}/>
+          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} error={initError} T={T}/>
 
       ) : (
         <>

@@ -1,18 +1,18 @@
 import { useState } from "react";
 
 export const THEME_OPTIONS = [
-  { id:"dark",      name:"Void",       desc:"El original",            preview:["#0D1117","#161B22","#348FFF"], emoji:"⬛", tag:null },
-  { id:"light",     name:"Blanco",     desc:"Claridad total",         preview:["#F4F7FB","#FFFFFF","#348FFF"], emoji:"☀️", tag:null },
-  { id:"pink",      name:"Sakura",     desc:"Petalos de cerezo",      preview:["#FEE6F2","#FFF0F8","#E8186A"], emoji:"🌸", tag:"✦ SECRET" },
-  { id:"ocean",     name:"Abismo",     desc:"Profundidades del mar",  preview:["#04080F","#071424","#00C8FF"], emoji:"🌊", tag:"✦ SECRET" },
-  { id:"sunset",    name:"Volcan",     desc:"Calor y brasa",          preview:["#0F0500","#1C0A05","#FF5500"], emoji:"🌋", tag:"✦ SECRET" },
-  { id:"forest",    name:"Bosque",     desc:"Luciernagas nocturnas",  preview:["#020A04","#071510","#22D45A"], emoji:"🌿", tag:"✦ SECRET" },
-  { id:"aurora",    name:"Aurora",     desc:"Luces del norte",        preview:["#020510","#060B1C","#8A5CF6"], emoji:"🔮", tag:"✦ SECRET" },
-  { id:"neon",      name:"Glitch",     desc:"Ciudad cyberpunk",       preview:["#03000A","#080018","#CC00FF"], emoji:"⚡", tag:"✦ SECRET" },
-  { id:"synthwave", name:"Synthwave",  desc:"Horizonte retro 80s",    preview:["#0A0015","#130028","#FF006E"], emoji:"🌅", tag:"✦ SECRET" },
-  { id:"cryo",      name:"Cryo",       desc:"Cristal glacial",        preview:["#020D1A","#061828","#00CFFF"], emoji:"❄️", tag:"✦ SECRET" },
-  { id:"cosmos",    name:"Cosmos",     desc:"Nebulosa y estrellas",   preview:["#020008","#080018","#FF6BF5"], emoji:"🌌", tag:"✦ SECRET" },
-  { id:"tormenta", name:"Tormenta",   desc:"Rayos y lluvia eléctrica",preview:["#04060E","#0A1020","#00E5FF"], emoji:"⛈️", tag:"✦ SECRET" },
+  { id:"dark",      name:"Void",       desc:"El original",            preview:["#0D1117","#161B22","#348FFF"], emoji:"⬛" },
+  { id:"light",     name:"Blanco",     desc:"Claridad total",         preview:["#F4F7FB","#FFFFFF","#348FFF"], emoji:"☀️" },
+  { id:"pink",      name:"Sakura",     desc:"Petalos de cerezo",      preview:["#FEE6F2","#FFF0F8","#E8186A"], emoji:"🌸" },
+  { id:"ocean",     name:"Abismo",     desc:"Profundidades del mar",  preview:["#04080F","#071424","#00C8FF"], emoji:"🌊" },
+  { id:"sunset",    name:"Volcan",     desc:"Calor y brasa",          preview:["#0F0500","#1C0A05","#FF5500"], emoji:"🌋" },
+  { id:"forest",    name:"Bosque",     desc:"Luciernagas nocturnas",  preview:["#020A04","#071510","#22D45A"], emoji:"🌿" },
+  { id:"aurora",    name:"Aurora",     desc:"Luces del norte",        preview:["#020510","#060B1C","#8A5CF6"], emoji:"🔮" },
+  { id:"neon",      name:"Glitch",     desc:"Ciudad cyberpunk",       preview:["#03000A","#080018","#CC00FF"], emoji:"⚡" },
+  { id:"synthwave", name:"Synthwave",  desc:"Horizonte retro 80s",    preview:["#0A0015","#130028","#FF006E"], emoji:"🌅" },
+  { id:"cryo",      name:"Cryo",       desc:"Cristal glacial",        preview:["#020D1A","#061828","#00CFFF"], emoji:"❄️" },
+  { id:"cosmos",    name:"Cosmos",     desc:"Nebulosa y estrellas",   preview:["#020008","#080018","#FF6BF5"], emoji:"🌌" },
+  { id:"tormenta", name:"Tormenta",   desc:"Rayos y lluvia eléctrica",preview:["#04060E","#0A1020","#00E5FF"], emoji:"⛈️" },
 ];
 
 export const ACCENT_MAP = {
@@ -21,7 +21,7 @@ export const ACCENT_MAP = {
   synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
 };
 
-export function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
+export function ThemePicker({ current, onSelect, onClose }) {
   const [hovered, setHovered] = useState(null);
   const accent = ACCENT_MAP[current] || "#348FFF";
   const isDark = !["light"].includes(current);
@@ -58,27 +58,15 @@ export function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
         }}/>
         <div style={{textAlign:"center",marginBottom:20,position:"relative"}}>
           <div style={{
-            display:"inline-flex",alignItems:"center",gap:6,
-            fontSize:9,fontWeight:800,letterSpacing:"0.2em",textTransform:"uppercase",
-            color:accent,marginBottom:8,
-            padding:"3px 10px",
-            background:`${accent}12`,
-            border:`1px solid ${accent}25`,
-            borderRadius:99,
-          }}>
-            <span style={{width:4,height:4,borderRadius:"50%",background:accent,display:"inline-block",boxShadow:`0 0 6px ${accent}`}}/>
-            TEMAS SECRETOS
-            <span style={{width:4,height:4,borderRadius:"50%",background:accent,display:"inline-block",boxShadow:`0 0 6px ${accent}`}}/>
-          </div>
-          <div style={{
             fontFamily:"'Bricolage Grotesque',sans-serif",
             fontSize:24,fontWeight:800,lineHeight:1.1,
             color: isDark ? "#F0EFFF" : "#0A0A14",
             letterSpacing:"-0.02em",
+            marginBottom:4,
           }}>
-            Elige tu universo
+            Elige tu tema
           </div>
-          <div style={{fontSize:11,color: isDark ? "#556080" : "#94A3B8",marginTop:4}}>
+          <div style={{fontSize:11,color: isDark ? "#556080" : "#94A3B8"}}>
             Cada tema transforma la experiencia
           </div>
         </div>
@@ -88,7 +76,6 @@ export function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
             const ac      = ACCENT_MAP[opt.id] || "#348FFF";
             const isActive = current === opt.id;
             const isHov    = hovered === opt.id;
-            const isSecret = !!opt.tag;
             return (
               <button key={opt.id} className="press"
                 onPointerEnter={() => setHovered(opt.id)}
@@ -121,15 +108,6 @@ export function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
                     borderRadius:99,
                   }}/>
                 )}
-                {isSecret && (
-                  <div style={{
-                    position:"absolute",top:8,right:8,
-                    fontSize:6,fontWeight:800,letterSpacing:"0.1em",
-                    color:ac,background:`${ac}18`,border:`1px solid ${ac}30`,
-                    borderRadius:99,padding:"2px 5px",
-                    opacity: isActive || isHov ? 1 : 0.6,
-                  }}>{opt.tag}</div>
-                )}
                 {isActive && (
                   <div style={{
                     position:"absolute",top:9,left:9,
@@ -158,21 +136,6 @@ export function ThemePicker({ current, onSelect, onClose, onShowMapa }) {
             );
           })}
         </div>
-
-        {/* Secret: Mapa en vivo */}
-        {onShowMapa && (
-          <button className="press" onClick={() => { onClose(); onShowMapa(); }}
-            style={{
-              width:"100%",marginTop:14,
-              display:"flex",alignItems:"center",justifyContent:"center",gap:8,
-              background: isDark ? "#ffffff06" : "#00000006",
-              border:`1px dashed ${isDark?"#ffffff18":"#00000015"}`,
-              borderRadius:12,padding:"10px 14px",cursor:"pointer",
-            }}>
-            <span style={{fontSize:14}}>🗺</span>
-            <span style={{fontSize:11,fontWeight:600,color: isDark ? "#556080" : "#94A3B8"}}>Mapa en vivo (beta)</span>
-          </button>
-        )}
 
         <div style={{marginTop:16,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:12}}>
           <div style={{height:1,flex:1,background: isDark ? "#ffffff10" : "#00000010"}}/>
