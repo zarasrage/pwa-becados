@@ -49,6 +49,6 @@ export function cacheAge(params) {
 
 export const _revalidatedThisSession = new Set();
 
-// Con TTL de 7 días + version check, la revalidación en background es menos urgente.
-// Solo revalidar si el caché tiene más de 1 hora (por si el version check no corrió aún)
-export const SWR_REVALIDATE_AFTER = 60 * 60 * 1000; // 1 hora
+// Con TTL de 7 días + version check (que limpia localStorage al detectar cambios),
+// la revalidación SWR solo es fallback. 24h es suficiente.
+export const SWR_REVALIDATE_AFTER = 24 * 60 * 60 * 1000; // 24 horas

@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
 import { todayISO } from "../utils/dates.js";
-import { apiSWR, apiGet } from "../utils/api.js";
-import { cacheGet, cacheSet } from "../utils/cache.js";
+import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
@@ -32,43 +31,20 @@ export function TabMes({ becado, onChangeBecado, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
-  const [lookup, setLookup] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [refreshingMes, setRefreshingMes] = useState(false);
-  const [error, setError]   = useState("");
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
+  const params = useMemo(
+    () => ({ route:"personal-month", becado, month: monthStr, token: API_TOKEN }),
+    [becado, monthStr]
+  );
+  const { data, updating, error, refresh } = useApiData(params);
 
-  const applyMonthData = (data) => {
-    if (!data?.ok || !data.days) return;
+  const lookup = useMemo(() => {
+    if (!data?.ok || !data.days) return {};
     const map = {};
     data.days.forEach(day => { map[day.date] = day; });
-    setLookup(map);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    setError("");
-    const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
-    const cached = cacheGet(params);
-    if (!cached) setLoading(true);
-    apiSWR(params, applyMonthData, applyMonthData)
-      .catch(e => { setError("Error cargando el mes"); setLoading(false); });
-  }, [becado, monthStr]);
-
-  const handleRefreshMes = () => {
-    if (refreshingMes) return;
-    setRefreshingMes(true);
-    const params = { route:"personal-month", becado, month:monthStr, token:API_TOKEN };
-    apiGet({ route:"invalidate_cache", token: API_TOKEN })
-      .catch(() => {})
-      .finally(() => {
-        // No borrar caché local — datos viejos visibles hasta que lleguen los nuevos
-        apiGet(params)
-          .then(fresh => { cacheSet(params, fresh); applyMonthData(fresh); setRefreshingMes(false); })
-          .catch(() => { setRefreshingMes(false); });
-      });
-  };
+    return map;
+  }, [data]);
 
   const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
   const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
@@ -87,9 +63,9 @@ export function TabMes({ becado, onChangeBecado, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
-          <button className="press" onClick={handleRefreshMes} disabled={refreshingMes}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:refreshingMes?0.5:1}}>
-            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:refreshingMes?"#348FFF":T.muted,borderRadius:"50%",animation:refreshingMes?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
+          <button className="press" onClick={refresh} disabled={updating}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:updating?0.5:1}}>
+            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:updating?"#348FFF":T.muted,borderRadius:"50%",animation:updating?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
           </button>
         </div>
 
@@ -105,7 +81,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
 
       <div style={{padding:"0 16px"}}>
         <ErrorBox msg={error} T={T}/>
-        {loading && Object.keys(lookup).length === 0 ? <Spinner color="#348FFF"/> : (
+        {!data ? <Spinner color="#348FFF"/> : (
           <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
             const dayNum  = Number(iso.split("-")[2]);
             const isToday = iso === today;

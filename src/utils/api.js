@@ -89,9 +89,14 @@ export function checkDataVersion() {
       const serverVersion = data.version;
       const localVersion = safeStorage.get("dataVersion");
       if (localVersion && localVersion !== serverVersion) {
-        // ¡El Sheet fue editado! No borrar caché — los datos viejos siguen
-        // visibles. Solo forzar que SWR revalide todo en background.
+        // ¡El Sheet fue editado! Limpiar caché localStorage para que los tabs
+        // revaliden en background. Los datos viejos quedan en el estado de los
+        // componentes hasta que lleguen los nuevos ("Actualizando…").
+        safeStorage.keys()
+          .filter(k => k.startsWith("cache:"))
+          .forEach(k => safeStorage.remove(k));
         _revalidatedThisSession.clear();
+        window.dispatchEvent(new CustomEvent("dataVersionChanged"));
       }
       safeStorage.set("dataVersion", serverVersion);
     })

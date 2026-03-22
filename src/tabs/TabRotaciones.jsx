@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT_ORDER, rot } from "../constants/rotations.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
-import { apiSWR, apiGet, prefetch } from "../utils/api.js";
-import { cacheSet } from "../utils/cache.js";
+import { prefetch } from "../utils/api.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
+import { useApiData } from "../hooks/useApiData.js";
+import { useState } from "react";
 import { DateNav } from "../components/ui/DateNav.jsx";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
@@ -15,39 +16,21 @@ import { SkeletonLine } from "../components/ui/SkeletonCard.jsx";
 export function TabRotaciones({ onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
-  const [summary, setSummary] = useState(null);
-  const [isStale, setIsStale] = useState(false);
-  const [error, setError] = useState("");
   const isOnline = useOnline();
   const scrollRef = useRef(null);
 
-  const load = useCallback((targetDate) => {
-    const params = {route:"summary",date:targetDate,token:API_TOKEN};
-    setError("");
-    const bail = setTimeout(() => {
-      setSummary(prev => prev ?? { ok:false, groups:{} });
-      setError("No se pudo conectar. Comprueba tu conexión.");
-    }, 12000);
-    apiSWR(
-      params,
-      (data) => { clearTimeout(bail); setSummary(data); setIsStale(true); },
-      (data, stale) => { clearTimeout(bail); setSummary(data); setIsStale(stale); }
-    ).catch(e => { clearTimeout(bail); setSummary(prev => prev ?? { ok:false, groups:{} }); setError(String(e.message||e)); });
-  }, []);
+  const params = useMemo(
+    () => ({ route:"summary", date, token:API_TOKEN }),
+    [date]
+  );
+  const { data: summary, updating, error, refresh } = useApiData(params);
 
-  useEffect(() => { load(date); }, [date, load]);
-
+  // Prefetch días cercanos
   useEffect(() => {
     [-1, 1].forEach(offset => prefetch({route:"summary",date:offsetDate(today,offset),token:API_TOKEN}));
   }, [today]);
 
-  const ptr = usePullToRefresh(() => {
-    const params = {route:"summary",date,token:API_TOKEN};
-    setError("");
-    apiGet(params)
-      .then(fresh => { cacheSet(params, fresh); setSummary(fresh); setIsStale(false); })
-      .catch(() => {});
-  }, scrollRef);
+  const ptr = usePullToRefresh(refresh, scrollRef);
 
   const entries = summary?.groups
     ? ROT_ORDER.filter(k=>summary.groups[k]).map(k=>[k,summary.groups[k]])
@@ -75,7 +58,7 @@ export function TabRotaciones({ onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
+        <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {summary === null && !error ? (
           <div style={{display:"flex",flexDirection:"column",gap:10}}>

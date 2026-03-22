@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { TURNO } from "../constants/turnos.js";
 import { rot } from "../constants/rotations.js";
@@ -8,6 +8,7 @@ import { cacheGet, cacheSet } from "../utils/cache.js";
 import { groupItems } from "../utils/schedule.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
+import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
 
 export function TabSemana({ becado, onChangeBecado, T }) {
@@ -15,21 +16,32 @@ export function TabSemana({ becado, onChangeBecado, T }) {
   const [refDate, setRefDate] = useState(today);
   const [lookup, setLookup] = useState({});
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
   const scrollRef = useRef(null);
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
 
-  const loadWeek = (dates, force = false) => {
+  // Carga la semana: muestra caché inmediatamente, luego fetch si faltan días
+  const loadWeek = useCallback((dates, forceRefresh = false) => {
+    // Mostrar caché disponible de inmediato
     const cached = {};
     dates.forEach(date => {
       const c = cacheGet({route:"daily", becado, date, token:API_TOKEN});
       if (c && c.ok !== false) cached[date] = c;
     });
-    if (Object.keys(cached).length > 0) setLookup(prev => ({...prev, ...cached}));
+    if (Object.keys(cached).length > 0) {
+      setLookup(prev => ({...prev, ...cached}));
+    }
 
     const allCached = dates.every(d => !!cacheGet({route:"daily",becado,date:d,token:API_TOKEN}));
-    if (allCached && !force) { setLoading(false); return; }
-    setLoading(true);
+    if (allCached && !forceRefresh) {
+      setLoading(false);
+      return;
+    }
+
+    if (Object.keys(cached).length === 0) setLoading(true);
+    else setUpdating(true);
+
     const monday = dates[0];
     apiGet({ route:"week", becado, start:monday, token:API_TOKEN })
       .then(res => {
@@ -44,27 +56,19 @@ export function TabSemana({ becado, onChangeBecado, T }) {
         setLookup(prev => ({...prev, ...next}));
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
-  };
+      .finally(() => { setLoading(false); setUpdating(false); });
+  }, [becado]);
 
-  useEffect(() => { loadWeek(weekDates); }, [becado, weekDates]);
+  useEffect(() => { loadWeek(weekDates); }, [becado, weekDates, loadWeek]);
 
-  const ptr = usePullToRefresh(() => {
-    const monday = weekDates[0];
-    apiGet({ route:"week", becado, start:monday, token:API_TOKEN })
-      .then(res => {
-        if (!res.ok || !res.days) return;
-        const next = {};
-        res.days.forEach(day => {
-          if (day.ok !== false) {
-            cacheSet({route:"daily",becado,date:day.date,token:API_TOKEN}, day);
-            next[day.date] = day;
-          }
-        });
-        setLookup(prev => ({...prev, ...next}));
-      })
-      .catch(() => {});
-  }, scrollRef);
+  // Recargar cuando el backend detecta cambio de versión
+  useEffect(() => {
+    const handler = () => loadWeek(weekDates, true);
+    window.addEventListener("dataVersionChanged", handler);
+    return () => window.removeEventListener("dataVersionChanged", handler);
+  }, [loadWeek, weekDates]);
+
+  const ptr = usePullToRefresh(() => loadWeek(weekDates, true), scrollRef);
 
   const isThisWeek = weekDates.includes(today);
   const days = weekDates.map(date => {
@@ -108,6 +112,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
+        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
         {!hasAnyData && loading ? (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[0,1,2,3,4,5,6].map(i => <SkeletonWeekCard key={i} index={i} T={T}/>)}

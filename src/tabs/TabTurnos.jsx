@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { todayISO, formatDate } from "../utils/dates.js";
-import { apiSWR, apiGet } from "../utils/api.js";
-import { cacheGet, cacheSet } from "../utils/cache.js";
+import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 
@@ -63,47 +62,14 @@ export function TabTurnos({ onBack, T }) {
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
   const [sub, setSub]     = useState("P");
-  const [data, setData]   = useState(null);
-
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
   const [selectedSem, setSelectedSem] = useState(null);
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
-
-  const loadData = (mStr) => {
-    const params = { route:"monthly", month: mStr, token: API_TOKEN };
-    setError("");
-    const cached = cacheGet(params);
-    if (!cached) setLoading(true);
-    apiSWR(params,
-      (d) => { setData(d); setLoading(false); },
-      (d) => { setData(d); setLoading(false); }
-    ).catch(e => { setError(String(e.message||e)); setLoading(false); });
-  };
-
-  useEffect(() => { loadData(monthStr); }, [monthStr]);
-
-  const handleRefresh = () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    setError("");
-    const params = { route:"monthly", month: monthStr, token: API_TOKEN };
-    apiGet({ route:"invalidate_cache", token: API_TOKEN })
-      .catch(() => {})
-      .finally(() => {
-        // No borrar caché local — datos viejos visibles hasta que lleguen los nuevos
-        apiGet(params)
-          .then(fresh => {
-            if (!fresh?.ok) { setRefreshing(false); return; }
-            cacheSet(params, fresh);
-            setData(fresh);
-            setRefreshing(false);
-          })
-          .catch(() => { setRefreshing(false); });
-      });
-  };
+  const params = useMemo(
+    () => ({ route:"monthly", month: monthStr, token: API_TOKEN }),
+    [monthStr]
+  );
+  const { data, updating, error, refresh } = useApiData(params);
 
   const prevMonth = () => { setSelectedSem(null); month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1); };
   const nextMonth = () => { setSelectedSem(null); month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1); };
@@ -144,9 +110,9 @@ export function TabTurnos({ onBack, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
-          <button className="press" onClick={handleRefresh} disabled={refreshing}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:refreshing?0.5:1}}>
-            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:refreshing?"#348FFF":T.muted,borderRadius:"50%",animation:refreshing?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
+          <button className="press" onClick={refresh} disabled={updating}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:updating?0.5:1}}>
+            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:updating?"#348FFF":T.muted,borderRadius:"50%",animation:updating?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
           </button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:14}}>
@@ -163,7 +129,7 @@ export function TabTurnos({ onBack, T }) {
         <ErrorBox msg={error} T={T}/>
 
         {sub === "S" ? (
-          loading && !data ? <Spinner color={SEM_COLOR}/> : (
+          !data ? <Spinner color={SEM_COLOR}/> : (
             <>
               <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
                 const dayNum  = Number(iso.split("-")[2]);
@@ -214,7 +180,7 @@ export function TabTurnos({ onBack, T }) {
             </>
           )
         ) : (
-          loading && !data ? <Spinner color={turnoColor}/> : (
+          !data ? <Spinner color={turnoColor}/> : (
             <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
               const dayNum  = Number(iso.split("-")[2]);
               const isToday = iso === today;

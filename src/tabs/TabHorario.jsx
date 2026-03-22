@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
-import { todayISO, offsetDate, t2m } from "../utils/dates.js";
-import { apiSWR, apiGet, prefetch, prefetchWeek } from "../utils/api.js";
-import { cacheSet } from "../utils/cache.js";
+import { todayISO, offsetDate, getWeekDates, t2m } from "../utils/dates.js";
+import { prefetch, prefetchWeek } from "../utils/api.js";
 import { groupItems, resolveItems } from "../utils/schedule.js";
 import { rot } from "../constants/rotations.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
-import { getWeekDates } from "../utils/dates.js";
+import { useApiData } from "../hooks/useApiData.js";
 import { DateNav } from "../components/ui/DateNav.jsx";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
@@ -21,28 +20,16 @@ import { SemCard } from "../components/ui/SemCard.jsx";
 export function TabHorario({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
-  const [daily, setDaily] = useState(null);
-  const [isStale, setIsStale] = useState(false);
-  const [error, setError] = useState("");
   const isOnline = useOnline();
   const scrollRef = useRef(null);
 
-  const load = useCallback((targetDate) => {
-    const params = {route:"daily",becado,date:targetDate,token:API_TOKEN};
-    setError("");
-    const bail = setTimeout(() => {
-      setDaily(prev => prev ?? { ok:false, rotationCode:"", items:[] });
-      setError("No se pudo conectar. Comprueba tu conexión.");
-    }, 12000);
-    apiSWR(
-      params,
-      (data) => { clearTimeout(bail); setDaily(data); setIsStale(true); },
-      (data, stale) => { clearTimeout(bail); setDaily(data); setIsStale(stale); }
-    ).catch(e => { clearTimeout(bail); setDaily(prev => prev ?? { ok:false, rotationCode:"", items:[] }); setError(String(e.message||e)); });
-  }, [becado]);
+  const params = useMemo(
+    () => ({ route:"daily", becado, date, token:API_TOKEN }),
+    [becado, date]
+  );
+  const { data: daily, updating, error, refresh } = useApiData(params);
 
-  useEffect(() => { load(date); }, [date, load]);
-
+  // Prefetch días cercanos
   useEffect(() => {
     const monday = getWeekDates(today)[0];
     prefetchWeek(becado, monday);
@@ -53,13 +40,7 @@ export function TabHorario({ becado, onChangeBecado, T }) {
     }
   }, [becado, today]);
 
-  const ptr = usePullToRefresh(() => {
-    const params = {route:"daily",becado,date,token:API_TOKEN};
-    setError("");
-    apiGet(params)
-      .then(fresh => { cacheSet(params, fresh); setDaily(fresh); setIsStale(false); })
-      .catch(() => {});
-  }, scrollRef);
+  const ptr = usePullToRefresh(refresh, scrollRef);
 
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
   const grouped = daily ? groupItems(resolveItems(daily.rotationCode, daily.items, date)) : null;
@@ -102,7 +83,7 @@ export function TabHorario({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
-        <OfflineBanner isOnline={isOnline} isStale={isStale} T={T}/>
+        <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {grouped === null ? (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
