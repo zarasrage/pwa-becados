@@ -105,7 +105,7 @@ export function SwapTurnos({ becados, onClose, T }) {
             </div>
           </div>
 
-          <TurnoSelector label="Becado A" becados={becados} curMonth={curMonth} tipoCode={tipo} selected={selA} onSelect={setSelA} T={T}/>
+          <TurnoSelector label="Becado A" becados={becados} tipoCode={tipo} selected={selA} onSelect={setSelA} T={T}/>
 
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{flex:1,height:1,background:T.border}}/>
@@ -113,7 +113,7 @@ export function SwapTurnos({ becados, onClose, T }) {
             <div style={{flex:1,height:1,background:T.border}}/>
           </div>
 
-          <TurnoSelector label="Becado B" becados={becados} curMonth={curMonth} tipoCode={tipo} selected={selB} onSelect={setSelB} T={T}/>
+          <TurnoSelector label="Becado B" becados={becados} tipoCode={tipo} selected={selB} onSelect={setSelB} T={T}/>
 
           {selA && selB && (
             <div style={{background:T.surface2,border:`1px solid ${tipoObj.color}30`,borderRadius:12,padding:"12px 14px"}}>
