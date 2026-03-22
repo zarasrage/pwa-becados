@@ -39,17 +39,16 @@
       </svg>`;
 
       const img = new Image();
-      const blob = new Blob([svgStr], {type:'image/svg+xml'});
-      const url = URL.createObjectURL(blob);
       img.onload = () => {
         ctx.drawImage(img, 0, 0);
-        URL.revokeObjectURL(url);
         const a = document.createElement('a');
         a.download = `pwa-${size}.png`;
         a.href = canvas.toDataURL('image/png');
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       };
-      img.src = url;
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
     }
 
     // Preview
