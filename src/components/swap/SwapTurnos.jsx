@@ -34,7 +34,7 @@ export function SwapTurnos({ becados, onClose, T }) {
     try {
       const res = await fetch(API_URL, {
         method:"POST",
-        headers:{"Content-Type":"application/json"},
+        headers:{"Content-Type":"text/plain"},
         body: JSON.stringify({
           route:"swap_turno", pin,
           becado1: selA.becado, date1: selA.date,
