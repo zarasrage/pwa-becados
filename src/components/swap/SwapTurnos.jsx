@@ -10,10 +10,9 @@ export function SwapTurnos({ becados, onClose, T }) {
   const curMonth = today.slice(0, 7);
 
   const TIPO_OPTS = [
-    { id:"P", label:"Poli",  sheet:"Dia",          color:"#06B6D4" },
-    { id:"D", label:"Día",   sheet:"Dia",          color:"#F59E0B" },
-    { id:"N", label:"Noche", sheet:"Noche",        color:"#4F6EFF" },
-    { id:"A", label:"Artro", sheet:"Artroscopia",   color:"#72FF00" },
+    { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
+    { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
+    { id:"N", label:"Noche", sheet:"Noche", color:"#4F6EFF" },
   ];
   const [tipo,    setTipo]    = useState("P");
   const [selA,    setSelA]    = useState(null);
