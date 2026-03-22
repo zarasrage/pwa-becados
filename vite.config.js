@@ -8,12 +8,12 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Becados",
-        short_name: "Becados",
+        name: "MimApp",
+        short_name: "MimApp",
         start_url: "/",
         display: "standalone",
-        background_color: "#ffffff",
-        theme_color: "#ffffff",
+        background_color: "#0D1117",
+        theme_color: "#0D1117",
         icons: [
           { src: "/pwa-192.png", sizes: "192x192", type: "image/png" },
           { src: "/pwa-512.png", sizes: "512x512", type: "image/png" }
