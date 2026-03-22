@@ -1,21 +1,24 @@
 import { todayISO } from "./dates.js";
 import { safeStorage } from "./storage.js";
 
-export const CACHE_7D = 7 * 24 * 60 * 60 * 1000;
+// Los datos cambian ~cada 2 semanas. El checkDataVersion() es el mecanismo
+// real de invalidación (limpia caché cuando el Sheet cambia). El TTL es solo
+// un fallback de seguridad → 30 días es suficiente.
+export const CACHE_30D = 30 * 24 * 60 * 60 * 1000;
 
 export function cacheTTL(params) {
   const route = (params.route || "").toLowerCase();
   if (route === "daily") {
-    // Para el día de hoy, expira a medianoche (podría haber cambio de turno)
+    // Hoy: expira a medianoche (puede haber cambio de turno de último minuto)
     const dateStr = params.date || todayISO();
     if (dateStr === todayISO()) {
       const [y,m,d] = dateStr.split("-").map(Number);
       const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
       return midnight - Date.now();
     }
-    return CACHE_7D; // Días pasados/futuros → 7 días
+    return CACHE_30D; // Días pasados/futuros → 30 días
   }
-  return CACHE_7D; // Todo lo demás → 7 días
+  return CACHE_30D; // Todo lo demás → 30 días
 }
 
 export function cacheKey(params) {
@@ -49,6 +52,6 @@ export function cacheAge(params) {
 
 export const _revalidatedThisSession = new Set();
 
-// Con TTL de 7 días + version check (que limpia localStorage al detectar cambios),
-// la revalidación SWR solo es fallback. 24h es suficiente.
-export const SWR_REVALIDATE_AFTER = 24 * 60 * 60 * 1000; // 24 horas
+// checkDataVersion() es el mecanismo real de invalidación.
+// SWR revalida en background solo como fallback (ej: si el version check falló por red).
+export const SWR_REVALIDATE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 días
