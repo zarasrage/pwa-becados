@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
 import { todayISO } from "../utils/dates.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
+import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
+import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
+import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
 function getMonthDates(year, month) {
   const firstDay  = new Date(year, month, 1);
@@ -51,8 +54,18 @@ export function TabMes({ becado, onChangeBecado, T }) {
 
   const slots = useMemo(() => getMonthDates(year, month), [year, month]);
 
+  const scrollRef = useRef(null);
+  const ptr = usePullToRefresh(refresh, scrollRef);
+
   return (
-    <div style={{minHeight:"100vh",paddingBottom:90,position:"relative",zIndex:1}}>
+    <div
+      ref={scrollRef}
+      style={{position:"relative",overflowY:"auto",minHeight:"100vh",paddingBottom:90,zIndex:1}}
+      onTouchStart={ptr.onTouchStart}
+      onTouchMove={ptr.onTouchMove}
+      onTouchEnd={ptr.onTouchEnd}
+    >
+      <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
         <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left",marginBottom:12}}>
@@ -63,10 +76,6 @@ export function TabMes({ becado, onChangeBecado, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
-          <button className="press" onClick={refresh} disabled={updating}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:updating?0.5:1}}>
-            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:updating?"#348FFF":T.muted,borderRadius:"50%",animation:updating?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
-          </button>
         </div>
 
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
@@ -80,6 +89,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
+        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {!data ? <Spinner color="#348FFF"/> : (
           <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {

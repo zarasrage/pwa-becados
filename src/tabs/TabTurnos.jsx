@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { todayISO, formatDate } from "../utils/dates.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
+import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
+import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
+import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
 
 const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
@@ -73,6 +76,9 @@ export function TabTurnos({ onBack, T }) {
   const slots  = useMemo(() => getMonthDates(year, month), [year, month]);
   const turnoColor = TURNO_TABS.find(t=>t.id===sub)?.color || "#64748B";
 
+  const scrollRef = useRef(null);
+  const ptr = usePullToRefresh(refresh, scrollRef);
+
   const lookup = useMemo(() => {
     if (!data?.ok) return {};
     const map = {};
@@ -91,7 +97,14 @@ export function TabTurnos({ onBack, T }) {
   const SEM_COLOR = "#E879F9";
 
   return (
-    <div style={{minHeight:"100vh",paddingBottom:24,position:"relative",zIndex:1}}>
+    <div
+      ref={scrollRef}
+      style={{position:"relative",overflowY:"auto",minHeight:"100vh",paddingBottom:24,zIndex:1}}
+      onTouchStart={ptr.onTouchStart}
+      onTouchMove={ptr.onTouchMove}
+      onTouchEnd={ptr.onTouchEnd}
+    >
+      <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
         <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
         <div style={{marginBottom:12}}>
@@ -106,10 +119,6 @@ export function TabTurnos({ onBack, T }) {
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
-          <button className="press" onClick={refresh} disabled={updating}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,opacity:updating?0.5:1}}>
-            <div style={{width:14,height:14,border:`2px solid ${T.muted}`,borderTopColor:updating?"#348FFF":T.muted,borderRadius:"50%",animation:updating?"spin 0.7s linear infinite":"none",transition:"border-top-color 0.2s"}}/>
-          </button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           {TURNO_TABS.map(t => (
@@ -122,6 +131,7 @@ export function TabTurnos({ onBack, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
+        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
 
         {sub === "S" ? (
