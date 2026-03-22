@@ -146,14 +146,13 @@ export function TurnoSelector({ label, becados, tipoCode, selected, onSelect, T 
                       const bc = TIPO_COLOR[id] || "#64748B";
                       return (
                         <div key={bi} style={{
-                          fontSize: isMain ? 11 : 8,
+                          fontSize: isMain ? 11 : 9,
                           fontWeight: 700,
-                          color: isMain ? bc : T.muted,
-                          background: isMain ? `${bc}25` : "transparent",
+                          color: bc,
+                          background: `${bc}25`,
                           borderRadius: 3,
-                          padding: isMain ? "1px 3px" : "0px 1px",
+                          padding: isMain ? "1px 3px" : "1px 2px",
                           lineHeight: 1.3,
-                          opacity: isMain ? 1 : 0.45,
                         }}>{id}</div>
                       );
                     })}
