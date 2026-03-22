@@ -103,7 +103,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
                 <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":"transparent",color:isToday?"#fff":T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:1}}>
                   {badges.map((b,bi)=>(
-                    <div key={bi} style={{fontSize:8,fontWeight:700,color:b.color,background:`${b.color}25`,borderRadius:3,padding:"1px 3px",lineHeight:1.3}}>{b.label}</div>
+                    <div key={bi} style={{fontSize:11,fontWeight:700,color:b.color,background:`${b.color}25`,borderRadius:3,padding:"1px 3px",lineHeight:1.3}}>{b.label}</div>
                   ))}
                 </div>
               </div>
