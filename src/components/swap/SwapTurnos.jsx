@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { API_URL, API_TOKEN } from "../../constants/api.js";
 import { todayISO, formatDate } from "../../utils/dates.js";
 import { cacheKey, _revalidatedThisSession } from "../../utils/cache.js";
+import { safeStorage } from "../../utils/storage.js";
 import { TurnoSelector } from "./TurnoSelector.jsx";
 
 export function SwapTurnos({ becados, onClose, T }) {
@@ -24,7 +25,8 @@ export function SwapTurnos({ becados, onClose, T }) {
   const handleTipo = (id) => { setTipo(id); setSelA(null); setSelB(null); setResult(null); };
   const tipoObj  = TIPO_OPTS.find(t => t.id === tipo);
   const canSubmit = selA && selB && pin.length === 4 && !loading
-    && !(selA.becado === selB.becado && selA.date === selB.date);
+    && !(selA.becado === selB.becado && selA.date === selB.date)
+    && selA.date !== selB.date;
 
   const handleSwap = async () => {
     if (!canSubmit) return;
@@ -42,11 +44,19 @@ export function SwapTurnos({ becados, onClose, T }) {
       });
       const data = await res.json();
       if (data.ok) {
-        // No borrar caché — datos viejos visibles hasta que SWR revalide.
-        // Solo marcar que estas claves necesitan refetch.
-        [{route:"daily",becado:selA.becado,date:selA.date,token:API_TOKEN},
-         {route:"daily",becado:selB.becado,date:selB.date,token:API_TOKEN}]
-          .forEach(p => _revalidatedThisSession.delete(cacheKey(p)));
+        // Limpiar caché local para las fechas afectadas en ambos becados
+        const affectedParams = [
+          {route:"daily",becado:selA.becado,date:selA.date,token:API_TOKEN},
+          {route:"daily",becado:selA.becado,date:selB.date,token:API_TOKEN},
+          {route:"daily",becado:selB.becado,date:selA.date,token:API_TOKEN},
+          {route:"daily",becado:selB.becado,date:selB.date,token:API_TOKEN},
+        ];
+        affectedParams.forEach(p => {
+          safeStorage.remove(cacheKey(p));
+          _revalidatedThisSession.delete(cacheKey(p));
+        });
+        // Disparar recarga en TabSemana si está escuchando
+        window.dispatchEvent(new CustomEvent("dataVersionChanged"));
         setResult({ ok:true, msg:"✓ Cambio aplicado correctamente" });
         setPin(""); setSelA(null); setSelB(null);
       } else {
