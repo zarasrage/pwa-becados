@@ -9,14 +9,7 @@ export const CACHE_30D = 30 * 24 * 60 * 60 * 1000;
 export function cacheTTL(params) {
   const route = (params.route || "").toLowerCase();
   if (route === "daily") {
-    // Hoy: expira a medianoche (puede haber cambio de turno de último minuto)
-    const dateStr = params.date || todayISO();
-    if (dateStr === todayISO()) {
-      const [y,m,d] = dateStr.split("-").map(Number);
-      const midnight = new Date(y, m-1, d+1, 0, 0, 0).getTime();
-      return midnight - Date.now();
-    }
-    return CACHE_30D; // Días pasados/futuros → 30 días
+    return CACHE_30D;
   }
   return CACHE_30D; // Todo lo demás → 30 días
 }
