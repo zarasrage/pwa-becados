@@ -26,6 +26,7 @@ import { TabRotaciones } from "./tabs/TabRotaciones.jsx";
 import { TabSemana } from "./tabs/TabSemana.jsx";
 import { TabTurnos } from "./tabs/TabTurnos.jsx";
 import { TabMes } from "./tabs/TabMes.jsx";
+import { TabEstadisticas } from "./tabs/TabEstadisticas.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
   const [showTurnos, setShowTurnos]       = useState(false);
   const [showRotaciones, setShowRotaciones] = useState(false);
   const [showMapa, setShowMapa]           = useState(false);
+  const [showEstadisticas, setShowEstadisticas] = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -159,7 +161,9 @@ export default function App() {
           ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
         : showMapa
           ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
-          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} error={initError} T={T}/>
+        : showEstadisticas
+          ? <TabEstadisticas onBack={() => setShowEstadisticas(false)} T={T}/>
+          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} error={initError} T={T}/>
 
       ) : (
         <>

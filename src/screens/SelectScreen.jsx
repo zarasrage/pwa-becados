@@ -3,7 +3,7 @@ import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { DEMO_BECADO } from "../data/demo.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
-export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, onShowEstadisticas, error, T }) {
   const [univ, setUniv] = useState("UNAB");
   const univCfg  = UNIVERSIDADES[univ];
   const groups   = univCfg.getGroups(becados);
@@ -44,6 +44,10 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
           <button className="press anim" onClick={onShowTurnos}
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"180ms"}}>
             <span>◷</span> Turnos del mes
+          </button>
+          <button className="press anim" onClick={onShowEstadisticas}
+            style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"240ms"}}>
+            📊
           </button>
         </div>
       </div>
