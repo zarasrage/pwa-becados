@@ -5,19 +5,16 @@ export function TabBar({ active, onChange, T }) {
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"mes",        icon:"▦□", label:"Mes" },
   ];
-  const bg = isPink ? "rgba(255,214,234,0.92)" : T.tabBg;
-  const border = isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`;
   return (
     <div style={{
       position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
       width:"100%",maxWidth:480,
-      background: bg,
+      background: isPink ? "rgba(255,214,234,0.88)" : T.tabBg,
       backdropFilter:"blur(24px)",
       WebkitBackdropFilter:"blur(24px)",
-      borderTop: border,
+      borderTop: isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`,
       display:"flex",
-      flexDirection:"column",
-      paddingBottom:34,
+      paddingBottom:"calc(var(--sab) + 8px)",
       zIndex:50,
       boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
     }}>
