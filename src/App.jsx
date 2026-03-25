@@ -11,6 +11,7 @@ import { DEMO_BECADO } from "./data/demo.js";
 import {
   SakuraPetals, OceanBubbles, AuroraEffect, ForestFireflies,
   SunsetEmbers, NeonGrid, SynthwaveEffect, CryoEffect, CosmosEffect, StormEffect,
+  CieloEffect, ArenaEffect,
 } from "./effects/index.js";
 import { ACCENT_MAP, ThemePicker } from "./components/settings/ThemePicker.jsx";
 import { SettingsPanel } from "./components/settings/SettingsPanel.jsx";
@@ -153,6 +154,8 @@ export default function App() {
       {theme === "cryo"      && <CryoEffect/>}
       {theme === "cosmos"    && <CosmosEffect/>}
       {theme === "tormenta" && <StormEffect/>}
+      {theme === "cielo"    && <CieloEffect/>}
+      {theme === "arena"    && <ArenaEffect/>}
 
       {!becado ? (
         showRotaciones

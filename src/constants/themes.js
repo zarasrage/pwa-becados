@@ -73,10 +73,21 @@ export const THEMES = {
     text:"#E0EAFF", sub:"#5080B0", muted:"#1A3050", tabBg:"rgba(4,6,14,0.95)",
     skeleton:"#0E1830", skeletonShine:"#152848", accent:"#00E5FF", glow:"#00E5FF",
   },
+  cielo: {
+    bg:"#E8F4FD", surface:"#FFFFFF", surface2:"#D6ECFB", border:"#A8D4EF",
+    text:"#0B2A42", sub:"#2E7BAE", muted:"#7DAFC8", tabBg:"rgba(232,244,253,0.95)",
+    skeleton:"#D6ECFB", skeletonShine:"#E8F4FD", accent:"#0EA5E9", glow:"#0EA5E9",
+  },
+  arena: {
+    bg:"#FDF6E3", surface:"#FFFDF5", surface2:"#F5E9C4", border:"#DDD0A0",
+    text:"#3A2510", sub:"#8B6030", muted:"#C4A070", tabBg:"rgba(253,246,227,0.95)",
+    skeleton:"#F5E9C4", skeletonShine:"#FDF6E3", accent:"#D4900A", glow:"#D4900A",
+  },
 };
 
 export const THEME_BG = {
   dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2",
   ocean:"#04080F", sunset:"#0F0500", forest:"#020A04", aurora:"#020510", neon:"#03000A",
   synthwave:"#0A0015", cryo:"#020D1A", cosmos:"#020008", tormenta:"#04060E",
+  cielo:"#E8F4FD", arena:"#FDF6E3",
 };

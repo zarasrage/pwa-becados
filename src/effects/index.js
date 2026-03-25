@@ -8,3 +8,5 @@ export { SynthwaveEffect } from "./SynthwaveEffect.jsx";
 export { CryoEffect } from "./CryoEffect.jsx";
 export { CosmosEffect } from "./CosmosEffect.jsx";
 export { LightningBoltSVG, StormEffect } from "./StormEffect.jsx";
+export { CieloEffect } from "./CieloEffect.jsx";
+export { ArenaEffect } from "./ArenaEffect.jsx";

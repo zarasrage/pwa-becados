@@ -13,18 +13,21 @@ export const THEME_OPTIONS = [
   { id:"cryo",      name:"Cryo",       desc:"Cristal glacial",        preview:["#020D1A","#061828","#00CFFF"], emoji:"❄️" },
   { id:"cosmos",    name:"Cosmos",     desc:"Nebulosa y estrellas",   preview:["#020008","#080018","#FF6BF5"], emoji:"🌌" },
   { id:"tormenta", name:"Tormenta",   desc:"Rayos y lluvia eléctrica",preview:["#04060E","#0A1020","#00E5FF"], emoji:"⛈️" },
+  { id:"cielo",    name:"Cielo",      desc:"Nubes y luz de día",       preview:["#E8F4FD","#FFFFFF","#0EA5E9"], emoji:"🌤️" },
+  { id:"arena",    name:"Arena",      desc:"Calor y polvo dorado",     preview:["#FDF6E3","#FFFDF5","#D4900A"], emoji:"🏜️" },
 ];
 
 export const ACCENT_MAP = {
   dark:"#348FFF", light:"#348FFF", pink:"#E8186A",
   ocean:"#00C8FF", sunset:"#FF5500", forest:"#22D45A", aurora:"#8A5CF6", neon:"#CC00FF",
   synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
+  cielo:"#0EA5E9", arena:"#D4900A",
 };
 
 export function ThemePicker({ current, onSelect, onClose }) {
   const [hovered, setHovered] = useState(null);
   const accent = ACCENT_MAP[current] || "#348FFF";
-  const isDark = !["light"].includes(current);
+  const isDark = !["light","pink","cielo","arena"].includes(current);
 
   return (
     <>
