@@ -74,14 +74,14 @@ export const THEMES = {
     skeleton:"#0E1830", skeletonShine:"#152848", accent:"#00E5FF", glow:"#00E5FF",
   },
   cielo: {
-    bg:"#E8F4FD", surface:"#FFFFFF", surface2:"#D6ECFB", border:"#A8D4EF",
-    text:"#0B2A42", sub:"#2E7BAE", muted:"#7DAFC8", tabBg:"rgba(232,244,253,0.95)",
-    skeleton:"#D6ECFB", skeletonShine:"#E8F4FD", accent:"#0EA5E9", glow:"#0EA5E9",
+    bg:"#B4DBFA", surface:"#F0F9FF", surface2:"#CAE8F8", border:"#60AADC",
+    text:"#052236", sub:"#0F58A8", muted:"#4080B0", tabBg:"rgba(180,219,250,0.95)",
+    skeleton:"#CAE8F8", skeletonShine:"#F0F9FF", accent:"#0272C0", glow:"#38BDF8",
   },
   arena: {
-    bg:"#FDF6E3", surface:"#FFFDF5", surface2:"#F5E9C4", border:"#DDD0A0",
-    text:"#3A2510", sub:"#8B6030", muted:"#C4A070", tabBg:"rgba(253,246,227,0.95)",
-    skeleton:"#F5E9C4", skeletonShine:"#FDF6E3", accent:"#D4900A", glow:"#D4900A",
+    bg:"#E6CA7A", surface:"#FDF5DA", surface2:"#EED990", border:"#B8860A",
+    text:"#231408", sub:"#7A3E12", muted:"#9A6828", tabBg:"rgba(230,202,122,0.96)",
+    skeleton:"#EED990", skeletonShine:"#FDF5DA", accent:"#B87008", glow:"#D89010",
   },
 };
 
@@ -89,5 +89,5 @@ export const THEME_BG = {
   dark:"#0D1117", light:"#F4F7FB", pink:"#FEE6F2",
   ocean:"#04080F", sunset:"#0F0500", forest:"#020A04", aurora:"#020510", neon:"#03000A",
   synthwave:"#0A0015", cryo:"#020D1A", cosmos:"#020008", tormenta:"#04060E",
-  cielo:"#E8F4FD", arena:"#FDF6E3",
+  cielo:"#B4DBFA", arena:"#E6CA7A",
 };
