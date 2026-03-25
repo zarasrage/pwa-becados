@@ -8,15 +8,6 @@ export function TabBar({ active, onChange, T }) {
   const bg = isPink ? "rgba(255,214,234,0.92)" : T.tabBg;
   const border = isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`;
   return (
-    <>
-    {/* extiende el fondo del tabbar hasta el borde físico de la pantalla */}
-    <div style={{
-      position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
-      width:"100%",maxWidth:480,
-      height:"max(env(safe-area-inset-bottom, 0px), 34px)",
-      background: isPink ? "rgba(255,214,234,0.96)" : T.tabBg.replace(/,\s*[\d.]+\)$/, ",1)"),
-      zIndex:49,
-    }}/>
     <div style={{
       position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
       width:"100%",maxWidth:480,
@@ -25,7 +16,8 @@ export function TabBar({ active, onChange, T }) {
       WebkitBackdropFilter:"blur(24px)",
       borderTop: border,
       display:"flex",
-      paddingBottom:"max(env(safe-area-inset-bottom, 0px), 34px)",
+      flexDirection:"column",
+      paddingBottom:34,
       zIndex:50,
       boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
     }}>
@@ -54,6 +46,5 @@ export function TabBar({ active, onChange, T }) {
         );
       })}
     </div>
-    </>
   );
 }
