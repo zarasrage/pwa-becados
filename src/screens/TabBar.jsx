@@ -5,16 +5,27 @@ export function TabBar({ active, onChange, T }) {
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"mes",        icon:"▦□", label:"Mes" },
   ];
+  const bg = isPink ? "rgba(255,214,234,0.92)" : T.tabBg;
+  const border = isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`;
   return (
+    <>
+    {/* extiende el fondo del tabbar hasta el borde físico de la pantalla */}
     <div style={{
       position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
       width:"100%",maxWidth:480,
-      background: isPink ? "rgba(255,214,234,0.88)" : T.tabBg,
+      height:"env(safe-area-inset-bottom, 20px)",
+      background: isPink ? "rgba(255,214,234,0.96)" : T.tabBg.replace(/,\s*[\d.]+\)$/, ",1)"),
+      zIndex:49,
+    }}/>
+    <div style={{
+      position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
+      width:"100%",maxWidth:480,
+      background: bg,
       backdropFilter:"blur(24px)",
       WebkitBackdropFilter:"blur(24px)",
-      borderTop: isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`,
+      borderTop: border,
       display:"flex",
-      paddingBottom:"calc(var(--sab) + 8px)",
+      paddingBottom:"env(safe-area-inset-bottom, 20px)",
       zIndex:50,
       boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
     }}>
@@ -43,5 +54,6 @@ export function TabBar({ active, onChange, T }) {
         );
       })}
     </div>
+    </>
   );
 }
