@@ -120,34 +120,28 @@ export function CieloEffect() {
           }}/>
         ))}
 
-        {/* pájaros — V shapes cruzando el cielo */}
+        {/* pájaros — curva SVG clásica, como se ven las gaviotas a distancia */}
         {birds.map(b=>(
-          <div key={b.id} style={{
-            position:"absolute",
-            top:`${b.y}%`, left:0,
-            width:22*b.scale, height:10*b.scale,
-            opacity:b.op,
-            animation:`birdGlide ${b.dur}s ${b.delay}s linear infinite`,
-          }}>
-            {/* ala izquierda */}
-            <div style={{
+          <svg key={b.id}
+            viewBox="0 0 28 12"
+            width={28*b.scale} height={12*b.scale}
+            style={{
               position:"absolute",
-              right:"50%",bottom:0,
-              width:12*b.scale,height:2*b.scale,
-              background:"rgba(24,58,100,0.55)",
-              transform:"rotate(-22deg)",transformOrigin:"right bottom",
-              borderRadius:2,
-            }}/>
-            {/* ala derecha */}
-            <div style={{
-              position:"absolute",
-              left:"50%",bottom:0,
-              width:12*b.scale,height:2*b.scale,
-              background:"rgba(24,58,100,0.55)",
-              transform:"rotate(22deg)",transformOrigin:"left bottom",
-              borderRadius:2,
-            }}/>
-          </div>
+              top:`${b.y}%`, left:0,
+              overflow:"visible",
+              opacity:b.op,
+              animation:`birdGlide ${b.dur}s ${b.delay}s linear infinite`,
+            }}
+          >
+            <path
+              d="M0 9 Q7 1 14 9 Q21 1 28 9"
+              stroke="rgba(18,50,90,0.55)"
+              strokeWidth="2.2"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         ))}
 
         {/* reflejo suave abajo */}
