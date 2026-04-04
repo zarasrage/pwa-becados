@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floor Spot Picker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0D1117; color: #E6EDF3; font-family: monospace; padding: 16px; }
+  h2 { margin-bottom: 8px; font-size: 16px; }
+  p { font-size: 12px; color: #8B949E; margin-bottom: 12px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs button { background: #161B22; border: 1px solid #2D3748; color: #8B949E; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-family: monospace; }
+  .tabs button.active { background: #348FFF22; border-color: #348FFF; color: #348FFF; font-weight: bold; }
+  .container { position: relative; display: inline-block; cursor: crosshair; }
+  .container img { max-width: 100%; display: block; image-rendering: pixelated; }
+  .dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #FF0; border: 2px solid #000; transform: translate(-50%, -50%); pointer-events: none; z-index: 2; }
+  .dot-label { position: absolute; transform: translate(-50%, -150%); background: #FF0; color: #000; font-size: 10px; font-weight: bold; padding: 1px 4px; border-radius: 3px; pointer-events: none; z-index: 3; white-space: nowrap; }
+  .output { margin-top: 16px; background: #161B22; border: 1px solid #2D3748; border-radius: 8px; padding: 12px; font-size: 12px; white-space: pre; overflow-x: auto; }
+  button.action { background: #348FFF; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; margin-right: 8px; margin-top: 8px; }
+  button.action:hover { background: #2B7AE0; }
+  button.red { background: #F87171; }
+</style>
+</head>
+<body>
+  <h2>🎯 Floor Spot Picker</h2>
+  <p>Elige edificio → click donde quieres los PIES → copia el código.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="container" id="container"><img id="img" alt="building" /></div>
+  <div>
+    <button class="action" onclick="undoLast()">↩ Deshacer</button>
+    <button class="action red" onclick="clearAll()">🗑 Borrar todo</button>
+    <button class="action" onclick="copyCode()">📋 Copiar código</button>
+  </div>
+  <div class="output" id="output">// Elige un edificio arriba</div>
+  <script>
+    const buildings = ["pabellones","jofre","policlinicos","urgencia"];
+    const allSpots = {}; buildings.forEach(b => allSpots[b] = []);
+    let current = "pabellones";
+    const tabs=document.getElementById('tabs'), container=document.getElementById('container'), img=document.getElementById('img'), output=document.getElementById('output');
+    buildings.forEach(b => { const btn=document.createElement('button'); btn.textContent=b; btn.onclick=()=>{current=b;renderTabs();img.src=`sprites/${b}.png`;render();}; tabs.appendChild(btn); });
+    renderTabs(); img.src=`sprites/${current}.png`;
+    function renderTabs(){[...tabs.children].forEach(btn=>{btn.className=btn.textContent===current?'active':'';});}
+    container.addEventListener('click',e=>{const rect=img.getBoundingClientRect();const x=((e.clientX-rect.left)/rect.width*100).toFixed(0);const y=((e.clientY-rect.top)/rect.height*100).toFixed(0);allSpots[current].push({x:Number(x),y:Number(y)});render();});
+    container.addEventListener('contextmenu',e=>{e.preventDefault();undoLast();});
+    function undoLast(){allSpots[current].pop();render();}
+    function clearAll(){allSpots[current]=[];render();}
+    function render(){container.querySelectorAll('.dot,.dot-label').forEach(el=>el.remove());const spots=allSpots[current];spots.forEach((s,i)=>{const dot=document.createElement('div');dot.className='dot';dot.style.left=s.x+'%';dot.style.top=s.y+'%';container.appendChild(dot);const label=document.createElement('div');label.className='dot-label';label.style.left=s.x+'%';label.style.top=s.y+'%';label.textContent=`${i}:(${s.x},${s.y})`;container.appendChild(label);});output.textContent=spots.length===0?`// Click en ${current}`:`// ${current}\nfloorSpots:[\n`+spots.map(s=>`  {x:${s.x},y:${s.y}},`).join('\n')+'\n]';}
+    function copyCode(){navigator.clipboard.writeText(output.textContent).then(()=>alert('Copiado!'));}
+  </script>
+</body>
+</html>
