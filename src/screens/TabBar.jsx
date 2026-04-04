@@ -16,7 +16,9 @@ export function TabBar({ active, onChange, T }) {
       display:"flex",
       paddingBottom:"calc(min(var(--sab), 20px) + 6px)",
       zIndex:50,
-      boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
+      boxShadow: isPink
+        ? "0 -4px 24px #E8186A18, 0 100px 0 100px rgba(255,214,234,0.99)"
+        : `0 100px 0 100px ${T.tabBg.replace(/[\d.]+\)$/, "0.99)")}`,
     }}>
       {tabs.map(tab=>{
         const isActive = active===tab.id;
