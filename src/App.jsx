@@ -133,7 +133,7 @@ export default function App() {
       maxWidth:480,
       margin:"0 auto",
       fontFamily:"'Inter',sans-serif",
-      paddingBottom: becado ? "calc(72px + min(var(--sab), 20px))" : 0,
+      paddingBottom: becado ? "calc(72px + var(--sab))" : 0,
       position:"relative",
     }}>
       <style>{CSS}</style>

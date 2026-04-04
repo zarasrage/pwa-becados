@@ -1,7 +1,7 @@
 export const CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root { --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); }
-  html, body { background: #0D1117; height: 100%; overflow: hidden; margin: 0; padding: 0; }
+  html, body { background: #0D1117; height: 100%; overflow: hidden; margin: 0; padding: 0; overscroll-behavior: none; }
   html { -webkit-text-size-adjust: 100%; }
   body { overscroll-behavior-y: contain; touch-action: manipulation; }
   #root { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
