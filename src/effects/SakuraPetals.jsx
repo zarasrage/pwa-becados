@@ -2,7 +2,7 @@
 // ✦ OPTIMIZADO: drop-shadow removido del SVG, glow via box-shadow en padre
 function PetalSVG({ size, color, opacity }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block"}}>
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{display:"block",filter:`drop-shadow(0 0 ${size*0.25}px ${color}90)`}}>
       <path d="M12 2 C14 5, 19 6, 20 10 C21 14, 18 19, 12 22 C6 19, 3 14, 4 10 C5 6, 10 5, 12 2Z"
         fill={color} opacity={opacity}/>
       <path d="M12 2 C12 8, 14 14, 12 22" stroke="white" strokeWidth="0.4" opacity="0.35" fill="none"/>
@@ -43,7 +43,6 @@ export function SakuraPetals() {
           animationDuration: `${p.duration}s, ${p.swayDur}s`,
           animationDelay: `${p.delay}s, ${p.delay * 0.6}s`,
           transform: `rotate(${p.rotate}deg)`,
-          boxShadow: `0 0 ${p.size*0.5}px ${p.color}70`,
         }}>
           <PetalSVG size={p.size} color={p.color} opacity={p.opacity}/>
         </div>

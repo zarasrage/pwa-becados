@@ -14,7 +14,7 @@ export function TabBar({ active, onChange, T }) {
       WebkitBackdropFilter:"blur(24px)",
       borderTop: isPink ? "1px solid #F4A8CE60" : `1px solid ${T.border}`,
       display:"flex",
-      paddingBottom:"calc(var(--sab) + 8px)",
+      paddingBottom:"calc(min(var(--sab), 20px) + 6px)",
       zIndex:50,
       boxShadow: isPink ? "0 -4px 24px #E8186A18" : "none",
     }}>
