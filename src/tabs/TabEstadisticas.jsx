@@ -31,7 +31,7 @@ function isWeekend(dateStr) {
 function computeStats(entries) {
   const byBecado = {};
   (entries || []).forEach(e => {
-    if (!["P","D","N","A","S"].includes(e.type)) return;
+    if (!["P","p","D","N","A","S"].includes(e.type)) return;
     const nombre = e.type === "S" ? e.presenter || e.name : e.name;
     if (!nombre) return;
     if (!byBecado[nombre]) byBecado[nombre] = { P:0, D:0, N:0, nFinde:0, nFeriado:0, A:0, S:0 };
@@ -43,7 +43,7 @@ function computeStats(entries) {
       if (finde)   b.nFinde++;
       if (feriado) b.nFeriado++;
     } else {
-      b[e.type]++;
+      b[e.type === "p" ? "P" : e.type]++;
     }
   });
   return Object.entries(byBecado).map(([name, s]) => {
@@ -184,6 +184,18 @@ export function TabEstadisticas({ onBack, T }) {
             <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>
               {viewMode==="semana" ? weekRangeLabel(weekDates) : monthLabel(year, month)}
             </div>
+            {viewMode==="semana" && !weekDateSet.has(today) && (
+              <button className="press" onClick={()=>setWeekRef(today)}
+                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                HOY
+              </button>
+            )}
+            {viewMode==="mes" && (year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
+              <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);}}
+                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                HOY
+              </button>
+            )}
             <button className="press"
               onClick={viewMode==="semana" ? nextWeek : nextMonth}
               style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>

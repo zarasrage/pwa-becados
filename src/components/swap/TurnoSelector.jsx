@@ -107,6 +107,7 @@ export function TurnoSelector({ label, becados, tipoCode, selected, onSelect, T 
 
               const badges = [];
               if (day.diaCode === "P") badges.push("P");
+              if (day.diaCode === "p") badges.push("p");
               if (day.diaCode === "D") badges.push("D");
               if (day.artroCode === "A") badges.push("A");
               if (day.nocheCode === "N") badges.push("N");

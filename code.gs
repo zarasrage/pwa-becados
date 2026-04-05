@@ -398,7 +398,7 @@ function getMonthly_(monthStr) {
   const entries = [];
 
   const sheetDefs = [
-    { name: "Dia",          types: { P:"P", D:"D" } },
+    { name: "Dia",          types: { P:"P", p:"p", D:"D" } },
     { name: "Noche",        types: { N:"N" } },
     { name: "Artroscopia",  types: { A:"A" } },
   ];
@@ -471,18 +471,27 @@ function getPersonalMonth_(becado, monthStr) {
   const artroByDay = readBecadoMonth_(ss, "Artroscopia", becado, y, m);
 
   // Seminarios
-  const semDays = new Set();
-  const semSh   = readSheet_(ss, "Seminarios");
+  const semByDay = {};
+  const semSh    = readSheet_(ss, "Seminarios");
   if (semSh) {
     const colMap = buildMonthColMap_(row_(semSh, 3).slice(1), y, m);
     for (const [ci, iso] of Object.entries(colMap)) {
-      const dayNum = Number(iso.split("-")[2]);
-      const dow    = new Date(y, m-1, dayNum).getDay();
+      const dayNum    = Number(iso.split("-")[2]);
+      const localDate = new Date(y, m-1, dayNum);
+      const dow       = localDate.getDay();
       if (![2,3,4].includes(dow)) continue;
       if (!SEMINARIO_ROTS.includes(rotByDay[dayNum] || "")) continue;
       const col = 2 + Number(ci);
+      const tag = SEMINARIO_DIA[weekdayEs_(localDate)] || "";
       for (let r = 4; r <= semSh.lastRow; r++) {
-        if ((cell_(semSh, r, col)||"").toString().trim()) { semDays.add(dayNum); break; }
+        const raw = (cell_(semSh, r, col)||"").toString().trim();
+        if (!raw) continue;
+        const is745     = raw.startsWith("7:45");
+        const time      = is745 ? "07:45" : "07:30";
+        const title     = is745 ? raw.replace(/^7:45\s*/, "").trim() : raw;
+        const presenter = (cell_(semSh, r, 1) || "").toString().trim();
+        semByDay[dayNum] = { presenter, title, tag, time };
+        break;
       }
     }
   }
@@ -491,8 +500,10 @@ function getPersonalMonth_(becado, monthStr) {
   const days = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = y + "-" + String(m).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+    const sem = semByDay[d] || null;
     days.push({ date: iso, rotationCode: rotByDay[d]||"", diaCode: diaByDay[d]||null,
-                nocheCode: nocheByDay[d]||null, artroCode: artroByDay[d]||null, hasSeminar: semDays.has(d) });
+                nocheCode: nocheByDay[d]||null, artroCode: artroByDay[d]||null,
+                hasSeminar: !!sem, seminario: sem });
   }
   return { ok: true, becado, month: monthStr, days };
 }

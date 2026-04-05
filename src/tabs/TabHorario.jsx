@@ -96,6 +96,7 @@ export function TabHorario({ becado, onChangeBecado, T }) {
           const diaCode  = daily?.turno?.diaCode  || null;
           const nocheCode= daily?.turno?.nocheCode || null;
           const artroCode= daily?.turno?.artroCode || null;
+          const isPoliAM = diaCode === "p";
           const hasAny   = manana.length || mediodia.length || tarde.length || diaCode || nocheCode || artroCode;
           if (!hasAny && !error) return (
             <div style={{textAlign:"center",padding:"60px 0"}}>
@@ -108,16 +109,17 @@ export function TabHorario({ becado, onChangeBecado, T }) {
           return (
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} index={cardIdx++} T={T}/>}
-              {manana.length > 0 && <SectionDivider label="Mañana" T={T}/>}
+              {(manana.length > 0 || isPoliAM) && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
+              {isPoliAM && <TurnoCard key="turno-dia" tipo={diaCode} index={cardIdx++} T={T}/>}
 
               {(mediodia.length > 0 || artroCode) && <SectionDivider label="Mediodía" T={T}/>}
               {mediodia.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
               {artroCode && <TurnoCard key="turno-artro" tipo={artroCode} index={cardIdx++} T={T}/>}
 
-              {(tarde.length > 0 || diaCode) && <SectionDivider label="Tarde" T={T}/>}
+              {(tarde.length > 0 || (diaCode && !isPoliAM)) && <SectionDivider label="Tarde" T={T}/>}
               {tarde.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
-              {diaCode && <TurnoCard key="turno-dia" tipo={diaCode} index={cardIdx++} T={T}/>}
+              {diaCode && !isPoliAM && <TurnoCard key="turno-dia" tipo={diaCode} index={cardIdx++} T={T}/>}
 
               {nocheCode && <SectionDivider label="Noche" T={T}/>}
               {nocheCode && <TurnoCard key="turno-noche" tipo={nocheCode} index={cardIdx++} T={T}/>}

@@ -15,7 +15,8 @@ export function TabSemana({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(() => {
     const d = new Date();
-    return d.getDay() === 0 ? offsetDate(today, 7) : today;
+    const dow = d.getDay();
+    return (dow === 6 || dow === 0) ? offsetDate(today, 7) : today;
   });
   const [lookup, setLookup] = useState({});
   const [loading, setLoading] = useState(false);
@@ -103,14 +104,14 @@ export function TabSemana({ becado, onChangeBecado, T }) {
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text}}>{weekRangeLabel(weekDates)}</div>
-          <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,7))}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
           {!isThisWeek && (
             <button className="press" onClick={()=>setRefDate(today)}
               style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
+          <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,7))}
+            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
       </div>
 

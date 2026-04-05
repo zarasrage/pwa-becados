@@ -9,7 +9,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
 
-const TURNO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
+const TURNO_COLOR = { P:"#06B6D4", p:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
 const SEMINAR_COLOR = "#E879F9";
 const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
 
@@ -83,12 +83,14 @@ export function TabTurnos({ onBack, T }) {
     if (!data?.ok) return {};
     const map = {};
     (data.entries||[]).forEach(e => {
-      if (e.type !== sub) return;
+      const matchesSub = sub === "P" ? (e.type === "P" || e.type === "p") : e.type === sub;
+      if (!matchesSub) return;
       if (sub === "S") {
         if (!map[e.date]) map[e.date] = { presenter: e.name, title: e.title, tag: e.tag, time: e.time };
       } else {
-        if (!map[e.date]) map[e.date] = [];
-        map[e.date].push(e.name);
+        if (!map[e.date]) map[e.date] = { names: [], hasAM: false };
+        map[e.date].names.push({ name: e.name, isAM: e.type === "p" });
+        if (e.type === "p") map[e.date].hasAM = true;
       }
     });
     return map;
@@ -118,6 +120,12 @@ export function TabTurnos({ onBack, T }) {
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
+          {(year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
+            <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);setSelectedSem(null);}}
+              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              HOY
+            </button>
+          )}
           <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
         <div style={{display:"flex",gap:6,marginBottom:14}}>
@@ -190,14 +198,16 @@ export function TabTurnos({ onBack, T }) {
             <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
               const dayNum  = Number(iso.split("-")[2]);
               const isToday = iso === today;
-              const names   = lookup[iso] || [];
+              const cell    = lookup[iso] || { names: [], hasAM: false };
+              const names   = cell.names || [];
               const has     = names.length > 0;
               return (
                 <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1}}>
                   <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
-                  {names.slice(0,3).map((name,ni) => (
-                    <div key={ni} style={{fontSize:9,fontWeight:600,color:turnoColor,background:`${turnoColor}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-                  ))}
+                  {names.slice(0,3).map((entry,ni) => {
+                    const isAM = sub === "P" && entry.isAM;
+                    return <div key={ni} style={{fontSize:9,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.name}</div>;
+                  })}
                   {names.length > 3 && <div style={{fontSize:8,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
                 </div>
               );

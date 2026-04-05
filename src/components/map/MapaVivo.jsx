@@ -46,6 +46,7 @@ function resolveBecadoBuilding(schedItems, turno, seminario, nowMin) {
   if (seminario && nowMin >= 450 && nowMin < 480) return "jofre";
   if (turno?.artroCode === "A" && nowMin >= 780 && nowMin < 840) return "jofre";
   if (turno?.diaCode === "P" && nowMin >= 840 && nowMin < 1080) return "policlinicos";
+  if (turno?.diaCode === "p" && nowMin >= 480 && nowMin < 660) return "policlinicos";
   if (turno?.diaCode === "D" && nowMin >= 840 && nowMin < 1200) return "urgencia";
   if (turno?.nocheCode === "N" && nowMin >= 1200) return "urgencia";
   const act = getCurrentActivity(schedItems, nowMin);
@@ -103,7 +104,7 @@ export function MapaVivo({ becados, T, onBack }) {
           (monthly.entries || []).forEach(e => {
             if (e.date !== date) return;
             if (!turnoLookup[e.name]) turnoLookup[e.name] = {};
-            if (e.type === "P" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
+            if (e.type === "P" || e.type === "p" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
             if (e.type === "N") turnoLookup[e.name].nocheCode = "N";
             if (e.type === "A") turnoLookup[e.name].artroCode = "A";
           });
