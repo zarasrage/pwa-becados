@@ -1,12 +1,19 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { todayISO, formatDate } from "../utils/dates.js";
+import { apiSWR } from "../utils/api.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
+
+const SEM_AREAS = [
+  { key:"Hombro",  tag:"Seminario Hombro",  color:"#E879F9" },
+  { key:"Rodilla", tag:"Seminario Rodilla", color:"#E879F9" },
+  { key:"Mano",    tag:"Seminario Mano",    color:"#E879F9" },
+];
 
 
 const TURNO_COLOR = { P:"#06B6D4", p:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
@@ -62,6 +69,47 @@ export function TabTurnos({ onBack, T }) {
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
   const [sub, setSub]     = useState("P");
   const [selectedSem, setSelectedSem] = useState(null);
+  const [semArea, setSemArea]       = useState(null);
+  const [upcoming, setUpcoming]     = useState([]);
+  const [upcomingMore, setUpcomingMore] = useState(false);
+
+  useEffect(() => {
+    if (!semArea) { setUpcoming([]); return; }
+    const tag = SEM_AREAS.find(a => a.key === semArea)?.tag;
+    const [ty, tm] = today.split("-").map(Number);
+    const m1 = `${ty}-${String(tm).padStart(2,"0")}`;
+    const nm = tm === 12 ? `${ty+1}-01` : `${ty}-${String(tm+1).padStart(2,"0")}`;
+
+    const filter = (entries) =>
+      (entries || []).filter(e => e.type === "S" && e.tag === tag && e.date >= today)
+                    .sort((a,b) => a.date.localeCompare(b.date));
+
+    const fetchNext = (base) => {
+      if (base.length >= 7) { setUpcoming(base.slice(0,7)); setUpcomingMore(false); return; }
+      setUpcomingMore(true);
+      apiSWR(
+        { route:"monthly", month:nm, token:API_TOKEN },
+        (d) => {
+          const combined = [...base, ...filter(d?.entries)]
+            .sort((a,b) => a.date.localeCompare(b.date)).slice(0,7);
+          setUpcoming(combined);
+        },
+        (d) => {
+          const combined = [...base, ...filter(d?.entries)]
+            .sort((a,b) => a.date.localeCompare(b.date)).slice(0,7);
+          setUpcoming(combined);
+          setUpcomingMore(false);
+        }
+      ).catch(() => setUpcomingMore(false));
+    };
+
+    setUpcomingMore(true);
+    apiSWR(
+      { route:"monthly", month:m1, token:API_TOKEN },
+      (d) => { const f = filter(d?.entries); setUpcoming(f.slice(0,7)); },
+      (d) => fetchNext(filter(d?.entries))
+    ).catch(() => setUpcomingMore(false));
+  }, [semArea]);
 
   const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
   const params = useMemo(
@@ -187,6 +235,60 @@ export function TabTurnos({ onBack, T }) {
                   {selectedSem.sem.tag && (
                     <div style={{display:"inline-flex",alignItems:"center",background:`${SEM_COLOR}15`,border:`1px solid ${SEM_COLOR}30`,borderRadius:99,padding:"3px 10px"}}>
                       <span style={{fontSize:11,color:SEM_COLOR,fontWeight:500}}>{selectedSem.sem.tag}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Botones próximos seminarios por área */}
+              <div style={{display:"flex",gap:6,marginTop:14,marginBottom:12}}>
+                {SEM_AREAS.map(area => {
+                  const isOpen = semArea === area.key;
+                  return (
+                    <button key={area.key} className="press"
+                      onClick={() => setSemArea(isOpen ? null : area.key)}
+                      style={{flex:1,height:34,borderRadius:9,border:`1px solid ${isOpen?SEM_COLOR+"80":T.border}`,background:isOpen?`${SEM_COLOR}20`:T.surface2,fontSize:11,fontWeight:isOpen?700:400,color:isOpen?SEM_COLOR:T.muted,transition:"all 0.15s"}}>
+                      {area.key}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Panel próximos 7 seminarios */}
+              {semArea && (
+                <div className="anim" style={{marginBottom:14,background:T.surface,border:`1px solid ${SEM_COLOR}30`,borderLeft:`3px solid ${SEM_COLOR}`,borderRadius:12,padding:"12px 14px"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:SEM_COLOR}}>
+                      Próximos · {semArea}
+                    </div>
+                    <button className="press" onClick={()=>setSemArea(null)}
+                      style={{background:"none",border:"none",fontSize:15,color:T.muted,lineHeight:1,cursor:"pointer"}}>✕</button>
+                  </div>
+                  {upcoming.length === 0 && upcomingMore ? <Spinner color={SEM_COLOR}/> :
+                   upcoming.length === 0 ? (
+                    <div style={{fontSize:13,color:T.muted,textAlign:"center",padding:"8px 0"}}>Sin seminarios próximos</div>
+                  ) : (
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {upcoming.map((e,i) => (
+                        <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",paddingBottom:i<upcoming.length-1?8:0,borderBottom:i<upcoming.length-1?`1px solid ${T.border}`:"none"}}>
+                          <div style={{flexShrink:0,minWidth:52}}>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:700,color:SEM_COLOR,lineHeight:1.3}}>{formatDate(e.date).split(",")[0]}</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:T.muted,lineHeight:1.3}}>{new Date(...e.date.split("-").map((v,i)=>i===1?v-1:+v)).toLocaleDateString("es-CL",{day:"numeric",month:"short"})}</div>
+                          </div>
+                          <div style={{width:1,height:32,background:`${SEM_COLOR}25`,flexShrink:0}}/>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name||e.presenter}</div>
+                            {(e.title||e.description) && <div style={{fontSize:11,color:T.sub,lineHeight:1.3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title||e.description}</div>}
+                          </div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEM_COLOR,opacity:0.7,flexShrink:0}}>{e.time||"07:30"}</div>
+                        </div>
+                      ))}
+                      {upcomingMore && (
+                        <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:8,opacity:0.5}}>
+                          <Spinner color={SEM_COLOR}/>
+                          <span style={{fontSize:11,color:SEM_COLOR}}>cargando más...</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
