@@ -28,6 +28,7 @@ import { TabSemana } from "./tabs/TabSemana.jsx";
 import { TabTurnos } from "./tabs/TabTurnos.jsx";
 import { TabMes } from "./tabs/TabMes.jsx";
 import { TabEstadisticas } from "./tabs/TabEstadisticas.jsx";
+import { TabEquipos } from "./tabs/TabEquipos.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
 export default function App() {
@@ -174,6 +175,7 @@ export default function App() {
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div className={activeTab==="equipos"?"tab-in":""} style={{display:activeTab==="equipos"?"block":"none"}}><TabEquipos onChangeBecado={handleChange} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}

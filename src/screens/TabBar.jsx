@@ -4,6 +4,7 @@ export function TabBar({ active, onChange, T }) {
     { id:"horario",    icon:"◑", label:"Mi Horario" },
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"mes",        icon:"▦□", label:"Mes" },
+    { id:"equipos",    icon:"⬡", label:"Equipos" },
   ];
   return (
     <div style={{
