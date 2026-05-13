@@ -39,15 +39,15 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <button className="press anim" onClick={onShowRotaciones}
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"80ms"}}>
-            <span>⊞</span> Rotaciones de hoy
+            <span>⊞</span> Rotaciones
           </button>
           <button className="press anim" onClick={onShowTurnos}
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"180ms"}}>
-            <span>◷</span> Turnos del mes
+            <span>◷</span> Mensual
           </button>
           <button className="press anim" onClick={onShowEquipos}
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"220ms"}}>
-            <span>⬡</span> Semana equipos
+            <span>⬡</span> Por Equipo
           </button>
           <button className="press anim" onClick={onShowEstadisticas}
             style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"240ms"}}>
