@@ -45,6 +45,7 @@ export default function App() {
   const [showRotaciones, setShowRotaciones] = useState(false);
   const [showMapa, setShowMapa]           = useState(false);
   const [showEstadisticas, setShowEstadisticas] = useState(false);
+  const [showEquipos, setShowEquipos]     = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -168,14 +169,15 @@ export default function App() {
           ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
         : showEstadisticas
           ? <TabEstadisticas onBack={() => setShowEstadisticas(false)} T={T}/>
-          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} error={initError} T={T}/>
+        : showEquipos
+          ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
+          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} error={initError} T={T}/>
 
       ) : (
         <>
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div className={activeTab==="equipos"?"tab-in":""} style={{display:activeTab==="equipos"?"block":"none"}}><TabEquipos onChangeBecado={handleChange} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}
