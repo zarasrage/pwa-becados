@@ -3,12 +3,8 @@ import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { DEMO_BECADO } from "../data/demo.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
-const EDITOR_PIN = "0001";
-
-export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, onShowEstadisticas, onShowEquipos, onShowEditor, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, onShowEstadisticas, onShowEquipos, error, T }) {
   const [univ, setUniv] = useState("UNAB");
-  const [pinInput, setPinInput] = useState("");
-  const [showPin, setShowPin]   = useState(false);
   const univCfg  = UNIVERSIDADES[univ];
   const groups   = univCfg.getGroups(becados);
 
@@ -53,64 +49,12 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
             style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"220ms"}}>
             <span>⬡</span> Por Equipo
           </button>
-          <button className="press anim" onClick={() => { setPinInput(""); setShowPin(true); }}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"260ms"}}>
-            <span>✎</span> Editor
-          </button>
           <button className="press anim" onClick={onShowEstadisticas}
             style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"280ms"}}>
             📊
           </button>
         </div>
       </div>
-
-      {/* PIN modal */}
-      {showPin && (
-        <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",
-          background:"rgba(0,0,0,0.55)"}} onClick={()=>setShowPin(false)}>
-          <div onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:480,margin:"0 auto",
-            background:T.surface,borderRadius:"16px 16px 0 0",
-            padding:"24px 20px calc(var(--sab)+28px)",boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
-            <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:4}}>Código de acceso</div>
-            <div style={{fontSize:11,color:T.muted,marginBottom:16}}>Ingresa el código para abrir el editor</div>
-            <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:20}}>
-              {[0,1,2,3].map(i => (
-                <div key={i} style={{width:48,height:56,borderRadius:10,
-                  border:`2px solid ${pinInput.length > i ? T.accent : T.border}`,
-                  background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
-                  fontSize:22,fontWeight:800,color:T.text,letterSpacing:0}}>
-                  {pinInput[i] ? "●" : ""}
-                </div>
-              ))}
-            </div>
-            {/* Teclado numérico */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
-              {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k,i) => (
-                <button key={i} className="press"
-                  disabled={k === ""}
-                  onClick={() => {
-                    if (k === "⌫") {
-                      setPinInput(p => p.slice(0,-1));
-                    } else if (k !== "") {
-                      const next = pinInput + String(k);
-                      setPinInput(next);
-                      if (next.length === 4) {
-                        if (next === EDITOR_PIN) { setShowPin(false); onShowEditor(); }
-                        else { setPinInput(""); }
-                      }
-                    }
-                  }}
-                  style={{height:52,borderRadius:10,border:`1px solid ${T.border}`,
-                    background: k===""?"transparent":T.surface2,
-                    fontSize:20,fontWeight:600,color:k==="⌫"?T.muted:T.text,
-                    cursor:k===""?"default":"pointer"}}>
-                  {k}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {error && <div style={{margin:"0 16px 12px",position:"relative",zIndex:1}}><ErrorBox msg={error} T={T}/></div>}
 

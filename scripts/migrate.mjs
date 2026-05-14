@@ -155,7 +155,8 @@ async function main() {
   for (let ci = 0; ci < semDRow.length; ci++) {
     const iso = excelDateToISO(semDRow[ci]);
     if (!iso) continue;
-    const dow = new Date(iso).getDay();
+    const [iy, im, id] = iso.split("-").map(Number);
+    const dow = new Date(iy, im - 1, id).getDay();
     const tag = SEMINARIO_DIA[dow];
     if (!tag) continue;
     const col = ci + 1;
