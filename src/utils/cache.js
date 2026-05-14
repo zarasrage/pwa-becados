@@ -22,7 +22,7 @@ export function cacheGet(params) {
     const raw = safeStorage.get(cacheKey(params));
     if (!raw) return null;
     const { data, ts, ttl } = JSON.parse(raw);
-    if (Date.now() - ts > (ttl || 30 * 60 * 1000)) { safeStorage.remove(cacheKey(params)); return null; }
+    if (Date.now() - ts > (ttl || CACHE_30D)) { safeStorage.remove(cacheKey(params)); return null; }
     return data;
   } catch { return null; }
 }
