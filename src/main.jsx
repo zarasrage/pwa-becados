@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import { registerSW } from "virtual:pwa-register";
 
-registerSW({ immediate: true });
+registerSW({ immediate: true, onNeedRefresh: () => window.location.reload() });
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
