@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
-import { todayISO, offsetDate, getWeekDates, weekRangeLabel, nextMonthStr } from "../utils/dates.js";
+import { todayISO, offsetDate, getWeekDates, weekRangeLabel } from "../utils/dates.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";

@@ -17,7 +17,7 @@ import { ActivityCard } from "../components/ui/ActivityCard.jsx";
 import { TurnoCard } from "../components/ui/TurnoCard.jsx";
 import { SemCard } from "../components/ui/SemCard.jsx";
 
-export function TabHorario({ becado, onChangeBecado, T }) {
+export function TabDia({ becado, onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const isOnline = useOnline();
@@ -60,7 +60,7 @@ export function TabHorario({ becado, onChangeBecado, T }) {
       )}
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0",position:"relative",zIndex:1}}>
-        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi horario</div>
+        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi día</div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
             <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,lineHeight:1.1,

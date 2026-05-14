@@ -1,8 +1,20 @@
-import { API_URL, API_TOKEN } from "../constants/api.js";
+import { API_URL, API_TOKEN, USE_SUPABASE } from "../constants/api.js";
 import { DEMO_BECADO, demoDaily, demoPersonalMonth } from "../data/demo.js";
 import { getWeekDates } from "./dates.js";
 import { cacheGet, cacheSet, cacheAge, cacheKey, _revalidatedThisSession, SWR_REVALIDATE_AFTER } from "./cache.js";
 import { safeStorage } from "./storage.js";
+import { getBecados, getDaily, getWeek, getSummary, getMonthly, getPersonalMonth } from "../lib/supabaseApi.js";
+
+async function supabaseGet(params) {
+  const route = (params.route || "").toLowerCase();
+  if (route === "becados")        return getBecados();
+  if (route === "daily")          return getDaily(params.becado, params.date);
+  if (route === "week")           return getWeek(params.becado, params.start);
+  if (route === "summary")        return getSummary(params.date);
+  if (route === "monthly")        return getMonthly(params.month);
+  if (route === "personal-month") return getPersonalMonth(params.becado, params.month);
+  return { ok: false, error: "Ruta no disponible en Supabase: " + route };
+}
 
 export async function apiGet(params) {
   if (params.becado === DEMO_BECADO) {
@@ -12,6 +24,7 @@ export async function apiGet(params) {
     if (route === "personal-month") return demoPersonalMonth(params.month);
     return { ok:false, error:"Demo: ruta no disponible" };
   }
+  if (USE_SUPABASE) return supabaseGet(params);
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
   const res = await fetch(url.toString());
@@ -70,35 +83,47 @@ export function prefetchWeek(becado, mondayISO) {
     .catch(() => {});
 }
 
-// ── Version check — sincronización con el backend ────────────────────────────
-// Cuando tú editas el Google Sheet, el backend actualiza un "dataVersion".
-// Esta función se llama una vez al abrir la app. Si la versión cambió,
-// limpia todo el localStorage para forzar datos frescos.
+// ── Version check — sincronización con Supabase ──────────────────────────────
+// Supabase tabla `config` tiene key="data_version". Cuando se editan datos,
+// se actualiza ese valor. La app lo chequea una vez por sesión y si cambió,
+// limpia el caché local para forzar datos frescos.
 export let _versionChecked = false;
 
 export function checkDataVersion() {
   if (_versionChecked) return;
   _versionChecked = true;
-  const url = new URL(API_URL);
-  url.searchParams.set("route", "version");
-  url.searchParams.set("token", API_TOKEN);
-  fetch(url.toString())
-    .then(r => r.json())
-    .then(data => {
-      if (!data.ok) return;
-      const serverVersion = data.version;
-      const localVersion = safeStorage.get("dataVersion");
-      if (localVersion && localVersion !== serverVersion) {
-        // ¡El Sheet fue editado! Limpiar caché localStorage para que los tabs
-        // revaliden en background. Los datos viejos quedan en el estado de los
-        // componentes hasta que lleguen los nuevos ("Actualizando…").
-        safeStorage.keys()
-          .filter(k => k.startsWith("cache:"))
-          .forEach(k => safeStorage.remove(k));
-        _revalidatedThisSession.clear();
-        window.dispatchEvent(new CustomEvent("dataVersionChanged"));
-      }
-      safeStorage.set("dataVersion", serverVersion);
-    })
-    .catch(() => {});
+  if (!USE_SUPABASE) {
+    // Fallback GAS
+    const url = new URL(API_URL);
+    url.searchParams.set("route", "version");
+    url.searchParams.set("token", API_TOKEN);
+    fetch(url.toString())
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+        _applyVersionCheck(data.version);
+      })
+      .catch(() => {});
+    return;
+  }
+  import("../lib/supabase.js").then(({ supabase }) => {
+    supabase.from("config").select("value").eq("key", "data_version").single()
+      .then(({ data }) => {
+        if (!data?.value) return;
+        _applyVersionCheck(data.value);
+      })
+      .catch(() => {});
+  });
+}
+
+function _applyVersionCheck(serverVersion) {
+  const localVersion = safeStorage.get("dataVersion");
+  if (localVersion && localVersion !== serverVersion) {
+    safeStorage.keys()
+      .filter(k => k.startsWith("cache:"))
+      .forEach(k => safeStorage.remove(k));
+    _revalidatedThisSession.clear();
+    window.dispatchEvent(new CustomEvent("dataVersionChanged"));
+  }
+  safeStorage.set("dataVersion", serverVersion);
 }

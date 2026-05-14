@@ -22,13 +22,14 @@ import { GearBtn } from "./components/ui/GearBtn.jsx";
 import { MapaVivo } from "./components/map/MapaVivo.jsx";
 import { SelectScreen } from "./screens/SelectScreen.jsx";
 import { TabBar } from "./screens/TabBar.jsx";
-import { TabHorario } from "./tabs/TabHorario.jsx";
+import { TabDia } from "./tabs/TabDia.jsx";
 import { TabRotaciones } from "./tabs/TabRotaciones.jsx";
 import { TabSemana } from "./tabs/TabSemana.jsx";
 import { TabTurnos } from "./tabs/TabTurnos.jsx";
 import { TabMes } from "./tabs/TabMes.jsx";
 import { TabEstadisticas } from "./tabs/TabEstadisticas.jsx";
 import { TabEquipos } from "./tabs/TabEquipos.jsx";
+import { TabEditor } from "./tabs/TabEditor.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
   const [showMapa, setShowMapa]           = useState(false);
   const [showEstadisticas, setShowEstadisticas] = useState(false);
   const [showEquipos, setShowEquipos]     = useState(false);
+  const [showEditor, setShowEditor]       = useState(false);
   const [showSwap, setShowSwap] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -144,7 +146,7 @@ export default function App() {
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} T={T}/>
+        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={()=>setShowEditor(true)} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
       {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
@@ -171,11 +173,13 @@ export default function App() {
           ? <TabEstadisticas onBack={() => setShowEstadisticas(false)} T={T}/>
         : showEquipos
           ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
+        : showEditor
+          ? <TabEditor onBack={() => setShowEditor(false)} T={T}/>
           : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} error={initError} T={T}/>
 
       ) : (
         <>
-          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabHorario becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>

@@ -10,9 +10,9 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
 const SEM_AREAS = [
-  { key:"Hombro",  tag:"Seminario Hombro",  color:"#E879F9" },
-  { key:"Rodilla", tag:"Seminario Rodilla", color:"#E879F9" },
-  { key:"Mano",    tag:"Seminario Mano",    color:"#E879F9" },
+  { key:"Hombro",  tag:"Seminario Hombro",  color:"#E879F9", dia:"Martes" },
+  { key:"Rodilla", tag:"Seminario Rodilla", color:"#E879F9", dia:"Miércoles" },
+  { key:"Mano",    tag:"Seminario Mano",    color:"#E879F9", dia:"Jueves" },
 ];
 
 
@@ -247,8 +247,9 @@ export function TabTurnos({ onBack, T }) {
                   return (
                     <button key={area.key} className="press"
                       onClick={() => setSemArea(isOpen ? null : area.key)}
-                      style={{flex:1,height:34,borderRadius:9,border:`1px solid ${isOpen?SEM_COLOR+"80":T.border}`,background:isOpen?`${SEM_COLOR}20`:T.surface2,fontSize:11,fontWeight:isOpen?700:400,color:isOpen?SEM_COLOR:T.muted,transition:"all 0.15s"}}>
-                      {area.key}
+                      style={{flex:1,height:40,borderRadius:9,border:`1px solid ${isOpen?SEM_COLOR+"80":T.border}`,background:isOpen?`${SEM_COLOR}20`:T.surface2,fontSize:11,fontWeight:isOpen?700:400,color:isOpen?SEM_COLOR:T.muted,transition:"all 0.15s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
+                      <span>{area.key}</span>
+                      <span style={{fontSize:9,opacity:0.7,fontWeight:400}}>{area.dia}</span>
                     </button>
                   );
                 })}

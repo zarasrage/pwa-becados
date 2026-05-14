@@ -50,7 +50,7 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
             <span>⬡</span> Por Equipo
           </button>
           <button className="press anim" onClick={onShowEstadisticas}
-            style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"240ms"}}>
+            style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"280ms"}}>
             📊
           </button>
         </div>

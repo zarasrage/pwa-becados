@@ -1,7 +1,7 @@
 export function TabBar({ active, onChange, T }) {
   const isPink = T.accent === "#E8186A";
   const tabs = [
-    { id:"horario",    icon:"◑", label:"Mi Horario" },
+    { id:"horario",    icon:"◑", label:"Día" },
     { id:"semana",     icon:"▦", label:"Semana" },
     { id:"mes",        icon:"▦□", label:"Mes" },
   ];
