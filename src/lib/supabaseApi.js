@@ -74,13 +74,13 @@ export async function getDaily(becado, dateStr) {
   if (semTag && rotationCode) {
     const { data: sData } = await supabase
       .from("seminarios")
-      .select("titulo, tag, hora, presentador_id, becados(nombre)")
+      .select("titulo, tag, hora, presentador_nombre, presentador_id, becados(nombre)")
       .eq("fecha", dateStr)
       .eq("tag", semTag)
       .single();
     if (sData) {
       seminario = {
-        presenter: sData.becados?.nombre || "",
+        presenter: sData.presentador_nombre || sData.becados?.nombre || "",
         title: sData.titulo,
         tag: sData.tag,
         time: sData.hora,
@@ -182,7 +182,7 @@ export async function getPersonalMonth(becado, monthStr) {
   // Seminarios del mes
   const { data: sData } = await supabase
     .from("seminarios")
-    .select("fecha, titulo, tag, hora, becados(nombre)")
+    .select("fecha, titulo, tag, hora, presentador_nombre, becados(nombre)")
     .gte("fecha", start)
     .lte("fecha", end);
 
@@ -196,7 +196,7 @@ export async function getPersonalMonth(becado, monthStr) {
   }
   for (const s of sData || []) {
     semByDay[s.fecha] = {
-      presenter: s.becados?.nombre || "",
+      presenter: s.presentador_nombre || s.becados?.nombre || "",
       title: s.titulo,
       tag: s.tag,
       time: s.hora,
@@ -253,14 +253,14 @@ export async function getMonthly(monthStr) {
   // Seminarios del mes
   const { data: sData } = await supabase
     .from("seminarios")
-    .select("fecha, titulo, tag, hora, becados(nombre)")
+    .select("fecha, titulo, tag, hora, presentador_nombre, becados(nombre)")
     .gte("fecha", start)
     .lte("fecha", end);
 
   for (const s of sData || []) {
     entries.push({
       date: s.fecha,
-      name: s.becados?.nombre || "",
+      name: s.presentador_nombre || s.becados?.nombre || "",
       type: "S",
       title: s.titulo,
       tag: s.tag,

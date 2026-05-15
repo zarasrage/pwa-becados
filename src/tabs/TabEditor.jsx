@@ -6,10 +6,20 @@ import { todayISO, offsetDate } from "../utils/dates.js";
 const SEMINARIO_ROTS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ","T"];
 
 const TURNO_TABS = [
-  { id:"N", label:"Noche", color:"#4F6EFF" },
-  { id:"D", label:"Día",   color:"#F59E0B" },
-  { id:"P", label:"Poli",  color:"#06B6D4" },
-  { id:"A", label:"Artro", color:"#72FF00" },
+  { id:"N", label:"Noche",      color:"#4F6EFF" },
+  { id:"D", label:"Día",        color:"#F59E0B" },
+  { id:"P", label:"Poli",       color:"#06B6D4" },
+  { id:"A", label:"Artro",      color:"#72FF00" },
+  { id:"S", label:"Seminarios", color:"#E879F9" },
+];
+
+const TAG_OPTS = [
+  { id:"H",   label:"Hombro",  color:"#FB923C" },
+  { id:"M",   label:"Mano",    color:"#F87171" },
+  { id:"CyP", label:"Cadera",  color:"#60A5FA" },
+  { id:"R",   label:"Rodilla", color:"#FACC15" },
+  { id:"TyP", label:"Tobillo", color:"#4ADE80" },
+  { id:"Col", label:"Columna", color:"#C084FC" },
 ];
 
 const COL_LABELS = ["LUNES","MARTES","MIÉRC","JUEVES","VIERNES","SÁB","DOM"];
@@ -178,13 +188,107 @@ function Contadores({ turnos, dates, tipo, T }) {
   );
 }
 
+// ── SeminarioPicker ───────────────────────────────────────────────────────────
+function SeminarioPicker({ existing, onSave, onDelete, onClose, T }) {
+  const [tag,       setTag]       = useState(existing?.tag       || "H");
+  const [presenter, setPresenter] = useState(existing?.presentador || "");
+  const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
+  const [hora,      setHora]      = useState(existing?.hora      || "07:30");
+
+  const canSave = presenter.trim() !== "";
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",
+      justifyContent:"flex-end",background:"rgba(0,0,0,0.55)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:T.surface,
+        borderRadius:"16px 16px 0 0",padding:"20px 16px calc(var(--sab)+24px)",
+        boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
+
+        <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
+          textTransform:"uppercase",marginBottom:14}}>
+          {existing ? "Editar seminario" : "Nuevo seminario"}
+        </div>
+
+        {/* Tag chips */}
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Rotación</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {TAG_OPTS.map(t => (
+              <button key={t.id} className="press" onClick={()=>setTag(t.id)}
+                style={{padding:"4px 10px",borderRadius:99,
+                  border:`1.5px solid ${tag===t.id?t.color:T.border}`,
+                  background:tag===t.id?`${t.color}20`:"transparent",
+                  fontSize:11,fontWeight:tag===t.id?700:500,
+                  color:tag===t.id?t.color:T.muted,cursor:"pointer"}}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Presentador — free text */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Presentador</div>
+          <input value={presenter} onChange={e=>setPresenter(e.target.value)}
+            placeholder="Nombre del presentador"
+            style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",
+              borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,
+              color:T.text,fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
+        </div>
+
+        {/* Título */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Título <span style={{fontWeight:400}}>(opcional)</span></div>
+          <input value={titulo} onChange={e=>setTitulo(e.target.value)}
+            placeholder="Título del seminario"
+            style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",
+              borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,
+              color:T.text,fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
+        </div>
+
+        {/* Hora */}
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Hora</div>
+          <input value={hora} onChange={e=>setHora(e.target.value)}
+            placeholder="07:30"
+            style={{width:110,padding:"10px 12px",borderRadius:10,
+              border:`1px solid ${T.border}`,background:T.surface2,
+              color:T.text,fontSize:13,outline:"none",
+              fontFamily:"'JetBrains Mono',monospace"}}/>
+        </div>
+
+        <div style={{display:"flex",gap:8}}>
+          {existing && (
+            <button className="press" onClick={()=>onDelete(existing.id)}
+              style={{flex:1,height:44,borderRadius:11,border:`1px solid #EF444440`,
+                background:"#EF444418",fontSize:13,fontWeight:600,color:"#EF4444",cursor:"pointer"}}>
+              Eliminar
+            </button>
+          )}
+          <button className="press"
+            onClick={()=>canSave && onSave({ tag, presenter:presenter.trim(), titulo:titulo.trim(), hora })}
+            disabled={!canSave}
+            style={{flex:2,height:44,borderRadius:11,border:"none",
+              background:canSave?"#E879F9":"#E879F940",
+              fontSize:13,fontWeight:700,color:canSave?"#fff":"#ffffff60",
+              cursor:canSave?"pointer":"default"}}>
+            {existing ? "Guardar cambios" : "Agregar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TabEditor ─────────────────────────────────────────────────────────────────
 export function TabEditor({ onBack, allowedTipos, T }) {
   const today  = useMemo(() => todayISO(), []);
   const [monday, setMonday]   = useState(() => getMondayOfWeek(today));
   const visibleTabs = allowedTipos?.length ? TURNO_TABS.filter(t => allowedTipos.includes(t.id)) : TURNO_TABS;
   const [tipo, setTipo]       = useState(() => visibleTabs[0]?.id || "N");
-  const [picker, setPicker]   = useState(null); // { date }
+  const [picker, setPicker]     = useState(null); // { date }
+  const [semPicker, setSemPicker] = useState(null); // { date, existing }
+  const [seminarios, setSeminarios] = useState({}); // { date: [{ id, tag, titulo, hora, presentador }] }
   const [saving, setSaving]   = useState(false);
   const [becados, setBecados] = useState([]);
   const [rotMap, setRotMap]   = useState({});
@@ -221,6 +325,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }, [monday]);
 
   useEffect(() => {
+    if (tipo === "S") return;
     Promise.all([
       supabase.from("turnos").select("fecha,tipo,becados(nombre)")
         .in("tipo", tipo === "P" ? ["P","p"] : [tipo]).gte("fecha", start).lte("fecha", end),
@@ -332,6 +437,75 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setSaving(false);
   }
 
+  // Seminarios load
+  useEffect(() => {
+    if (tipo !== "S") return;
+    supabase.from("seminarios")
+      .select("id, fecha, tag, titulo, hora, presentador_nombre, presentador_id, becados(nombre)")
+      .gte("fecha", start).lte("fecha", end)
+      .then(({ data }) => {
+        const map = {};
+        for (const s of data || []) {
+          if (!map[s.fecha]) map[s.fecha] = [];
+          map[s.fecha].push({
+            id: s.id,
+            tag: s.tag,
+            titulo: s.titulo || "",
+            hora: s.hora || "07:30",
+            presentador: s.presentador_nombre || s.becados?.nombre || "",
+          });
+        }
+        setSeminarios(map);
+      });
+  }, [tipo, monday]);
+
+  async function handleSaveSem(date, { tag, presenter, titulo, hora }, existingId) {
+    setSemPicker(null); setSaving(true);
+    if (existingId) {
+      const { error } = await supabase.from("seminarios")
+        .update({ tag, titulo: titulo || null, hora, presentador_nombre: presenter, presentador_id: null })
+        .eq("id", existingId);
+      if (!error) {
+        setSeminarios(prev => {
+          const next = {...prev};
+          next[date] = (next[date]||[]).map(s =>
+            s.id===existingId ? {...s, tag, titulo, hora, presentador: presenter} : s
+          );
+          return next;
+        });
+        await bumpDataVersion();
+      }
+    } else {
+      const { data, error } = await supabase.from("seminarios")
+        .insert({ fecha: date, tag, titulo: titulo || null, hora, presentador_nombre: presenter, presentador_id: null })
+        .select("id").single();
+      if (!error && data) {
+        setSeminarios(prev => {
+          const next = {...prev};
+          if (!next[date]) next[date] = [];
+          next[date] = [...next[date], { id: data.id, tag, titulo, hora, presentador: presenter }];
+          return next;
+        });
+        await bumpDataVersion();
+      }
+    }
+    setSaving(false);
+  }
+
+  async function handleDeleteSem(id, date) {
+    setSemPicker(null); setSaving(true);
+    const { error } = await supabase.from("seminarios").delete().eq("id", id);
+    if (!error) {
+      setSeminarios(prev => {
+        const next = {...prev};
+        next[date] = (next[date]||[]).filter(s => s.id !== id);
+        return next;
+      });
+      await bumpDataVersion();
+    }
+    setSaving(false);
+  }
+
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
 
   // Dividir en 4 semanas de 7 días
@@ -360,7 +534,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1}}>
-            <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>Editor de turnos</div>
+            <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>{tipo==="S"?"Editor de seminarios":"Editor de turnos"}</div>
             <div style={{fontSize:12,fontWeight:600,color:T.sub,textTransform:"capitalize"}}>
               {periodLabel(dates)}
             </div>
@@ -443,6 +617,92 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       <div style={{padding:"8px 12px 40px"}}>
         {loading ? (
           <div style={{textAlign:"center",padding:40,color:T.muted,fontSize:13}}>Cargando…</div>
+        ) : tipo === "S" ? (
+          // ── Seminarios grid ──
+          <>
+            {weeks.map((week, wi) => {
+              const maxSems = Math.max(1, ...week.map(date => (seminarios[date]||[]).length));
+              return (
+                <div key={wi} style={{marginBottom:4}}>
+                  {/* Fila de números */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                    {week.map(date => {
+                      const dayNum = Number(date.split("-")[2]);
+                      const weekend = isWeekend(date);
+                      const isToday = date === today;
+                      return (
+                        <div key={date} style={{textAlign:"center",fontSize:13,fontWeight:800,
+                          padding:"4px 2px 2px",
+                          color:isToday?"#fff":weekend?T.muted:T.text,
+                          background:isToday?"#E879F9":weekend?T.surface2:T.surface,
+                          borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif"}}>
+                          {dayNum}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Filas de seminarios */}
+                  {Array.from({length: maxSems}).map((_, rowIdx) => (
+                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                      {week.map(date => {
+                        const sems = seminarios[date] || [];
+                        const sem = sems[rowIdx];
+                        const tagOpt = TAG_OPTS.find(t => t.id === sem?.tag);
+                        return (
+                          <div key={date} style={{minHeight:36,background:T.surface,
+                            display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            {sem && (
+                              <button className="press"
+                                onClick={() => setSemPicker({date, existing: sem})}
+                                style={{width:"100%",height:"100%",minHeight:36,border:"none",
+                                  background:"none",padding:"3px 3px",cursor:"pointer",
+                                  display:"flex",flexDirection:"column",alignItems:"center",
+                                  justifyContent:"center",gap:1}}>
+                                <div style={{fontSize:8,fontWeight:700,
+                                  color:tagOpt?.color||"#E879F9",lineHeight:1.2,
+                                  background:`${tagOpt?.color||"#E879F9"}18`,
+                                  borderRadius:3,padding:"1px 4px"}}>
+                                  {tagOpt?.label||sem.tag}
+                                </div>
+                                <div style={{fontSize:8,color:T.sub,lineHeight:1.2,
+                                  maxWidth:"100%",overflow:"hidden",
+                                  textOverflow:"ellipsis",whiteSpace:"nowrap",
+                                  padding:"0 2px"}}>
+                                  {sem.presentador}
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {/* Fila de botones + */}
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:8}}>
+                    {week.map(date => {
+                      const weekend = isWeekend(date);
+                      return (
+                        <div key={date} style={{background:weekend?T.surface2:T.surface,
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          padding:"3px 0",borderRadius:"0 0 4px 4px"}}>
+                          {!weekend && (
+                            <button className="press"
+                              onClick={() => setSemPicker({date, existing:null})}
+                              style={{width:18,height:18,borderRadius:99,
+                                border:"1.5px dashed #E879F980",background:"transparent",
+                                display:"flex",alignItems:"center",justifyContent:"center",
+                                fontSize:13,color:"#E879F9",cursor:"pointer",lineHeight:1}}>+</button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </>
         ) : (
           <>
             {weeks.map((week, wi) => {
@@ -546,6 +806,15 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         )}
       </div>
 
+      {semPicker && (
+        <SeminarioPicker
+          existing={semPicker.existing}
+          onSave={vals => handleSaveSem(semPicker.date, vals, semPicker.existing?.id)}
+          onDelete={id => handleDeleteSem(id, semPicker.date)}
+          onClose={() => setSemPicker(null)}
+          T={T}
+        />
+      )}
       {picker && (
         <BecadoPicker
           elegibles={elegiblesParaDia(picker.date).filter(n=>!nombresAsignados(picker.date).includes(n))}

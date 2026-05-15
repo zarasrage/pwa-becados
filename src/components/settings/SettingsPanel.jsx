@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 const EDITOR_PINS = {
-  "1429": ["N","D","P","A"],
+  "1429": ["N","D","P","A","S"],
   "0001": ["N","D","P"],
   "2222": ["A"],
 };
