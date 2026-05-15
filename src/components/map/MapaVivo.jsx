@@ -3,7 +3,7 @@ import { API_TOKEN } from "../../constants/api.js";
 import { MAP_BUILDINGS } from "../../constants/map.js";
 import { ROT } from "../../constants/rotations.js";
 import { todayISO, offsetDate, m2t, t2m } from "../../utils/dates.js";
-import { apiGet } from "../../utils/api.js";
+import { apiGet, apiSWR } from "../../utils/api.js";
 import { DEMO_BECADO, DEMO_MAP_NAMES, DEMO_ACTIVITIES, demoSummary, demoMonthly } from "../../data/demo.js";
 import { DateNav } from "../ui/DateNav.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
@@ -92,8 +92,8 @@ export function MapaVivo({ becados, T, onBack }) {
           monthly = demoMonthly(date.slice(0,7));
         } else {
           [summary, monthly] = await Promise.all([
-            apiGet({ route:"summary", date, token:API_TOKEN }),
-            apiGet({ route:"monthly", month:date.slice(0,7), token:API_TOKEN }),
+            apiSWR({ route:"summary", date, token:API_TOKEN }, ()=>{}, ()=>{}),
+            apiSWR({ route:"monthly", month:date.slice(0,7), token:API_TOKEN }, ()=>{}, ()=>{}),
           ]);
         }
 

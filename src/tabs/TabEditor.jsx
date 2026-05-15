@@ -392,7 +392,7 @@ export function TabEditor({ onBack, T }) {
 
         {/* Nav período */}
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-          <button className="press" onClick={()=>setMonday(d=>offsetDate(d,-28))} onClickCapture={()=>setHistorial([])}
+          <button className="press" onClick={()=>{ setHistorial([]); setMonday(d=>offsetDate(d,-28)); }}
             style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.border}`,
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,color:T.sub,flexShrink:0}}>‹</button>
@@ -404,7 +404,7 @@ export function TabEditor({ onBack, T }) {
             </button>
           )}
           <div style={{flex:1}}/>
-          <button className="press" onClick={()=>setMonday(d=>offsetDate(d,28))}
+          <button className="press" onClick={()=>{ setHistorial([]); setMonday(d=>offsetDate(d,28)); }}
             style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.border}`,
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,color:T.sub,flexShrink:0}}>›</button>

@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
-import { API_URL, API_TOKEN } from "../../constants/api.js";
+import { API_TOKEN } from "../../constants/api.js";
+import { supabase } from "../../lib/supabase.js";
+import { bumpDataVersion } from "../../lib/supabaseApi.js";
 import { todayISO, formatDate } from "../../utils/dates.js";
 import { cacheKey, _revalidatedThisSession } from "../../utils/cache.js";
 import { safeStorage } from "../../utils/storage.js";
 import { TurnoSelector } from "./TurnoSelector.jsx";
 
-export function SwapTurnos({ becados, onClose, T }) {
-  const today   = useMemo(() => todayISO(), []);
-  const curMonth = today.slice(0, 7);
+const SWAP_PIN = "0001";
 
+export function SwapTurnos({ becados, onClose, T }) {
   const TIPO_OPTS = [
     { id:"P", label:"Poli",  sheet:"Dia",   color:"#06B6D4" },
     { id:"D", label:"Día",   sheet:"Dia",   color:"#F59E0B" },
@@ -29,20 +30,35 @@ export function SwapTurnos({ becados, onClose, T }) {
 
   const handleSwap = async () => {
     if (!canSubmit) return;
+    if (pin !== SWAP_PIN) { setResult({ ok:false, msg:"PIN incorrecto" }); return; }
     setLoading(true); setResult(null);
     try {
-      const res = await fetch(API_URL, {
-        method:"POST",
-        headers:{"Content-Type":"text/plain"},
-        body: JSON.stringify({
-          route:"swap_turno", pin,
-          becado1: selA.becado, date1: selA.date,
-          becado2: selB.becado, date2: selB.date,
-          sheet: tipoObj.sheet, tipoCode: tipo,
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
+      // Obtener IDs de ambos becados
+      const { data: bData, error: bErr } = await supabase
+        .from("becados").select("id,nombre").in("nombre", [selA.becado, selB.becado]);
+      if (bErr) throw bErr;
+      const idA = bData?.find(b => b.nombre === selA.becado)?.id;
+      const idB = bData?.find(b => b.nombre === selB.becado)?.id;
+      if (!idA || !idB) throw new Error("Becado no encontrado");
+
+      // Borrar turnos originales
+      const [delA, delB] = await Promise.all([
+        supabase.from("turnos").delete().eq("becado_id", idA).eq("fecha", selA.date).eq("tipo", tipo),
+        supabase.from("turnos").delete().eq("becado_id", idB).eq("fecha", selB.date).eq("tipo", tipo),
+      ]);
+      if (delA.error) throw delA.error;
+      if (delB.error) throw delB.error;
+
+      // Insertar turnos cruzados
+      const [insA, insB] = await Promise.all([
+        supabase.from("turnos").upsert({ becado_id: idA, fecha: selB.date, tipo }, { onConflict: "becado_id,fecha,tipo" }),
+        supabase.from("turnos").upsert({ becado_id: idB, fecha: selA.date, tipo }, { onConflict: "becado_id,fecha,tipo" }),
+      ]);
+      if (insA.error) throw insA.error;
+      if (insB.error) throw insB.error;
+
+      await bumpDataVersion();
+      {
         // Limpiar caché local para las fechas afectadas en ambos becados
         const months = [...new Set([selA.date.slice(0,7), selB.date.slice(0,7)])];
         const affectedParams = [
@@ -62,11 +78,9 @@ export function SwapTurnos({ becados, onClose, T }) {
         window.dispatchEvent(new CustomEvent("dataVersionChanged"));
         setResult({ ok:true, msg:"✓ Cambio aplicado correctamente" });
         setPin(""); setSelA(null); setSelB(null);
-      } else {
-        setResult({ ok:false, msg: data.error || "Error al aplicar el cambio" });
       }
     } catch(e) {
-      setResult({ ok:false, msg:"Error de conexión" });
+      setResult({ ok:false, msg: e.message || "Error al aplicar el cambio" });
     }
     setLoading(false);
   };

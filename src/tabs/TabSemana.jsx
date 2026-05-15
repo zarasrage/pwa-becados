@@ -6,6 +6,7 @@ import { todayISO, offsetDate, getWeekDates, weekRangeLabel, weekLabel } from ".
 import { apiGet } from "../utils/api.js";
 import { cacheGet, cacheSet } from "../utils/cache.js";
 import { groupItems } from "../utils/schedule.js";
+import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
@@ -72,6 +73,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
     return () => window.removeEventListener("dataVersionChanged", handler);
   }, [loadWeek, weekDates]);
 
+  const isOnline = useOnline();
   const ptr = usePullToRefresh(() => loadWeek(weekDates, true), scrollRef);
 
   const isThisWeek = weekDates.includes(today);
@@ -116,7 +118,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
+        <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         {!hasAnyData && loading ? (
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[0,1,2,3,4,5,6].map(i => <SkeletonWeekCard key={i} index={i} T={T}/>)}

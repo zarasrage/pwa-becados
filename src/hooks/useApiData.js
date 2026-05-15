@@ -41,7 +41,11 @@ export function useApiData(params) {
 
     const bail = setTimeout(() => {
       setUpdating(false);
-      setError("No se pudo conectar. Comprueba tu conexión.");
+      // Solo mostrar error si no hay datos en pantalla (sin caché)
+      setData(prev => {
+        if (!prev) setError("No se pudo conectar. Comprueba tu conexión.");
+        return prev;
+      });
     }, 12000);
 
     apiSWR(

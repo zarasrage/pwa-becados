@@ -8,6 +8,7 @@ import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
+import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
@@ -42,6 +43,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
 
   const slots = useMemo(() => getMonthDates(year, month), [year, month]);
 
+  const isOnline = useOnline();
   const scrollRef = useRef(null);
   const ptr = usePullToRefresh(refresh, scrollRef);
 
@@ -84,7 +86,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
+        <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {!data ? <Spinner color="#348FFF"/> : (
           <>

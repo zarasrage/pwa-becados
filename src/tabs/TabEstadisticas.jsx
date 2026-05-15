@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
-import { todayISO, offsetDate, getWeekDates, weekRangeLabel } from "../utils/dates.js";
+import { todayISO, offsetDate, getWeekDates, weekRangeLabel, monthLabel } from "../utils/dates.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { apiSWR } from "../utils/api.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
-
-function monthLabel(year, month) {
-  return new Date(year, month, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
-}
 
 // Feriados chilenos 2025–2026
 const FERIADOS = new Set([

@@ -6,8 +6,10 @@ import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
+import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
+import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
 
 const SEM_AREAS = [
   { key:"Hombro",  tag:"Seminario Hombro",  color:"#E879F9", dia:"Martes" },
@@ -18,23 +20,8 @@ const SEM_AREAS = [
 
 const TURNO_COLOR = { P:"#06B6D4", p:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
 const SEMINAR_COLOR = "#E879F9";
-const WEEKDAY_LABELS = ["L","M","X","J","V","S","D"];
 
 
-function CalendarGrid({ slots, today, renderCell, T }) {
-  return (
-    <>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-        {WEEKDAY_LABELS.map(d => (
-          <div key={d} style={{textAlign:"center",fontSize:9,fontWeight:700,color:T.muted,letterSpacing:"0.04em",padding:"2px 0"}}>{d}</div>
-        ))}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-        {slots.map((iso, i) => iso ? renderCell(iso, i) : <div key={i}/>)}
-      </div>
-    </>
-  );
-}
 
 const TURNO_TABS = [
   { id:"P", label:"Poli",      color:"#06B6D4" },
@@ -105,6 +92,7 @@ export function TabTurnos({ onBack, T }) {
   const slots  = useMemo(() => getMonthDates(year, month), [year, month]);
   const turnoColor = TURNO_TABS.find(t=>t.id===sub)?.color || "#64748B";
 
+  const isOnline = useOnline();
   const scrollRef = useRef(null);
   const ptr = usePullToRefresh(refresh, scrollRef);
 
@@ -168,7 +156,7 @@ export function TabTurnos({ onBack, T }) {
       </div>
 
       <div style={{padding:"0 16px"}}>
-        <OfflineBanner isOnline={true} isStale={updating} T={T}/>
+        <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
 
         {sub === "S" ? (
