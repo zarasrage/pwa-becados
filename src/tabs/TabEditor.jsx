@@ -6,9 +6,9 @@ import { todayISO, offsetDate } from "../utils/dates.js";
 const SEMINARIO_ROTS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ","T"];
 
 const TURNO_TABS = [
-  { id:"P", label:"Poli",  color:"#06B6D4" },
-  { id:"D", label:"Día",   color:"#F59E0B" },
   { id:"N", label:"Noche", color:"#4F6EFF" },
+  { id:"D", label:"Día",   color:"#F59E0B" },
+  { id:"P", label:"Poli",  color:"#06B6D4" },
   { id:"A", label:"Artro", color:"#72FF00" },
 ];
 
