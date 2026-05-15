@@ -44,11 +44,15 @@ export function SwapTurnos({ becados, onClose, T }) {
       const data = await res.json();
       if (data.ok) {
         // Limpiar caché local para las fechas afectadas en ambos becados
+        const months = [...new Set([selA.date.slice(0,7), selB.date.slice(0,7)])];
         const affectedParams = [
           {route:"daily",becado:selA.becado,date:selA.date,token:API_TOKEN},
           {route:"daily",becado:selA.becado,date:selB.date,token:API_TOKEN},
           {route:"daily",becado:selB.becado,date:selA.date,token:API_TOKEN},
           {route:"daily",becado:selB.becado,date:selB.date,token:API_TOKEN},
+          ...months.map(month => ({route:"monthly",month,token:API_TOKEN})),
+          ...months.map(month => ({route:"personal-month",becado:selA.becado,month,token:API_TOKEN})),
+          ...months.map(month => ({route:"personal-month",becado:selB.becado,month,token:API_TOKEN})),
         ];
         affectedParams.forEach(p => {
           safeStorage.remove(cacheKey(p));

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
 import { TURNO } from "../constants/turnos.js";
-import { todayISO } from "../utils/dates.js";
+import { todayISO, getMonthDates, monthLabel } from "../utils/dates.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -11,25 +11,6 @@ import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 
-function getMonthDates(year, month) {
-  const firstDay  = new Date(year, month, 1);
-  const lastDay   = new Date(year, month + 1, 0);
-  const startDow  = (firstDay.getDay() + 6) % 7;
-  const slots = [];
-  for (let i = 0; i < 42; i++) {
-    const dayNum = i - startDow + 1;
-    if (dayNum < 1 || dayNum > lastDay.getDate()) { slots.push(null); continue; }
-    const d = new Date(year, month, dayNum);
-    slots.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
-  }
-  let last = 41;
-  while (last > 0 && slots[last] === null) last--;
-  return slots.slice(0, Math.ceil((last + 1) / 7) * 7);
-}
-
-function monthLabel(year, month) {
-  return new Date(year, month, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
-}
 
 function formatDayLabel(iso) {
   const [y, m, d] = iso.split("-").map(Number);
