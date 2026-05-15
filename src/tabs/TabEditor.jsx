@@ -179,10 +179,11 @@ function Contadores({ turnos, dates, tipo, T }) {
 }
 
 // ── TabEditor ─────────────────────────────────────────────────────────────────
-export function TabEditor({ onBack, T }) {
+export function TabEditor({ onBack, allowedTipos, T }) {
   const today  = useMemo(() => todayISO(), []);
   const [monday, setMonday]   = useState(() => getMondayOfWeek(today));
-  const [tipo, setTipo]       = useState("N");
+  const visibleTabs = allowedTipos?.length ? TURNO_TABS.filter(t => allowedTipos.includes(t.id)) : TURNO_TABS;
+  const [tipo, setTipo]       = useState(() => visibleTabs[0]?.id || "N");
   const [picker, setPicker]   = useState(null); // { date }
   const [saving, setSaving]   = useState(false);
   const [becados, setBecados] = useState([]);
@@ -379,7 +380,7 @@ export function TabEditor({ onBack, T }) {
 
         {/* Tipo tabs */}
         <div style={{display:"flex",gap:5,marginBottom:10,background:T.surface2,borderRadius:10,padding:3}}>
-          {TURNO_TABS.map(tab => (
+          {visibleTabs.map(tab => (
             <button key={tab.id} className="press" onClick={() => { setTipo(tab.id); setHistorial([]); }}
               style={{flex:1,height:28,borderRadius:8,border:"none",
                 background: tipo===tab.id ? tab.color : "transparent",

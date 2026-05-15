@@ -48,6 +48,7 @@ export default function App() {
   const [showEstadisticas, setShowEstadisticas] = useState(false);
   const [showEquipos, setShowEquipos]     = useState(false);
   const [showEditor, setShowEditor]       = useState(false);
+  const [editorTipos, setEditorTipos]     = useState([]);
   const [showSwap, setShowSwap] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -146,7 +147,7 @@ export default function App() {
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={()=>setShowEditor(true)} T={T}/>
+        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={(tipos)=>{ setEditorTipos(tipos); setShowEditor(true); }} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
       {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
@@ -174,7 +175,7 @@ export default function App() {
         : showEquipos
           ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
         : showEditor
-          ? <TabEditor onBack={() => setShowEditor(false)} T={T}/>
+          ? <TabEditor onBack={() => setShowEditor(false)} allowedTipos={editorTipos} T={T}/>
           : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} error={initError} T={T}/>
 
       ) : (

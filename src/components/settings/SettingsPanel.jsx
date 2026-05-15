@@ -1,6 +1,10 @@
 import { useState } from "react";
 
-const EDITOR_PIN = "0001";
+const EDITOR_PINS = {
+  "1429": ["P","D","N","A"],
+  "0001": ["P","D","N"],
+  "2222": ["A"],
+};
 
 const FOTOS = [
   "/fotos/WhatsApp Image 2026-05-02 at 16.37.38.jpeg",
@@ -91,7 +95,8 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
                       const next = pinInput + String(k);
                       setPinInput(next);
                       if (next.length === 4) {
-                        if (next === EDITOR_PIN) { setShowPin(false); onClose(); onShowEditor(); }
+                        const allowed = EDITOR_PINS[next];
+                        if (allowed) { setShowPin(false); onClose(); onShowEditor(allowed); }
                         else { setPinInput(""); }
                       }
                     }
