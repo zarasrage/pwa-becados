@@ -148,19 +148,27 @@ ${items}
 
 Responde SOLO con el array JSON:`;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  let response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 4096,
+        messages: [{ role: "user", content: prompt }],
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
   const data = await response.json();
   const text = data.content?.[0]?.text ?? "[]";
@@ -189,18 +197,10 @@ Responde SOLO con el array JSON:`;
   });
 }
 
-async function subirASupabase(registros, fecha, isReenvio) {
-  if (isReenvio && fecha) {
+async function subirASupabase(registros, fecha) {
+  // Siempre reemplazar: borra registros existentes para esa fecha e inserta los nuevos
+  if (fecha) {
     await supabase.from("tabla_quirurgica").delete().eq("fecha", fecha);
-  } else {
-    const { data } = await supabase
-      .from("tabla_quirurgica")
-      .select("id")
-      .eq("fecha", fecha)
-      .limit(1);
-    if (data && data.length > 0) {
-      return { skipped: true };
-    }
   }
 
   if (registros.length > 0) {
@@ -208,7 +208,7 @@ async function subirASupabase(registros, fecha, isReenvio) {
     if (error) throw error;
   }
 
-  return { skipped: false };
+  return { inserted: registros.length };
 }
 
 export const handler = async (event) => {
@@ -228,12 +228,11 @@ export const handler = async (event) => {
     return { statusCode: 400, body: "Invalid JSON" };
   }
 
-  const { fileContent, filename, subject } = body;
+  const { fileContent, filename } = body;
   if (!fileContent || !filename) {
     return { statusCode: 400, body: "fileContent y filename son requeridos" };
   }
 
-  const isReenvio = subject?.toUpperCase().includes("REENV") ?? false;
   const buffer = Buffer.from(fileContent, "base64");
   const fecha = extraerFecha(filename);
 
@@ -252,13 +251,7 @@ export const handler = async (event) => {
   }
 
   try {
-    const result = await subirASupabase(registros, fecha, isReenvio);
-    if (result.skipped) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ ok: true, skipped: true, fecha, motivo: "fecha ya existe" }),
-      };
-    }
+    await subirASupabase(registros, fecha);
   } catch (err) {
     return { statusCode: 500, body: `Error Supabase: ${err.message}` };
   }
@@ -269,7 +262,6 @@ export const handler = async (event) => {
       ok: true,
       fecha,
       registros: registros.length,
-      reenvio: isReenvio,
       con_diagnostico: registros.filter((r) => r.diagnostico).length,
     }),
   };
