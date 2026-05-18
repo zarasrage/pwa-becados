@@ -1,16 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { todayISO, offsetDate, formatDate } from "../utils/dates.js";
+import { todayISO, offsetDate, formatDate, getWeekDates } from "../utils/dates.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
+import { FELLOWS } from "../data/fellows.js";
+import { useApiData } from "../hooks/useApiData.js";
+import { API_TOKEN } from "../constants/api.js";
 
 const EQUIPOS = [
-  { id: 1, nombre: "Mano",          color: "#EF4444", cirujanos: ["BRANES ROCIO ALEJANDRA FRANCISCA","BREYER JUAN MANUEL","FERRADA PAULINA","GOMEZ CARLOS JOSE","GUERRA CARLOS JAVIER","GATICA PAMELA","HERES VICTORIA","MATHEUS JESUS ALBERTO","PEREZ ALFONSO JAVIER","SOTELO PAULA ALEJANDRA","STURIZA VANJA MARIA","URRUTIA ESTEBAN FELIPE","VERGARA PAMELA ISABEL","VERGARA LAURA","GUTIERREZ JAIME"] },
+  { id: 1, nombre: "Mano",          color: "#EF4444", cirujanos: ["BRANES ROCIO ALEJANDRA FRANCISCA","BREYER JUAN MANUEL","FERRADA PAULINA","GOMEZ CARLOS JOSE","GUERRA CARLOS JAVIER","GATICA PAMELA","HERES VICTORIA","MATHEUS JESUS ALBERTO","PEREZ ALFONSO JAVIER","SOTELO PAULA ALEJANDRA","STURIZA VANJA MARIA","URRUTIA ESTEBAN FELIPE","VERGARA PAMELA ISABEL","VERGARA LAURA","GUTIERREZ JAIME","BASAURI TOMAS"] },
   { id: 2, nombre: "Hombro",        color: "#F97316", cirujanos: ["AMOEDO FELIPE","LOPEZ SEBASTIAN","ROJAS WALTER ANDRES","SULZER SUSAN CHRISTIN","VARGAS JORGE MAURICIO","VARGAS PABLO CESAR"] },
   { id: 3, nombre: "Cadera",        color: "#3B82F6", cirujanos: ["GONZALEZ JAIME ARNOLDO","NUNEZ MANUEL JOSE","TELIAS ALBERTO LUIS"] },
   { id: 4, nombre: "Rodilla",       color: "#EAB308", cirujanos: ["BUSTOS FELIPE IGNACIO","CASTRO NICOLAS CRISTIAN","FRANULIC NICOLAS ALEJANDRO","GAGGERO NICOLAS SANTIAGO","INNOCENTI PIERO ANTONIO","KOCH MARCO ANTONIO","LASO JOSE IGNACIO","MUNOZ JOSE TOMAS","OLIVIERI RODRIGO ALEJANDRO","VALIENTE DIEGO ALBERTO JESUS"] },
   { id: 5, nombre: "Tobillo y pie", color: "#22C55E", cirujanos: ["ABARCA MARIO CRISTOBAL","BASTIAS GONZALO FELIPE","BERGERET JUAN","CHARNAY PIERRE BARTHELEMY","CUCHACOVICH NATALIO RENE","LAYSECA ALVARO","MELO RODRIGO HORACIO","MENA JAVIER IGNACIO","PARADA CRISTIAN GONZALO","PEREZ LUIS CARLOS","PIGA CAMILO ANTONIO","QUEZADA JOSE","SELMAN LUIS FELIPE","VALDERRAMA IGNACIO ANDRES","ZAGAL PATRICIO ALFONSO"] },
   { id: 6, nombre: "Columna",       color: "#A855F7", cirujanos: ["CIRILLO JUAN IGNACIO","FLEIDERMAN JOSE GERARDO","GIMBERNAT MARCOS EDUARDO","TAPIA CARLOS"] },
 ];
+
+const EQUIPO_TO_ROT = {
+  "Mano": "M", "Hombro": "H", "Cadera": "CyP",
+  "Rodilla": "R", "Tobillo y Pie": "TyP", "Columna": "Col",
+};
 
 const PABELLON_COLORS = [
   "#348FFF","#FF6B6B","#4CAF50","#FF9800",
@@ -23,6 +31,24 @@ function normalizarNombre(n) {
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/[^A-Z\s]/g, "")
     .trim();
+}
+
+function getApellidoCirujano(equipoField) {
+  if (!equipoField) return null;
+  const palabrasField = new Set(normalizarNombre(equipoField).split(/\s+/));
+  for (const eq of EQUIPOS) {
+    for (const c of eq.cirujanos) {
+      const partes = normalizarNombre(c).split(/\s+/);
+      const apellido = partes[0], nombre = partes[1];
+      if (apellido && nombre && palabrasField.has(apellido) && palabrasField.has(nombre)) {
+        return apellido.charAt(0).toUpperCase() + apellido.slice(1).toLowerCase();
+      }
+    }
+  }
+  // Fallback para cirujanos no listados: campo viene NOMBRE NOMBRE APELLIDO APELLIDO
+  const partes = equipoField.trim().split(/\s+/);
+  const ap = partes.length >= 3 ? partes[partes.length - 2] : partes[partes.length - 1];
+  return ap ? ap.charAt(0).toUpperCase() + ap.slice(1).toLowerCase() : null;
 }
 
 function cirujanoEnEquipo(equipoField, cirujanos) {
@@ -42,10 +68,42 @@ function formatHora(hora) {
   return hora.slice(0, 5);
 }
 
-function PacienteCard({ r, color, T }) {
+function PacienteCard({ r, color, T, summaryGroups }) {
   const [expanded, setExpanded] = useState(false);
+  const [asistente, setAsistente] = useState(() => {
+    try { return localStorage.getItem(`asistente_${r.id}`) || ""; } catch { return ""; }
+  });
+  const [asignando, setAsignando] = useState(false);
+  const [otroMode, setOtroMode]   = useState(false);
+  const [otroTexto, setOtroTexto] = useState("");
+
+  const especialidadEquipo = EQUIPOS.find(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
+  const rotCode    = especialidadEquipo ? EQUIPO_TO_ROT[especialidadEquipo.nombre] : null;
+  const becadosDisp = rotCode ? (summaryGroups?.[rotCode] || []) : [];
+  const fellowsDisp = especialidadEquipo
+    ? FELLOWS.filter(f => f.especialidad === especialidadEquipo.nombre)
+    : [];
+
+  const toggle = () => {
+    setExpanded(e => {
+      if (e) { setAsignando(false); setOtroMode(false); }
+      return !e;
+    });
+  };
+
+  const asignar = (nombre) => {
+    setAsistente(nombre);
+    try { localStorage.setItem(`asistente_${r.id}`, nombre); } catch {}
+    setAsignando(false); setOtroMode(false); setOtroTexto("");
+  };
+
+  const remover = () => {
+    setAsistente("");
+    try { localStorage.removeItem(`asistente_${r.id}`); } catch {}
+  };
+
   return (
-    <div onClick={() => setExpanded(e => !e)}
+    <div onClick={toggle}
       style={{
         background: r.cancelada ? `${T.surface}88` : T.surface,
         border: `1px solid ${r.cancelada ? T.border+"66" : T.border}`,
@@ -80,16 +138,91 @@ function PacienteCard({ r, color, T }) {
               </div>
             )}
           </div>
-          <div style={{ fontSize:13,color:T.muted,flexShrink:0 }}>{expanded?"▾":"›"}</div>
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0 }}>
+            {r.equipo && <span style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>{getApellidoCirujano(r.equipo)}</span>}
+            <span style={{ fontSize:13,color:T.muted }}>{expanded?"▾":"›"}</span>
+          </div>
         </div>
 
         {expanded && (
           <div style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
-            {r.equipo && <div style={{ fontSize:12,color:T.sub }}><span style={{ color:T.muted,fontSize:11 }}>Cirujano · </span>{r.equipo}</div>}
-            {r.info_cirugia && <div style={{ fontSize:12,color:T.sub }}><span style={{ color:T.muted,fontSize:11 }}>Material · </span>{r.info_cirugia}</div>}
-            {r.prestacion && !r.cirugia && <div style={{ fontSize:12,color:T.sub }}><span style={{ color:T.muted,fontSize:11 }}>Prestación · </span>{r.prestacion}</div>}
-            {r.alertas && <div style={{ fontSize:12,color:"#FF9800" }}>⚠️ {r.alertas}</div>}
-            {r.dur_plan && <div style={{ fontSize:11,color:T.muted }}>⏱ {r.dur_plan} min estimados</div>}
+
+            {/* Asistente */}
+            <div onClick={e => e.stopPropagation()}>
+              <div style={{ display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
+                <span style={{ color:T.muted,fontSize:11 }}>Asistente ·</span>
+                {asistente ? (
+                  <>
+                    <span style={{ fontSize:12,color:T.text,fontWeight:500 }}>{asistente}</span>
+                    <span onClick={remover} style={{ fontSize:11,color:T.muted,cursor:"pointer",padding:"0 2px" }}>✕</span>
+                  </>
+                ) : !asignando ? (
+                  <span onClick={() => setAsignando(true)}
+                    style={{ fontSize:11,fontWeight:600,color:"#348FFF",cursor:"pointer" }}>
+                    + Asignar
+                  </span>
+                ) : null}
+              </div>
+
+              {asignando && !otroMode && (
+                <div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:6 }}>
+                  {becadosDisp.length > 0 && (
+                    <div>
+                      <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
+                      <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                        {becadosDisp.map(nombre => (
+                          <button key={nombre} onClick={() => asignar(nombre)}
+                            style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${especialidadEquipo?.color||T.border}`,background:`${especialidadEquipo?.color||"#348FFF"}18`,color:especialidadEquipo?.color||T.sub,cursor:"pointer" }}>
+                            {nombre.split(" ")[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {fellowsDisp.length > 0 && (
+                    <div>
+                      <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
+                      <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                        {fellowsDisp.map(f => (
+                          <button key={f.nombre} onClick={() => asignar(f.nombre)}
+                            style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${f.color}`,background:`${f.color}18`,color:f.color,cursor:"pointer" }}>
+                            {f.nombre.split(" ")[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ display:"flex",gap:4 }}>
+                    <button onClick={() => setOtroMode(true)}
+                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
+                      Otro
+                    </button>
+                    <button onClick={() => setAsignando(false)}
+                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {asignando && otroMode && (
+                <div style={{ display:"flex",gap:6,marginTop:6,alignItems:"center" }}>
+                  <input
+                    value={otroTexto}
+                    onChange={e => setOtroTexto(e.target.value)}
+                    onKeyDown={e => { if (e.key==="Enter" && otroTexto.trim()) asignar(otroTexto.trim()); }}
+                    placeholder="Nombre del asistente..."
+                    autoFocus
+                    style={{ flex:1,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:8,padding:"4px 10px",fontSize:12,color:T.text,outline:"none",fontFamily:"'Inter',sans-serif" }}
+                  />
+                  <button onClick={() => otroTexto.trim() && asignar(otroTexto.trim())}
+                    style={{ borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,background:"#348FFF",color:"#fff",border:"none",cursor:"pointer" }}>✓</button>
+                  <button onClick={() => setOtroMode(false)}
+                    style={{ borderRadius:8,padding:"4px 10px",fontSize:12,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer" }}>✕</button>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
       </div>
@@ -103,6 +236,12 @@ export function TabPabellones({ onBack, T }) {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
   const [equipoSel, setEquipoSel]   = useState(null); // null = todos
+
+  // Fetch summary (becados por rotación) para la semana de la fecha seleccionada
+  const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
+  const summaryParams = useMemo(() => ({ route: "summary", date: monday, token: API_TOKEN }), [monday]);
+  const { data: summary } = useApiData(summaryParams);
+  const summaryGroups = summary?.groups || {};
 
   // Cargar tabla quirúrgica cuando cambia la fecha
   useEffect(() => {
@@ -123,9 +262,12 @@ export function TabPabellones({ onBack, T }) {
 
   // Filtrar por equipo si hay uno seleccionado
   const equipoActivo = equipoSel ? EQUIPOS.find(e => e.id === equipoSel) : null;
-  const dataFiltrada = equipoActivo
-    ? data.filter(r => cirujanoEnEquipo(r.equipo, equipoActivo.cirujanos))
-    : data;
+  const esDeAlgunEquipo = (r) => EQUIPOS.some(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
+  const dataFiltrada = equipoSel === "otros"
+    ? data.filter(r => !esDeAlgunEquipo(r))
+    : equipoActivo
+      ? data.filter(r => cirujanoEnEquipo(r.equipo, equipoActivo.cirujanos))
+      : data;
 
   // Agrupar por pabellón
   const grouped = dataFiltrada.reduce((acc, row) => {
@@ -180,6 +322,10 @@ export function TabPabellones({ onBack, T }) {
               {eq.nombre}
             </button>
           ))}
+          <button className="press" onClick={() => setEquipoSel(equipoSel==="otros" ? null : "otros")}
+            style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:11,fontWeight:600,border:`1px solid ${equipoSel==="otros"?"#94A3B8":T.border}`,background:equipoSel==="otros"?"#94A3B8":T.surface,color:equipoSel==="otros"?"#fff":T.sub }}>
+            Otros
+          </button>
         </div>
       </div>
 
@@ -193,7 +339,7 @@ export function TabPabellones({ onBack, T }) {
           <div style={{ textAlign:"center",paddingTop:60 }}>
             <div style={{ fontSize:32,marginBottom:10,opacity:0.2 }}>🔪</div>
             <div style={{ fontSize:14,color:T.muted }}>
-              {equipoSel ? "Sin cirugías de este equipo para este día" : "Sin tabla quirúrgica para este día"}
+              {equipoSel === "otros" ? "Sin cirugías de otros equipos para este día" : equipoSel ? "Sin cirugías de este equipo para este día" : "Sin tabla quirúrgica para este día"}
             </div>
           </div>
         ) : (
@@ -229,7 +375,7 @@ export function TabPabellones({ onBack, T }) {
                     </div>
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                    {grouped[pab].map((r, i) => <PacienteCard key={r.id||i} r={r} color={color} T={T}/>)}
+                    {grouped[pab].map((r, i) => <PacienteCard key={r.id||i} r={r} color={color} T={T} summaryGroups={summaryGroups}/>)}
                   </div>
                 </div>
               );

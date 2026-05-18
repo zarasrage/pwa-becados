@@ -148,8 +148,13 @@ ${items}
 
 Responde SOLO con el array JSON:`;
 
+  if (!ANTHROPIC_KEY) {
+    console.error("ANTHROPIC_API_KEY no está configurada en las variables de entorno");
+    return registros;
+  }
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 20000);
   let response;
   try {
     response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -170,8 +175,15 @@ Responde SOLO con el array JSON:`;
     clearTimeout(timer);
   }
 
+  if (!response.ok) {
+    const errBody = await response.text();
+    console.error(`Claude API error ${response.status}:`, errBody);
+    return registros;
+  }
+
   const data = await response.json();
   const text = data.content?.[0]?.text ?? "[]";
+  console.log(`Claude extrajo datos para ${conTexto.length} filas`);
 
   let extraidos;
   try {
