@@ -18,10 +18,19 @@ function limpiar(val) {
 
 function parseTime(val) {
   if (val === null || val === undefined) return null;
+  // Date object (SheetJS con cellDates:true)
+  if (val instanceof Date) {
+    const h = String(val.getUTCHours()).padStart(2, "0");
+    const m = String(val.getUTCMinutes()).padStart(2, "0");
+    const s = String(val.getUTCSeconds()).padStart(2, "0");
+    return `${h}:${m}:${s}`;
+  }
   const s = String(val).trim();
   if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 8);
-  if (!isNaN(val) && Number(val) < 1) {
-    const totalSec = Math.round(Number(val) * 86400);
+  // Fracción decimal de día (0 a 1)
+  const n = Number(val);
+  if (!isNaN(n) && n >= 0 && n < 1) {
+    const totalSec = Math.round(n * 86400);
     const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
     const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
     const s2 = String(totalSec % 60).padStart(2, "0");
