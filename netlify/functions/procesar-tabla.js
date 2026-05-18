@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const SECRET_TOKEN = process.env.TABLA_SECRET_TOKEN;
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -19,7 +20,6 @@ function parseTime(val) {
   if (val === null || val === undefined) return null;
   const s = String(val).trim();
   if (/^\d{1,2}:\d{2}/.test(s)) return s.slice(0, 8);
-  // Excel serial time (fraction of day)
   if (!isNaN(val) && Number(val) < 1) {
     const totalSec = Math.round(Number(val) * 86400);
     const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
@@ -58,7 +58,6 @@ function parsearExcel(buffer, filename) {
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
 
-    // Buscar fila de headers (donde col[0] === 'Hora')
     let headerRow = -1;
     for (let i = 0; i < rows.length; i++) {
       if (String(rows[i][0] ?? "").trim().toLowerCase() === "hora") {
@@ -108,6 +107,9 @@ function parsearExcel(buffer, filename) {
         upq_instrumental: col(14),
         coordinadora: col(15),
         cancelada: isCancelacion,
+        diagnostico: null,
+        cirugia: null,
+        info_cirugia: null,
       });
     }
   }
@@ -115,12 +117,96 @@ function parsearExcel(buffer, filename) {
   return registros;
 }
 
+async function extraerConClaude(registros) {
+  // Solo procesar filas que tienen upq_instrumental
+  const conTexto = registros.filter((r) => r.upq_instrumental);
+  if (conTexto.length === 0) return registros;
+
+  // Armar batch con índice para mapear de vuelta
+  const items = conTexto.map((r, i) => `[${i}] ${r.upq_instrumental}`).join("\n\n");
+
+  const prompt = `Eres un asistente médico. Analiza cada texto quirúrgico y extrae en JSON los campos: diagnostico, cirugia, info_cirugia.
+
+Reglas:
+- "diagnostico": el diagnóstico del paciente (ej: "Fractura cadera izquierda")
+- "cirugia": el nombre del procedimiento quirúrgico (ej: "PTC Cadera", "Osteosíntesis radio")
+- "info_cirugia": el material, implantes e instrumentos quirúrgicos (lo que viene después de // o los materiales listados)
+- Si no puedes identificar un campo, usa null
+- Responde SOLO con un array JSON válido, un objeto por cada texto, en el mismo orden
+
+Textos:
+${items}
+
+Responde SOLO con el array JSON:`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5",
+      max_tokens: 4096,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text ?? "[]";
+
+  let extraidos;
+  try {
+    // Extraer JSON del texto aunque tenga texto extra alrededor
+    const match = text.match(/\[[\s\S]*\]/);
+    extraidos = match ? JSON.parse(match[0]) : [];
+  } catch {
+    console.error("Error parseando respuesta de Claude:", text);
+    return registros;
+  }
+
+  // Mapear resultados de vuelta a los registros originales
+  let idx = 0;
+  return registros.map((r) => {
+    if (!r.upq_instrumental) return r;
+    const extraido = extraidos[idx++] ?? {};
+    return {
+      ...r,
+      diagnostico: extraido.diagnostico ?? null,
+      cirugia: extraido.cirugia ?? null,
+      info_cirugia: extraido.info_cirugia ?? null,
+    };
+  });
+}
+
+async function subirASupabase(registros, fecha, isReenvio) {
+  if (isReenvio && fecha) {
+    await supabase.table("tabla_quirurgica").delete().eq("fecha", fecha);
+  } else {
+    const { data } = await supabase
+      .from("tabla_quirurgica")
+      .select("id")
+      .eq("fecha", fecha)
+      .limit(1);
+    if (data && data.length > 0) {
+      return { skipped: true };
+    }
+  }
+
+  if (registros.length > 0) {
+    const { error } = await supabase.from("tabla_quirurgica").insert(registros);
+    if (error) throw error;
+  }
+
+  return { skipped: false };
+}
+
 export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method not allowed" };
   }
 
-  // Validar token secreto
   const token = event.headers["x-secret-token"];
   if (SECRET_TOKEN && token !== SECRET_TOKEN) {
     return { statusCode: 401, body: "Unauthorized" };
@@ -134,7 +220,6 @@ export const handler = async (event) => {
   }
 
   const { fileContent, filename, subject } = body;
-
   if (!fileContent || !filename) {
     return { statusCode: 400, body: "fileContent y filename son requeridos" };
   }
@@ -151,15 +236,19 @@ export const handler = async (event) => {
   }
 
   try {
-    if (isReenvio && fecha) {
-      await supabase.table("tabla_quirurgica").delete().eq("fecha", fecha);
-    }
+    registros = await extraerConClaude(registros);
+  } catch (err) {
+    console.error("Error Claude:", err.message);
+    // Continuar sin extracción si Claude falla
+  }
 
-    if (registros.length > 0) {
-      const { error } = await supabase
-        .from("tabla_quirurgica")
-        .insert(registros);
-      if (error) throw error;
+  try {
+    const result = await subirASupabase(registros, fecha, isReenvio);
+    if (result.skipped) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ ok: true, skipped: true, fecha, motivo: "fecha ya existe" }),
+      };
     }
   } catch (err) {
     return { statusCode: 500, body: `Error Supabase: ${err.message}` };
@@ -172,6 +261,7 @@ export const handler = async (event) => {
       fecha,
       registros: registros.length,
       reenvio: isReenvio,
+      con_diagnostico: registros.filter((r) => r.diagnostico).length,
     }),
   };
 };
