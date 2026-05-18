@@ -191,7 +191,7 @@ Responde SOLO con el array JSON:`;
 
 async function subirASupabase(registros, fecha, isReenvio) {
   if (isReenvio && fecha) {
-    await supabase.table("tabla_quirurgica").delete().eq("fecha", fecha);
+    await supabase.from("tabla_quirurgica").delete().eq("fecha", fecha);
   } else {
     const { data } = await supabase
       .from("tabla_quirurgica")

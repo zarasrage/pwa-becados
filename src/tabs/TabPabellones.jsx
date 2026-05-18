@@ -27,10 +27,13 @@ function normalizarNombre(n) {
 
 function cirujanoEnEquipo(equipoField, cirujanos) {
   if (!equipoField) return false;
-  const norm = normalizarNombre(equipoField);
+  const palabrasField = new Set(normalizarNombre(equipoField).split(/\s+/));
   return cirujanos.some(c => {
-    const palabras = normalizarNombre(c).split(" ").filter(p => p.length > 3);
-    return palabras.some(p => norm.includes(p));
+    const partes = normalizarNombre(c).split(/\s+/);
+    const apellido = partes[0];
+    const nombre   = partes[1];
+    if (!apellido || !nombre) return false;
+    return palabrasField.has(apellido) && palabrasField.has(nombre);
   });
 }
 
