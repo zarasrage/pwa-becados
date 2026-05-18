@@ -30,6 +30,7 @@ import { TabMes } from "./tabs/TabMes.jsx";
 import { TabEstadisticas } from "./tabs/TabEstadisticas.jsx";
 import { TabEquipos } from "./tabs/TabEquipos.jsx";
 import { TabEditor } from "./tabs/TabEditor.jsx";
+import { TabPabellones } from "./tabs/TabPabellones.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
   const [showEditor, setShowEditor]       = useState(false);
   const [editorTipos, setEditorTipos]     = useState([]);
   const [showSwap, setShowSwap] = useState(false);
+  const [showPabellones, setShowPabellones] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
   const ACCENT = ACCENT_MAP[theme] || "#348FFF";
@@ -176,7 +178,9 @@ export default function App() {
           ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
         : showEditor
           ? <TabEditor onBack={() => setShowEditor(false)} allowedTipos={editorTipos} T={T}/>
-          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} error={initError} T={T}/>
+        : showPabellones
+          ? <TabPabellones onBack={() => setShowPabellones(false)} T={T}/>
+          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} onShowPabellones={() => setShowPabellones(true)} error={initError} T={T}/>
 
       ) : (
         <>
