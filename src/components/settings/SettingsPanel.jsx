@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SubirTabla } from "./SubirTabla.jsx";
 
 const EDITOR_PINS = {
   "1429": ["N","D","P","A","S"],
@@ -23,6 +24,7 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
   const [loading, setLoading]     = useState(false);
   const [showPin, setShowPin]     = useState(false);
   const [pinInput, setPinInput]   = useState("");
+  const [showSubirTabla, setShowSubirTabla] = useState(false);
 
   return (
     <>
@@ -59,9 +61,14 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Sugerencias</span>
         </button>
         <button className="press" onClick={() => { setPinInput(""); setShowPin(true); }}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
           <span style={{fontSize:15}}>✎</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Editor</span>
+        </button>
+        <button className="press" onClick={() => setShowSubirTabla(true)}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
+          <span style={{fontSize:15}}>🔪</span>
+          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Subir tabla</span>
         </button>
       </div>
 
@@ -112,6 +119,8 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
           </div>
         </div>
       )}
+
+      {showSubirTabla && <SubirTabla onClose={() => setShowSubirTabla(false)} T={T} />}
 
       {showSug && (
         <>
