@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 // Si TABLA_SECRET_TOKEN está seteado en Netlify, ponlo aquí también.
 // Si no está seteado, déjalo vacío — la función lo acepta igual.
-const UPLOAD_TOKEN = "";
+const UPLOAD_TOKEN = "tabla_qx_2026";
 
 export function SubirTabla({ onClose, T }) {
   const fileRef  = useRef(null);
