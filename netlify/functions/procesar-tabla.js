@@ -76,8 +76,12 @@ function parsearExcel(buffer, filename) {
     }
     if (headerRow === -1) continue;
 
+    // Log header row so column mapping can be verified in Netlify Function Logs
+    console.log(`[excel] sheet="${sheetName}" headerRow=${headerRow} cols:`, rows[headerRow].map((v, i) => `${i}:${v}`).join(" | "));
+
     const fecha = extraerFecha(filename);
     let pabellon = null;
+    let firstDataLogged = false;
 
     for (let i = headerRow + 1; i < rows.length; i++) {
       const row = rows[i];
@@ -94,6 +98,11 @@ function parsearExcel(buffer, filename) {
 
       const col = (n) => (row.length > n ? limpiar(row[n]) : null);
       const dur = col(1);
+
+      if (!firstDataLogged) {
+        firstDataLogged = true;
+        console.log(`[excel] primera fila datos (cols 11-16):`, [11,12,13,14,15,16].map((n) => `${n}:${JSON.stringify(col(n))}`).join(" | "));
+      }
 
       registros.push({
         fecha,
