@@ -68,11 +68,8 @@ function formatHora(hora) {
   return hora.slice(0, 5);
 }
 
-function PacienteCard({ r, color, T, summaryGroups }) {
+function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemover }) {
   const [expanded, setExpanded] = useState(false);
-  const [asistente, setAsistente] = useState(() => {
-    try { return localStorage.getItem(`asistente_${r.id}`) || ""; } catch { return ""; }
-  });
   const [asignando, setAsignando] = useState(false);
   const [otroMode, setOtroMode]   = useState(false);
   const [otroTexto, setOtroTexto] = useState("");
@@ -92,15 +89,11 @@ function PacienteCard({ r, color, T, summaryGroups }) {
   };
 
   const asignar = (nombre) => {
-    setAsistente(nombre);
-    try { localStorage.setItem(`asistente_${r.id}`, nombre); } catch {}
+    onAsignar(nombre);
     setAsignando(false); setOtroMode(false); setOtroTexto("");
   };
 
-  const remover = () => {
-    setAsistente("");
-    try { localStorage.removeItem(`asistente_${r.id}`); } catch {}
-  };
+  const remover = () => onRemover();
 
   return (
     <div onClick={toggle}
@@ -236,6 +229,7 @@ export function TabPabellones({ onBack, T }) {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
   const [equipoSel, setEquipoSel]   = useState(null); // null = todos
+  const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: asistente }
 
   // Fetch summary (becados por rotación) para la semana de la fecha seleccionada
   const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
@@ -243,22 +237,71 @@ export function TabPabellones({ onBack, T }) {
   const { data: summary } = useApiData(summaryParams);
   const summaryGroups = summary?.groups || {};
 
-  // Cargar tabla quirúrgica cuando cambia la fecha
+  // Cargar tabla quirúrgica y asignaciones cuando cambia la fecha
   useEffect(() => {
     setLoading(true);
     setError(null);
-    supabase
-      .from("tabla_quirurgica")
-      .select("*")
-      .eq("fecha", fecha)
-      .order("pabellon", { ascending: true })
-      .order("hora",     { ascending: true })
-      .then(({ data: rows, error: err }) => {
-        if (err) { setError(err.message); setLoading(false); return; }
-        setData(rows || []);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase
+        .from("tabla_quirurgica")
+        .select("*")
+        .eq("fecha", fecha)
+        .order("pabellon", { ascending: true })
+        .order("hora",     { ascending: true }),
+      supabase
+        .from("asignaciones")
+        .select("cirugia_id, asistente")
+        .eq("fecha", fecha),
+    ]).then(([{ data: rows, error: err }, { data: asigs }]) => {
+      if (err) { setError(err.message); setLoading(false); return; }
+      setData(rows || []);
+      const map = {};
+      for (const a of asigs || []) map[a.cirugia_id] = a.asistente;
+      setAsignaciones(map);
+      setLoading(false);
+    });
   }, [fecha]);
+
+  // Suscripción Realtime — sincroniza asignaciones entre dispositivos
+  useEffect(() => {
+    const channel = supabase
+      .channel(`asignaciones:${fecha}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "asignaciones",
+        filter: `fecha=eq.${fecha}`,
+      }, (payload) => {
+        if (payload.eventType === "DELETE") {
+          setAsignaciones(prev => {
+            const next = { ...prev };
+            delete next[payload.old.cirugia_id];
+            return next;
+          });
+        } else {
+          const { cirugia_id, asistente } = payload.new;
+          setAsignaciones(prev => ({ ...prev, [cirugia_id]: asistente }));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fecha]);
+
+  // Callbacks de asignación — actualizan estado local y persisten en Supabase
+  const handleAsignar = (cirugiaId, nombre) => {
+    setAsignaciones(prev => ({ ...prev, [cirugiaId]: nombre }));
+    supabase.from("asignaciones")
+      .upsert({ cirugia_id: cirugiaId, fecha, asistente: nombre, updated_at: new Date().toISOString() })
+      .then(({ error: err }) => { if (err) console.error("[asignaciones] upsert:", err.message); });
+  };
+
+  const handleRemover = (cirugiaId) => {
+    setAsignaciones(prev => { const next = { ...prev }; delete next[cirugiaId]; return next; });
+    supabase.from("asignaciones")
+      .delete()
+      .eq("cirugia_id", cirugiaId)
+      .then(({ error: err }) => { if (err) console.error("[asignaciones] delete:", err.message); });
+  };
 
   // Filtrar por equipo si hay uno seleccionado
   const equipoActivo = equipoSel ? EQUIPOS.find(e => e.id === equipoSel) : null;
@@ -375,7 +418,18 @@ export function TabPabellones({ onBack, T }) {
                     </div>
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
-                    {grouped[pab].map((r, i) => <PacienteCard key={r.id||i} r={r} color={color} T={T} summaryGroups={summaryGroups}/>)}
+                    {grouped[pab].map((r, i) => (
+                    <PacienteCard
+                      key={r.id||i}
+                      r={r}
+                      color={color}
+                      T={T}
+                      summaryGroups={summaryGroups}
+                      asistente={asignaciones[r.id] || ""}
+                      onAsignar={(nombre) => handleAsignar(r.id, nombre)}
+                      onRemover={() => handleRemover(r.id)}
+                    />
+                  ))}
                   </div>
                 </div>
               );
