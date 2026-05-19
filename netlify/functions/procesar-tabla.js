@@ -135,14 +135,11 @@ function parsearExcel(buffer, filename) {
   return registros;
 }
 
-async function extraerConClaude(registros) {
-  // Solo procesar filas que tienen upq_instrumental
-  const conTexto = registros.filter((r) => r.upq_instrumental);
-  if (conTexto.length === 0) return registros;
+const CHUNK_SIZE = 15;
+const CLAUDE_TIMEOUT_MS = 22000;
 
-  // Armar batch con índice para mapear de vuelta
-  const items = conTexto.map((r, i) => `[${i}] ${r.upq_instrumental}`).join("\n\n");
-
+async function llamarClaude(textos) {
+  const items = textos.map((t, i) => `[${i}] ${t}`).join("\n\n");
   const prompt = `Eres un asistente médico. Analiza cada texto quirúrgico y extrae en JSON los campos: diagnostico, cirugia, info_cirugia.
 
 Reglas:
@@ -157,15 +154,8 @@ ${items}
 
 Responde SOLO con el array JSON:`;
 
-  console.log(`[claude] ${conTexto.length} filas con upq_instrumental de ${registros.length} totales`);
-
-  if (!ANTHROPIC_KEY) {
-    console.error("[claude] ANTHROPIC_API_KEY no está configurada");
-    return registros;
-  }
-
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  const timer = setTimeout(() => controller.abort(), CLAUDE_TIMEOUT_MS);
   let response;
   try {
     response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -177,7 +167,7 @@ Responde SOLO con el array JSON:`;
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
+        max_tokens: 2048,
         messages: [{ role: "user", content: prompt }],
       }),
       signal: controller.signal,
@@ -188,35 +178,55 @@ Responde SOLO con el array JSON:`;
 
   if (!response.ok) {
     const errBody = await response.text();
-    console.error(`[claude] API error ${response.status}:`, errBody);
-    return registros;
+    throw new Error(`Claude API ${response.status}: ${errBody.slice(0, 200)}`);
   }
 
   const data = await response.json();
   const text = data.content?.[0]?.text ?? "[]";
-  console.log(`[claude] extracción OK para ${conTexto.length} filas`);
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error(`Claude no devolvió JSON array. Respuesta: ${text.slice(0, 200)}`);
+  return JSON.parse(match[0]);
+}
 
-  let extraidos;
-  try {
-    // Extraer JSON del texto aunque tenga texto extra alrededor
-    const match = text.match(/\[[\s\S]*\]/);
-    extraidos = match ? JSON.parse(match[0]) : [];
-  } catch {
-    console.error("Error parseando respuesta de Claude:", text);
+async function extraerConClaude(registros) {
+  const conTexto = registros.filter((r) => r.upq_instrumental);
+  if (conTexto.length === 0) return registros;
+
+  console.log(`[claude] ${conTexto.length} filas con upq_instrumental de ${registros.length} totales`);
+
+  if (!ANTHROPIC_KEY) {
+    console.error("[claude] ANTHROPIC_API_KEY no está configurada");
     return registros;
   }
 
-  // Mapear resultados de vuelta a los registros originales
+  // Dividir en chunks para que cada llamada sea rápida (~3-5s por chunk de 15)
+  const resultados = new Array(conTexto.length).fill(null);
+  for (let i = 0; i < conTexto.length; i += CHUNK_SIZE) {
+    const chunk = conTexto.slice(i, i + CHUNK_SIZE);
+    const textos = chunk.map((r) => r.upq_instrumental);
+    try {
+      const extraidos = await llamarClaude(textos);
+      chunk.forEach((_, j) => {
+        const e = extraidos[j] ?? {};
+        resultados[i + j] = {
+          diagnostico: e.diagnostico ?? null,
+          cirugia: e.cirugia ?? null,
+          info_cirugia: e.info_cirugia ?? null,
+        };
+      });
+      console.log(`[claude] chunk ${i}-${i + chunk.length - 1} OK`);
+    } catch (err) {
+      console.error(`[claude] chunk ${i}-${i + chunk.length - 1} falló:`, err.message);
+      // chunk queda con nulls — no rompe el resto
+    }
+  }
+
+  // Mapear de vuelta a registros originales
   let idx = 0;
   return registros.map((r) => {
     if (!r.upq_instrumental) return r;
-    const extraido = extraidos[idx++] ?? {};
-    return {
-      ...r,
-      diagnostico: extraido.diagnostico ?? null,
-      cirugia: extraido.cirugia ?? null,
-      info_cirugia: extraido.info_cirugia ?? null,
-    };
+    const extraido = resultados[idx++] ?? {};
+    return { ...r, ...extraido };
   });
 }
 
