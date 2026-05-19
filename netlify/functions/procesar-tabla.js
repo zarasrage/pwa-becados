@@ -148,8 +148,10 @@ ${items}
 
 Responde SOLO con el array JSON:`;
 
+  console.log(`[claude] ${conTexto.length} filas con upq_instrumental de ${registros.length} totales`);
+
   if (!ANTHROPIC_KEY) {
-    console.error("ANTHROPIC_API_KEY no está configurada en las variables de entorno");
+    console.error("[claude] ANTHROPIC_API_KEY no está configurada");
     return registros;
   }
 
@@ -165,7 +167,7 @@ Responde SOLO con el array JSON:`;
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -177,13 +179,13 @@ Responde SOLO con el array JSON:`;
 
   if (!response.ok) {
     const errBody = await response.text();
-    console.error(`Claude API error ${response.status}:`, errBody);
+    console.error(`[claude] API error ${response.status}:`, errBody);
     return registros;
   }
 
   const data = await response.json();
   const text = data.content?.[0]?.text ?? "[]";
-  console.log(`Claude extrajo datos para ${conTexto.length} filas`);
+  console.log(`[claude] extracción OK para ${conTexto.length} filas`);
 
   let extraidos;
   try {
@@ -274,6 +276,7 @@ export const handler = async (event) => {
       ok: true,
       fecha,
       registros: registros.length,
+      con_upq: registros.filter((r) => r.upq_instrumental).length,
       con_diagnostico: registros.filter((r) => r.diagnostico).length,
     }),
   };

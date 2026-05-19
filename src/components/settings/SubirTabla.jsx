@@ -108,6 +108,9 @@ export function SubirTabla({ onClose, T }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: "#22c55e", marginBottom: 6 }}>✓ Subido correctamente</div>
             <div style={{ fontSize: 12, color: T.sub, marginBottom: 2 }}>📅 Fecha: <strong>{status.fecha}</strong></div>
             <div style={{ fontSize: 12, color: T.sub, marginBottom: 2 }}>🔪 {status.registros} cirugías cargadas</div>
+            {status.con_upq != null && (
+              <div style={{ fontSize: 12, color: T.sub, marginBottom: 2 }}>📋 {status.con_upq} con texto instrumental</div>
+            )}
             <div style={{ fontSize: 12, color: T.sub }}>🧠 {status.con_diagnostico} con diagnóstico extraído</div>
           </div>
         )}
