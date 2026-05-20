@@ -38,6 +38,16 @@ function colorParaAsistente(nombre) {
   return ASISTENTE_PALETTE[Math.abs(hash) % ASISTENTE_PALETTE.length];
 }
 
+function parseAsistentes(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    return [raw];
+  }
+}
+
 function normalizarNombre(n) {
   if (!n) return "";
   return n.toUpperCase()
@@ -58,7 +68,6 @@ function getApellidoCirujano(equipoField) {
       }
     }
   }
-  // Fallback para cirujanos no listados: campo viene NOMBRE NOMBRE APELLIDO APELLIDO
   const partes = equipoField.trim().split(/\s+/);
   const ap = partes.length >= 3 ? partes[partes.length - 2] : partes[partes.length - 1];
   return ap ? ap.charAt(0).toUpperCase() + ap.slice(1).toLowerCase() : null;
@@ -81,7 +90,7 @@ function formatHora(hora) {
   return hora.slice(0, 5);
 }
 
-function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemover }) {
+function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRemover, onRemoverTodos }) {
   const [asignando, setAsignando] = useState(false);
   const [otroMode, setOtroMode]   = useState(false);
   const [otroTexto, setOtroTexto] = useState("");
@@ -98,14 +107,20 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
     if (asignando) { setOtroMode(false); setOtroTexto(""); }
   };
 
-  const asignar = (nombre) => {
-    onAsignar(nombre);
-    setAsignando(false); setOtroMode(false); setOtroTexto("");
+  // Toggle: si ya está asignado lo quita, si no lo agrega
+  const toggleAsistente = (nombre) => {
+    if (asistentes.includes(nombre)) {
+      onRemover(nombre);
+    } else {
+      onAsignar(nombre);
+    }
   };
 
-  const remover = (e) => {
-    e.stopPropagation();
-    onRemover();
+  const asignarOtro = () => {
+    if (!otroTexto.trim()) return;
+    onAsignar(otroTexto.trim());
+    setOtroTexto("");
+    setOtroMode(false);
   };
 
   return (
@@ -144,18 +159,23 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
               </div>
             )}
           </div>
-          <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0 }}>
+          {/* Columna derecha: cirujano arriba, asistentes abajo */}
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0 }}>
             {r.equipo && (
               <span style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>
                 {getApellidoCirujano(r.equipo)}
               </span>
             )}
-            {asistente && (
-              <span style={{ fontSize:10,fontWeight:600,color:colorParaAsistente(asistente),background:`${colorParaAsistente(asistente)}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${colorParaAsistente(asistente)}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3 }}>
-                {asistente.split(" ")[0]}
-                <span onClick={remover} style={{ fontSize:9,opacity:0.6,cursor:"pointer" }}>✕</span>
-              </span>
-            )}
+            {asistentes.map(nombre => {
+              const c = colorParaAsistente(nombre);
+              return (
+                <span key={nombre} onClick={e => { e.stopPropagation(); onRemover(nombre); }}
+                  style={{ fontSize:10,fontWeight:600,color:c,background:`${c}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${c}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3,cursor:"pointer" }}>
+                  {nombre.split(" ")[0]}
+                  <span style={{ fontSize:9,opacity:0.6 }}>✕</span>
+                </span>
+              );
+            })}
           </div>
         </div>
 
@@ -165,12 +185,16 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
               <div>
                 <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
                 <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                  {becadosDisp.map(nombre => (
-                    <button key={nombre} onClick={() => asignar(nombre)}
-                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${colorParaAsistente(nombre)}`,background:`${colorParaAsistente(nombre)}18`,color:colorParaAsistente(nombre),cursor:"pointer" }}>
-                      {nombre.split(" ")[0]}
-                    </button>
-                  ))}
+                  {becadosDisp.map(nombre => {
+                    const asig = asistentes.includes(nombre);
+                    const c = colorParaAsistente(nombre);
+                    return (
+                      <button key={nombre} onClick={() => toggleAsistente(nombre)}
+                        style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
+                        {asig ? "✓ " : ""}{nombre.split(" ")[0]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -178,23 +202,33 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
               <div>
                 <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
                 <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                  {fellowsDisp.map(f => (
-                    <button key={f.nombre} onClick={() => asignar(f.nombre)}
-                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${colorParaAsistente(f.nombre)}`,background:`${colorParaAsistente(f.nombre)}18`,color:colorParaAsistente(f.nombre),cursor:"pointer" }}>
-                      {f.nombre.split(" ")[0]}
-                    </button>
-                  ))}
+                  {fellowsDisp.map(f => {
+                    const asig = asistentes.includes(f.nombre);
+                    const c = colorParaAsistente(f.nombre);
+                    return (
+                      <button key={f.nombre} onClick={() => toggleAsistente(f.nombre)}
+                        style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
+                        {asig ? "✓ " : ""}{f.nombre.split(" ")[0]}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
-            <div style={{ display:"flex",gap:4 }}>
+            <div style={{ display:"flex",gap:4,flexWrap:"wrap" }}>
               <button onClick={() => setOtroMode(true)}
                 style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
-                Otro
+                + Otro
               </button>
+              {asistentes.length > 0 && (
+                <button onClick={() => { onRemoverTodos(); setAsignando(false); }}
+                  style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:"1px solid #FF6B6B44",background:"#FF6B6B11",color:"#FF6B6B",cursor:"pointer" }}>
+                  Desasignar todos
+                </button>
+              )}
               <button onClick={() => setAsignando(false)}
                 style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
-                Cancelar
+                Cerrar
               </button>
             </div>
           </div>
@@ -205,12 +239,12 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
             <input
               value={otroTexto}
               onChange={e => setOtroTexto(e.target.value)}
-              onKeyDown={e => { if (e.key==="Enter" && otroTexto.trim()) asignar(otroTexto.trim()); }}
+              onKeyDown={e => { if (e.key==="Enter") asignarOtro(); }}
               placeholder="Nombre del asistente..."
               autoFocus
               style={{ flex:1,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:8,padding:"4px 10px",fontSize:12,color:T.text,outline:"none",fontFamily:"'Inter',sans-serif" }}
             />
-            <button onClick={() => otroTexto.trim() && asignar(otroTexto.trim())}
+            <button onClick={asignarOtro}
               style={{ borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,background:"#348FFF",color:"#fff",border:"none",cursor:"pointer" }}>✓</button>
             <button onClick={() => setOtroMode(false)}
               style={{ borderRadius:8,padding:"4px 10px",fontSize:12,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer" }}>✕</button>
@@ -226,16 +260,14 @@ export function TabPabellones({ onBack, T }) {
   const [data, setData]             = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
-  const [equipoSel, setEquipoSel]   = useState(null); // null = todos
-  const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: asistente }
+  const [equipoSel, setEquipoSel]   = useState(null);
+  const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: string[] }
 
-  // Fetch summary (becados por rotación) para la semana de la fecha seleccionada
   const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
   const summaryParams = useMemo(() => ({ route: "summary", date: monday, token: API_TOKEN }), [monday]);
   const { data: summary } = useApiData(summaryParams);
   const summaryGroups = summary?.groups || {};
 
-  // Cargar tabla quirúrgica y asignaciones cuando cambia la fecha
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -254,13 +286,12 @@ export function TabPabellones({ onBack, T }) {
       if (err) { setError(err.message); setLoading(false); return; }
       setData(rows || []);
       const map = {};
-      for (const a of asigs || []) map[a.cirugia_id] = a.asistente;
+      for (const a of asigs || []) map[a.cirugia_id] = parseAsistentes(a.asistente);
       setAsignaciones(map);
       setLoading(false);
     });
   }, [fecha]);
 
-  // Suscripción Realtime — sincroniza asignaciones entre dispositivos
   useEffect(() => {
     const channel = supabase
       .channel(`asignaciones:${fecha}`)
@@ -278,30 +309,52 @@ export function TabPabellones({ onBack, T }) {
           });
         } else {
           const { cirugia_id, asistente } = payload.new;
-          setAsignaciones(prev => ({ ...prev, [cirugia_id]: asistente }));
+          setAsignaciones(prev => ({ ...prev, [cirugia_id]: parseAsistentes(asistente) }));
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fecha]);
 
-  // Callbacks de asignación — actualizan estado local y persisten en Supabase
+  const persistir = (cirugiaId, lista) => {
+    if (lista.length === 0) {
+      supabase.from("asignaciones").delete().eq("cirugia_id", cirugiaId)
+        .then(({ error: err }) => { if (err) console.error("[asignaciones] delete:", err.message); });
+    } else {
+      supabase.from("asignaciones")
+        .upsert({ cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista), updated_at: new Date().toISOString() })
+        .then(({ error: err }) => { if (err) console.error("[asignaciones] upsert:", err.message); });
+    }
+  };
+
   const handleAsignar = (cirugiaId, nombre) => {
-    setAsignaciones(prev => ({ ...prev, [cirugiaId]: nombre }));
-    supabase.from("asignaciones")
-      .upsert({ cirugia_id: cirugiaId, fecha, asistente: nombre, updated_at: new Date().toISOString() })
-      .then(({ error: err }) => { if (err) console.error("[asignaciones] upsert:", err.message); });
+    setAsignaciones(prev => {
+      const actual = prev[cirugiaId] || [];
+      if (actual.includes(nombre)) return prev;
+      const nueva = [...actual, nombre];
+      persistir(cirugiaId, nueva);
+      return { ...prev, [cirugiaId]: nueva };
+    });
   };
 
-  const handleRemover = (cirugiaId) => {
-    setAsignaciones(prev => { const next = { ...prev }; delete next[cirugiaId]; return next; });
-    supabase.from("asignaciones")
-      .delete()
-      .eq("cirugia_id", cirugiaId)
-      .then(({ error: err }) => { if (err) console.error("[asignaciones] delete:", err.message); });
+  const handleRemover = (cirugiaId, nombre) => {
+    setAsignaciones(prev => {
+      const nueva = (prev[cirugiaId] || []).filter(n => n !== nombre);
+      persistir(cirugiaId, nueva);
+      if (nueva.length === 0) { const next = { ...prev }; delete next[cirugiaId]; return next; }
+      return { ...prev, [cirugiaId]: nueva };
+    });
   };
 
-  // Filtrar por equipo si hay uno seleccionado
+  const handleRemoverTodos = (cirugiaId) => {
+    setAsignaciones(prev => {
+      const next = { ...prev };
+      delete next[cirugiaId];
+      persistir(cirugiaId, []);
+      return next;
+    });
+  };
+
   const equipoActivo = equipoSel ? EQUIPOS.find(e => e.id === equipoSel) : null;
   const esDeAlgunEquipo = (r) => EQUIPOS.some(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
   const dataFiltrada = equipoSel === "otros"
@@ -310,7 +363,6 @@ export function TabPabellones({ onBack, T }) {
       ? data.filter(r => cirujanoEnEquipo(r.equipo, equipoActivo.cirujanos))
       : data;
 
-  // Agrupar por pabellón
   const grouped = dataFiltrada.reduce((acc, row) => {
     const key = row.pabellon || "Sin pabellón";
     if (!acc[key]) acc[key] = [];
@@ -326,7 +378,6 @@ export function TabPabellones({ onBack, T }) {
   return (
     <div style={{ minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40 }}>
 
-      {/* Header */}
       <div style={{ position:"sticky",top:0,zIndex:10,background:T.bg,paddingTop:"calc(var(--sat) + 12px)",paddingBottom:10,borderBottom:`1px solid ${T.border}` }}>
         <div style={{ display:"flex",alignItems:"center",gap:10,padding:"0 16px" }}>
           <button onClick={onBack} className="press"
@@ -339,7 +390,6 @@ export function TabPabellones({ onBack, T }) {
           </div>
         </div>
 
-        {/* Navegación fecha */}
         <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:12,padding:"8px 16px 0" }}>
           <button className="press" onClick={() => setFecha(f => offsetDate(f, -1))}
             style={{ background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 14px",fontSize:16,color:T.sub }}>‹</button>
@@ -351,7 +401,6 @@ export function TabPabellones({ onBack, T }) {
             style={{ background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 14px",fontSize:16,color:T.sub }}>›</button>
         </div>
 
-        {/* Filtro por equipo */}
         <div style={{ display:"flex",gap:6,padding:"8px 16px 0",overflowX:"auto",scrollbarWidth:"none" }}>
           <button className="press" onClick={() => setEquipoSel(null)}
             style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:11,fontWeight:600,border:`1px solid ${!equipoSel?"#348FFF":T.border}`,background:!equipoSel?"#348FFF":T.surface,color:!equipoSel?"#fff":T.sub }}>
@@ -370,7 +419,6 @@ export function TabPabellones({ onBack, T }) {
         </div>
       </div>
 
-      {/* Contenido */}
       <div style={{ padding:"14px 16px" }}>
         {loading ? (
           <div style={{ display:"flex",justifyContent:"center",paddingTop:60 }}><Spinner/></div>
@@ -385,7 +433,6 @@ export function TabPabellones({ onBack, T }) {
           </div>
         ) : (
           <>
-            {/* Resumen */}
             <div style={{ display:"flex",gap:8,marginBottom:16 }}>
               <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
                 <div style={{ fontSize:16,fontWeight:700,color:equipoColor||T.text }}>{total}</div>
@@ -403,7 +450,6 @@ export function TabPabellones({ onBack, T }) {
               )}
             </div>
 
-            {/* Pabellones */}
             {pabellones.map((pab, idx) => {
               const color = equipoColor || PABELLON_COLORS[idx % PABELLON_COLORS.length];
               return (
@@ -414,17 +460,18 @@ export function TabPabellones({ onBack, T }) {
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
                     {grouped[pab].map((r, i) => (
-                    <PacienteCard
-                      key={r.id||i}
-                      r={r}
-                      color={color}
-                      T={T}
-                      summaryGroups={summaryGroups}
-                      asistente={asignaciones[r.id] || ""}
-                      onAsignar={(nombre) => handleAsignar(r.id, nombre)}
-                      onRemover={() => handleRemover(r.id)}
-                    />
-                  ))}
+                      <PacienteCard
+                        key={r.id||i}
+                        r={r}
+                        color={color}
+                        T={T}
+                        summaryGroups={summaryGroups}
+                        asistentes={asignaciones[r.id] || []}
+                        onAsignar={(nombre) => handleAsignar(r.id, nombre)}
+                        onRemover={(nombre) => handleRemover(r.id, nombre)}
+                        onRemoverTodos={() => handleRemoverTodos(r.id)}
+                      />
+                    ))}
                   </div>
                 </div>
               );
