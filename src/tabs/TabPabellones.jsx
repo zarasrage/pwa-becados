@@ -90,9 +90,8 @@ function formatHora(hora) {
   return hora.slice(0, 5);
 }
 
-function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRemover, onRemoverTodos }) {
-  const [asignando, setAsignando] = useState(false);
-  const [otroMode, setOtroMode]   = useState(false);
+function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRemover, onRemoverTodos, isOpen, onToggle }) {
+  const [otroMode, setOtroMode] = useState(false);
   const [otroTexto, setOtroTexto] = useState("");
 
   const especialidadEquipo = EQUIPOS.find(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
@@ -103,8 +102,8 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
     : [];
 
   const handleClick = () => {
-    setAsignando(a => !a);
-    if (asignando) { setOtroMode(false); setOtroTexto(""); }
+    if (isOpen) { setOtroMode(false); setOtroTexto(""); }
+    onToggle();
   };
 
   // Toggle: si ya está asignado lo quita, si no lo agrega
@@ -179,7 +178,7 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
           </div>
         </div>
 
-        {asignando && !otroMode && (
+        {isOpen && !otroMode && (
           <div onClick={e => e.stopPropagation()} style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
             {becadosDisp.length > 0 && (
               <div>
@@ -221,12 +220,12 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
                 + Otro
               </button>
               {asistentes.length > 0 && (
-                <button onClick={() => { onRemoverTodos(); setAsignando(false); }}
+                <button onClick={() => { onRemoverTodos(); onToggle(); }}
                   style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:"1px solid #FF6B6B44",background:"#FF6B6B11",color:"#FF6B6B",cursor:"pointer" }}>
                   Desasignar todos
                 </button>
               )}
-              <button onClick={() => setAsignando(false)}
+              <button onClick={() => { setOtroMode(false); setOtroTexto(""); onToggle(); }}
                 style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
                 Cerrar
               </button>
@@ -234,7 +233,7 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
           </div>
         )}
 
-        {asignando && otroMode && (
+        {isOpen && otroMode && (
           <div onClick={e => e.stopPropagation()} style={{ display:"flex",gap:6,marginTop:10,alignItems:"center",paddingTop:10,borderTop:`1px solid ${T.border}` }}>
             <input
               value={otroTexto}
@@ -262,6 +261,7 @@ export function TabPabellones({ onBack, T }) {
   const [error, setError]           = useState(null);
   const [equipoSel, setEquipoSel]   = useState(null);
   const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: string[] }
+  const [openCardId, setOpenCardId]     = useState(null);
   const inFlightRef = useRef(new Set()); // cirugia_ids con escritura en curso
 
   const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
@@ -358,6 +358,8 @@ export function TabPabellones({ onBack, T }) {
     setAsignaciones(prev => { const next = { ...prev }; delete next[cirugiaId]; return next; });
     persistir(cirugiaId, []);
   };
+
+  useEffect(() => { setOpenCardId(null); }, [fecha, equipoSel]);
 
   const equipoActivo = equipoSel ? EQUIPOS.find(e => e.id === equipoSel) : null;
   const esDeAlgunEquipo = (r) => EQUIPOS.some(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
@@ -474,6 +476,8 @@ export function TabPabellones({ onBack, T }) {
                         onAsignar={(nombre) => handleAsignar(r.id, nombre)}
                         onRemover={(nombre) => handleRemover(r.id, nombre)}
                         onRemoverTodos={() => handleRemoverTodos(r.id)}
+                        isOpen={openCardId === (r.id || i)}
+                        onToggle={() => setOpenCardId(prev => prev === (r.id || i) ? null : (r.id || i))}
                       />
                     ))}
                   </div>
