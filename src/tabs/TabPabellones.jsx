@@ -322,37 +322,35 @@ export function TabPabellones({ onBack, T }) {
         .then(({ error: err }) => { if (err) console.error("[asignaciones] delete:", err.message); });
     } else {
       supabase.from("asignaciones")
-        .upsert({ cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista), updated_at: new Date().toISOString() })
+        .upsert(
+          { cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista), updated_at: new Date().toISOString() },
+          { onConflict: "cirugia_id" }
+        )
         .then(({ error: err }) => { if (err) console.error("[asignaciones] upsert:", err.message); });
     }
   };
 
   const handleAsignar = (cirugiaId, nombre) => {
-    setAsignaciones(prev => {
-      const actual = prev[cirugiaId] || [];
-      if (actual.includes(nombre)) return prev;
-      const nueva = [...actual, nombre];
-      persistir(cirugiaId, nueva);
-      return { ...prev, [cirugiaId]: nueva };
-    });
+    const actual = asignaciones[cirugiaId] || [];
+    if (actual.includes(nombre)) return;
+    const nueva = [...actual, nombre];
+    setAsignaciones(prev => ({ ...prev, [cirugiaId]: nueva }));
+    persistir(cirugiaId, nueva);
   };
 
   const handleRemover = (cirugiaId, nombre) => {
+    const actual = asignaciones[cirugiaId] || [];
+    const nueva = actual.filter(n => n !== nombre);
     setAsignaciones(prev => {
-      const nueva = (prev[cirugiaId] || []).filter(n => n !== nombre);
-      persistir(cirugiaId, nueva);
       if (nueva.length === 0) { const next = { ...prev }; delete next[cirugiaId]; return next; }
       return { ...prev, [cirugiaId]: nueva };
     });
+    persistir(cirugiaId, nueva);
   };
 
   const handleRemoverTodos = (cirugiaId) => {
-    setAsignaciones(prev => {
-      const next = { ...prev };
-      delete next[cirugiaId];
-      persistir(cirugiaId, []);
-      return next;
-    });
+    setAsignaciones(prev => { const next = { ...prev }; delete next[cirugiaId]; return next; });
+    persistir(cirugiaId, []);
   };
 
   const equipoActivo = equipoSel ? EQUIPOS.find(e => e.id === equipoSel) : null;
