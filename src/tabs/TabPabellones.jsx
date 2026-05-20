@@ -25,6 +25,19 @@ const PABELLON_COLORS = [
   "#9C27B0","#00BCD4","#F06292","#8BC34A",
 ];
 
+const ASISTENTE_PALETTE = [
+  "#EF4444","#F97316","#F59E0B","#EAB308","#84CC16",
+  "#22C55E","#10B981","#14B8A6","#06B6D4","#0EA5E9",
+  "#3B82F6","#6366F1","#8B5CF6","#A855F7","#D946EF",
+  "#EC4899","#F43F5E","#FB923C","#4ADE80","#34D399",
+];
+
+function colorParaAsistente(nombre) {
+  let hash = 0;
+  for (let i = 0; i < nombre.length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) & 0xFFFFFF;
+  return ASISTENTE_PALETTE[Math.abs(hash) % ASISTENTE_PALETTE.length];
+}
+
 function normalizarNombre(n) {
   if (!n) return "";
   return n.toUpperCase()
@@ -69,7 +82,6 @@ function formatHora(hora) {
 }
 
 function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemover }) {
-  const [expanded, setExpanded] = useState(false);
   const [asignando, setAsignando] = useState(false);
   const [otroMode, setOtroMode]   = useState(false);
   const [otroTexto, setOtroTexto] = useState("");
@@ -81,11 +93,8 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
     ? FELLOWS.filter(f => f.especialidad === especialidadEquipo.nombre)
     : [];
 
-  const toggle = () => {
-    setExpanded(e => {
-      if (e) { setAsignando(false); setOtroMode(false); }
-      return !e;
-    });
+  const handleClick = () => {
+    if (!asignando) setAsignando(true);
   };
 
   const asignar = (nombre) => {
@@ -93,10 +102,13 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
     setAsignando(false); setOtroMode(false); setOtroTexto("");
   };
 
-  const remover = () => onRemover();
+  const remover = (e) => {
+    e.stopPropagation();
+    onRemover();
+  };
 
   return (
-    <div onClick={toggle}
+    <div onClick={handleClick}
       style={{
         background: r.cancelada ? `${T.surface}88` : T.surface,
         border: `1px solid ${r.cancelada ? T.border+"66" : T.border}`,
@@ -121,101 +133,86 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
               {r.cancelada && <span style={{ marginLeft:6,background:"#FF6B6B22",color:"#FF6B6B",borderRadius:99,padding:"1px 6px",fontSize:10,fontWeight:600 }}>CANCELADA</span>}
             </div>
             {r.diagnostico && (
-              <div style={{ fontSize:12,color:T.sub,marginTop:4,fontStyle:"italic",whiteSpace:expanded?"normal":"nowrap",overflow:expanded?"visible":"hidden",textOverflow:expanded?"unset":"ellipsis" }}>
+              <div style={{ fontSize:12,color:T.sub,marginTop:4,fontStyle:"italic",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                 {r.diagnostico}
               </div>
             )}
             {r.cirugia && (
-              <div style={{ fontSize:12,fontWeight:500,color:T.text,marginTop:2,whiteSpace:expanded?"normal":"nowrap",overflow:expanded?"visible":"hidden",textOverflow:expanded?"unset":"ellipsis" }}>
+              <div style={{ fontSize:12,fontWeight:500,color:T.text,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                 ✂️ {r.cirugia}
               </div>
             )}
           </div>
           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0 }}>
-            {r.equipo && <span style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>{getApellidoCirujano(r.equipo)}</span>}
-            <span style={{ fontSize:13,color:T.muted }}>{expanded?"▾":"›"}</span>
+            {r.equipo && (
+              <span style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>
+                {getApellidoCirujano(r.equipo)}
+              </span>
+            )}
+            {asistente && (
+              <span style={{ fontSize:10,fontWeight:600,color:colorParaAsistente(asistente),background:`${colorParaAsistente(asistente)}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${colorParaAsistente(asistente)}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3 }}>
+                {asistente.split(" ")[0]}
+                <span onClick={remover} style={{ fontSize:9,opacity:0.6,cursor:"pointer" }}>✕</span>
+              </span>
+            )}
           </div>
         </div>
 
-        {expanded && (
-          <div style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
-
-            {/* Asistente */}
-            <div onClick={e => e.stopPropagation()}>
-              <div style={{ display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
-                <span style={{ color:T.muted,fontSize:11 }}>Asistente ·</span>
-                {asistente ? (
-                  <>
-                    <span style={{ fontSize:12,color:T.text,fontWeight:500 }}>{asistente}</span>
-                    <span onClick={remover} style={{ fontSize:11,color:T.muted,cursor:"pointer",padding:"0 2px" }}>✕</span>
-                  </>
-                ) : !asignando ? (
-                  <span onClick={() => setAsignando(true)}
-                    style={{ fontSize:11,fontWeight:600,color:"#348FFF",cursor:"pointer" }}>
-                    + Asignar
-                  </span>
-                ) : null}
+        {asignando && !otroMode && (
+          <div onClick={e => e.stopPropagation()} style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
+            {becadosDisp.length > 0 && (
+              <div>
+                <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                  {becadosDisp.map(nombre => (
+                    <button key={nombre} onClick={() => asignar(nombre)}
+                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${colorParaAsistente(nombre)}`,background:`${colorParaAsistente(nombre)}18`,color:colorParaAsistente(nombre),cursor:"pointer" }}>
+                      {nombre.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
               </div>
-
-              {asignando && !otroMode && (
-                <div style={{ display:"flex",flexDirection:"column",gap:6,marginTop:6 }}>
-                  {becadosDisp.length > 0 && (
-                    <div>
-                      <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
-                      <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                        {becadosDisp.map(nombre => (
-                          <button key={nombre} onClick={() => asignar(nombre)}
-                            style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${especialidadEquipo?.color||T.border}`,background:`${especialidadEquipo?.color||"#348FFF"}18`,color:especialidadEquipo?.color||T.sub,cursor:"pointer" }}>
-                            {nombre.split(" ")[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {fellowsDisp.length > 0 && (
-                    <div>
-                      <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
-                      <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
-                        {fellowsDisp.map(f => (
-                          <button key={f.nombre} onClick={() => asignar(f.nombre)}
-                            style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${f.color}`,background:`${f.color}18`,color:f.color,cursor:"pointer" }}>
-                            {f.nombre.split(" ")[0]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <div style={{ display:"flex",gap:4 }}>
-                    <button onClick={() => setOtroMode(true)}
-                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
-                      Otro
+            )}
+            {fellowsDisp.length > 0 && (
+              <div>
+                <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                  {fellowsDisp.map(f => (
+                    <button key={f.nombre} onClick={() => asignar(f.nombre)}
+                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${colorParaAsistente(f.nombre)}`,background:`${colorParaAsistente(f.nombre)}18`,color:colorParaAsistente(f.nombre),cursor:"pointer" }}>
+                      {f.nombre.split(" ")[0]}
                     </button>
-                    <button onClick={() => setAsignando(false)}
-                      style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
-                      Cancelar
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              )}
-
-              {asignando && otroMode && (
-                <div style={{ display:"flex",gap:6,marginTop:6,alignItems:"center" }}>
-                  <input
-                    value={otroTexto}
-                    onChange={e => setOtroTexto(e.target.value)}
-                    onKeyDown={e => { if (e.key==="Enter" && otroTexto.trim()) asignar(otroTexto.trim()); }}
-                    placeholder="Nombre del asistente..."
-                    autoFocus
-                    style={{ flex:1,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:8,padding:"4px 10px",fontSize:12,color:T.text,outline:"none",fontFamily:"'Inter',sans-serif" }}
-                  />
-                  <button onClick={() => otroTexto.trim() && asignar(otroTexto.trim())}
-                    style={{ borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,background:"#348FFF",color:"#fff",border:"none",cursor:"pointer" }}>✓</button>
-                  <button onClick={() => setOtroMode(false)}
-                    style={{ borderRadius:8,padding:"4px 10px",fontSize:12,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer" }}>✕</button>
-                </div>
-              )}
+              </div>
+            )}
+            <div style={{ display:"flex",gap:4 }}>
+              <button onClick={() => setOtroMode(true)}
+                style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
+                Otro
+              </button>
+              <button onClick={() => setAsignando(false)}
+                style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
+                Cancelar
+              </button>
             </div>
+          </div>
+        )}
 
+        {asignando && otroMode && (
+          <div onClick={e => e.stopPropagation()} style={{ display:"flex",gap:6,marginTop:10,alignItems:"center",paddingTop:10,borderTop:`1px solid ${T.border}` }}>
+            <input
+              value={otroTexto}
+              onChange={e => setOtroTexto(e.target.value)}
+              onKeyDown={e => { if (e.key==="Enter" && otroTexto.trim()) asignar(otroTexto.trim()); }}
+              placeholder="Nombre del asistente..."
+              autoFocus
+              style={{ flex:1,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:8,padding:"4px 10px",fontSize:12,color:T.text,outline:"none",fontFamily:"'Inter',sans-serif" }}
+            />
+            <button onClick={() => otroTexto.trim() && asignar(otroTexto.trim())}
+              style={{ borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:600,background:"#348FFF",color:"#fff",border:"none",cursor:"pointer" }}>✓</button>
+            <button onClick={() => setOtroMode(false)}
+              style={{ borderRadius:8,padding:"4px 10px",fontSize:12,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,cursor:"pointer" }}>✕</button>
           </div>
         )}
       </div>
@@ -389,17 +386,17 @@ export function TabPabellones({ onBack, T }) {
           <>
             {/* Resumen */}
             <div style={{ display:"flex",gap:8,marginBottom:16 }}>
-              <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 12px",textAlign:"center" }}>
-                <div style={{ fontSize:20,fontWeight:700,color:equipoColor||T.text }}>{total}</div>
+              <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
+                <div style={{ fontSize:16,fontWeight:700,color:equipoColor||T.text }}>{total}</div>
                 <div style={{ fontSize:10,color:T.muted }}>cirugías</div>
               </div>
-              <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 12px",textAlign:"center" }}>
-                <div style={{ fontSize:20,fontWeight:700,color:T.text }}>{pabellones.length}</div>
+              <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
+                <div style={{ fontSize:16,fontWeight:700,color:T.text }}>{pabellones.length}</div>
                 <div style={{ fontSize:10,color:T.muted }}>pabellones</div>
               </div>
               {canceladas > 0 && (
-                <div style={{ flex:1,background:"#FF6B6B11",border:`1px solid #FF6B6B33`,borderRadius:10,padding:"8px 12px",textAlign:"center" }}>
-                  <div style={{ fontSize:20,fontWeight:700,color:"#FF6B6B" }}>{canceladas}</div>
+                <div style={{ flex:1,background:"#FF6B6B11",border:`1px solid #FF6B6B33`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
+                  <div style={{ fontSize:16,fontWeight:700,color:"#FF6B6B" }}>{canceladas}</div>
                   <div style={{ fontSize:10,color:"#FF6B6B" }}>canceladas</div>
                 </div>
               )}
@@ -413,9 +410,6 @@ export function TabPabellones({ onBack, T }) {
                   <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
                     <div style={{ width:8,height:8,borderRadius:"50%",background:color,flexShrink:0 }}/>
                     <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color }}>{pab}</div>
-                    <div style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}` }}>
-                      {grouped[pab].filter(r=>!r.cancelada).length} cirugías
-                    </div>
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
                     {grouped[pab].map((r, i) => (
