@@ -94,7 +94,8 @@ function PacienteCard({ r, color, T, summaryGroups, asistente, onAsignar, onRemo
     : [];
 
   const handleClick = () => {
-    if (!asignando) setAsignando(true);
+    setAsignando(a => !a);
+    if (asignando) { setOtroMode(false); setOtroTexto(""); }
   };
 
   const asignar = (nombre) => {
