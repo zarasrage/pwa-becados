@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { todayISO, offsetDate, formatDate, getWeekDates } from "../utils/dates.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -262,6 +262,7 @@ export function TabPabellones({ onBack, T }) {
   const [error, setError]           = useState(null);
   const [equipoSel, setEquipoSel]   = useState(null);
   const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: string[] }
+  const inFlightRef = useRef(new Set()); // cirugia_ids con escritura en curso
 
   const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
   const summaryParams = useMemo(() => ({ route: "summary", date: monday, token: API_TOKEN }), [monday]);
@@ -301,6 +302,9 @@ export function TabPabellones({ onBack, T }) {
         table: "asignaciones",
         filter: `fecha=eq.${fecha}`,
       }, (payload) => {
+        const id = payload.old?.cirugia_id ?? payload.new?.cirugia_id;
+        // Ignorar eventos propios para evitar parpadeo
+        if (inFlightRef.current.has(id)) return;
         if (payload.eventType === "DELETE") {
           setAsignaciones(prev => {
             const next = { ...prev };
@@ -317,17 +321,19 @@ export function TabPabellones({ onBack, T }) {
   }, [fecha]);
 
   const persistir = (cirugiaId, lista) => {
-    if (lista.length === 0) {
-      supabase.from("asignaciones").delete().eq("cirugia_id", cirugiaId)
-        .then(({ error: err }) => { if (err) console.error("[asignaciones] delete:", err.message); });
-    } else {
-      supabase.from("asignaciones")
-        .upsert(
-          { cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista), updated_at: new Date().toISOString() },
-          { onConflict: "cirugia_id" }
-        )
-        .then(({ error: err }) => { if (err) console.error("[asignaciones] upsert:", err.message); });
-    }
+    inFlightRef.current.add(cirugiaId);
+    // Borrar siempre primero (evita problemas de unique constraint), luego insertar si hay asistentes
+    supabase.from("asignaciones").delete().eq("cirugia_id", cirugiaId)
+      .then(({ error: delErr }) => {
+        if (delErr) { console.error("[asignaciones] delete:", delErr.message); inFlightRef.current.delete(cirugiaId); return; }
+        if (lista.length === 0) { inFlightRef.current.delete(cirugiaId); return; }
+        supabase.from("asignaciones")
+          .insert({ cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista) })
+          .then(({ error: insErr }) => {
+            if (insErr) console.error("[asignaciones] insert:", insErr.message);
+            inFlightRef.current.delete(cirugiaId);
+          });
+      });
   };
 
   const handleAsignar = (cirugiaId, nombre) => {
