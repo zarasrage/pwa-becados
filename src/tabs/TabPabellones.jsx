@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { todayISO, offsetDate, formatDate, getWeekDates } from "../utils/dates.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -262,7 +262,6 @@ export function TabPabellones({ onBack, T }) {
   const [equipoSel, setEquipoSel]   = useState(null);
   const [asignaciones, setAsignaciones] = useState({}); // { [cirugia_id]: string[] }
   const [openCardId, setOpenCardId]     = useState(null);
-  const inFlightRef = useRef(new Set()); // cirugia_ids con escritura en curso
 
   const monday = useMemo(() => getWeekDates(fecha)[0], [fecha]);
   const summaryParams = useMemo(() => ({ route: "summary", date: monday, token: API_TOKEN }), [monday]);
@@ -293,35 +292,7 @@ export function TabPabellones({ onBack, T }) {
     });
   }, [fecha]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`asignaciones:${fecha}`)
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "asignaciones",
-        filter: `fecha=eq.${fecha}`,
-      }, (payload) => {
-        const id = payload.old?.cirugia_id ?? payload.new?.cirugia_id;
-        // Ignorar eventos propios para evitar parpadeo
-        if (inFlightRef.current.has(id)) return;
-        if (payload.eventType === "DELETE") {
-          setAsignaciones(prev => {
-            const next = { ...prev };
-            delete next[payload.old.cirugia_id];
-            return next;
-          });
-        } else {
-          const { cirugia_id, asistente } = payload.new;
-          setAsignaciones(prev => ({ ...prev, [cirugia_id]: parseAsistentes(asistente) }));
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fecha]);
-
   const persistir = (cirugiaId, lista) => {
-    inFlightRef.current.add(cirugiaId);
     fetch("/.netlify/functions/asignaciones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -329,8 +300,7 @@ export function TabPabellones({ onBack, T }) {
     })
       .then(r => r.json())
       .then(({ error }) => { if (error) console.error("[asignaciones]", error); })
-      .catch(e => console.error("[asignaciones] fetch:", e))
-      .finally(() => { inFlightRef.current.delete(cirugiaId); });
+      .catch(e => console.error("[asignaciones] fetch:", e));
   };
 
   const handleAsignar = (cirugiaId, nombre) => {
