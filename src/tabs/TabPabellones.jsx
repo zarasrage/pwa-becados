@@ -6,7 +6,7 @@ import { FELLOWS } from "../data/fellows.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { API_TOKEN } from "../constants/api.js";
 
-const EQUIPOS = [
+export const EQUIPOS = [
   { id: 1, nombre: "Mano",          color: "#EF4444", cirujanos: ["BRANES ROCIO ALEJANDRA FRANCISCA","BREYER JUAN MANUEL","FERRADA PAULINA","GOMEZ CARLOS JOSE","GUERRA CARLOS JAVIER","GATICA PAMELA","HERES VICTORIA","MATHEUS JESUS ALBERTO","PEREZ ALFONSO JAVIER","SOTELO PAULA ALEJANDRA","STURIZA VANJA MARIA","URRUTIA ESTEBAN FELIPE","VERGARA PAMELA ISABEL","VERGARA LAURA","GUTIERREZ JAIME","BASAURI TOMAS","CORDOVA CARLOS"] },
   { id: 2, nombre: "Hombro",        color: "#F97316", cirujanos: ["AMOEDO FELIPE","LOPEZ SEBASTIAN","ROJAS WALTER ANDRES","SULZER SUSAN CHRISTIN","VARGAS JORGE MAURICIO","VARGAS PABLO CESAR"] },
   { id: 3, nombre: "Cadera",        color: "#3B82F6", cirujanos: ["GONZALEZ JAIME ARNOLDO","NUNEZ MANUEL JOSE","TELIAS ALBERTO LUIS","ROJAS CLAUDIO"] },
@@ -93,6 +93,7 @@ function formatHora(hora) {
 function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRemover, onRemoverTodos, isOpen, onToggle }) {
   const [otroMode, setOtroMode] = useState(false);
   const [otroTexto, setOtroTexto] = useState("");
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const especialidadEquipo = EQUIPOS.find(eq => cirujanoEnEquipo(r.equipo, eq.cirujanos));
   const rotCode    = especialidadEquipo ? EQUIPO_TO_ROT[especialidadEquipo.nombre] : null;
@@ -148,12 +149,12 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
               {r.cancelada && <span style={{ marginLeft:6,background:"#FF6B6B22",color:"#FF6B6B",borderRadius:99,padding:"1px 6px",fontSize:10,fontWeight:600 }}>CANCELADA</span>}
             </div>
             {r.diagnostico && (
-              <div style={{ fontSize:12,color:T.sub,marginTop:4,fontStyle:"italic",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+              <div style={{ fontSize:12,color:T.sub,marginTop:4,fontStyle:"italic",...(!isOpen&&{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}) }}>
                 {r.diagnostico}
               </div>
             )}
             {r.cirugia && (
-              <div style={{ fontSize:12,fontWeight:500,color:T.text,marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
+              <div style={{ fontSize:12,fontWeight:500,color:T.text,marginTop:2,...(!isOpen&&{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}) }}>
                 ✂️ {r.cirugia}
               </div>
             )}
@@ -177,6 +178,24 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
             })}
           </div>
         </div>
+
+        {/* Info extra */}
+        {r.info_cirugia && (
+          <div onClick={e => e.stopPropagation()}>
+            {infoOpen && (
+              <div style={{ fontSize:11,color:T.sub,marginTop:6,padding:"6px 8px",background:T.surface2,borderRadius:8,border:`1px solid ${T.border}`,lineHeight:1.5 }}>
+                {r.info_cirugia}
+              </div>
+            )}
+            <div style={{ display:"flex",justifyContent:"flex-end",marginTop:3 }}>
+              <button onClick={() => setInfoOpen(v => !v)}
+                style={{ fontSize:10,color:T.muted,background:"transparent",border:"none",padding:"2px 0",cursor:"pointer",display:"flex",alignItems:"center",gap:3 }}>
+                <span style={{ fontSize:11 }}>ℹ️</span>
+                <span>{infoOpen ? "Ocultar" : "Ver info"}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {isOpen && !otroMode && (
           <div onClick={e => e.stopPropagation()} style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
