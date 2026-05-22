@@ -322,18 +322,15 @@ export function TabPabellones({ onBack, T }) {
 
   const persistir = (cirugiaId, lista) => {
     inFlightRef.current.add(cirugiaId);
-    // Borrar siempre primero (evita problemas de unique constraint), luego insertar si hay asistentes
-    supabase.from("asignaciones").delete().eq("cirugia_id", cirugiaId)
-      .then(({ error: delErr }) => {
-        if (delErr) { console.error("[asignaciones] delete:", delErr.message); inFlightRef.current.delete(cirugiaId); return; }
-        if (lista.length === 0) { inFlightRef.current.delete(cirugiaId); return; }
-        supabase.from("asignaciones")
-          .insert({ cirugia_id: cirugiaId, fecha, asistente: JSON.stringify(lista) })
-          .then(({ error: insErr }) => {
-            if (insErr) console.error("[asignaciones] insert:", insErr.message);
-            inFlightRef.current.delete(cirugiaId);
-          });
-      });
+    fetch("/.netlify/functions/asignaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cirugia_id: cirugiaId, fecha, asistentes: lista }),
+    })
+      .then(r => r.json())
+      .then(({ error }) => { if (error) console.error("[asignaciones]", error); })
+      .catch(e => console.error("[asignaciones] fetch:", e))
+      .finally(() => { inFlightRef.current.delete(cirugiaId); });
   };
 
   const handleAsignar = (cirugiaId, nombre) => {
