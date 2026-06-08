@@ -14,12 +14,12 @@ const TURNO_TABS = [
 ];
 
 const TAG_OPTS = [
-  { id:"H",   label:"Hombro",  color:"#FB923C" },
-  { id:"M",   label:"Mano",    color:"#F87171" },
-  { id:"CyP", label:"Cadera",  color:"#60A5FA" },
-  { id:"R",   label:"Rodilla", color:"#FACC15" },
-  { id:"TyP", label:"Tobillo", color:"#4ADE80" },
-  { id:"Col", label:"Columna", color:"#C084FC" },
+  { id:"Seminario Hombro",  label:"Hombro",  color:"#FB923C" },
+  { id:"Seminario Mano",    label:"Mano",    color:"#F87171" },
+  { id:"Seminario Cadera",  label:"Cadera",  color:"#60A5FA" },
+  { id:"Seminario Rodilla", label:"Rodilla", color:"#FACC15" },
+  { id:"Seminario Tobillo", label:"Tobillo", color:"#4ADE80" },
+  { id:"Seminario Columna", label:"Columna", color:"#C084FC" },
 ];
 
 const COL_LABELS = ["LUNES","MARTES","MIÉRC","JUEVES","VIERNES","SÁB","DOM"];
@@ -195,7 +195,7 @@ function Contadores({ turnos, dates, tipo, T }) {
 
 // ── SeminarioPicker ───────────────────────────────────────────────────────────
 function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) {
-  const [tag,       setTag]       = useState(existing?.tag       || "H");
+  const [tag,       setTag]       = useState(existing?.tag       || "Seminario Hombro");
   const [presenter, setPresenter] = useState(existing?.presentador || "");
   const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
   const [hora,      setHora]      = useState(existing?.hora      || "07:30");
