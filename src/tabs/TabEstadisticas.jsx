@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
-import { todayISO, offsetDate, getWeekDates, weekRangeLabel, monthLabel } from "../utils/dates.js";
-import { useApiData } from "../hooks/useApiData.js";
+import { todayISO, offsetDate, getWeekDates, weekRangeLabel } from "../utils/dates.js";
 import { apiSWR } from "../utils/api.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
@@ -50,6 +49,29 @@ function computeStats(entries) {
   }).sort((a, b) => b.peso - a.peso);
 }
 
+function getMondayOfWeek(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  const dt = new Date(y,m-1,d);
+  const dow = dt.getDay();
+  dt.setDate(dt.getDate() - (dow === 0 ? 6 : dow - 1));
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+}
+
+function get4Weeks(monday) {
+  const dates = [];
+  for (let i = 0; i < 28; i++) dates.push(offsetDate(monday, i));
+  return dates;
+}
+
+function period4Label(start, end) {
+  const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const fmt = d => { const [y,m,day] = d.split("-").map(Number); return { day, mon: MESES[m-1], y }; };
+  const s = fmt(start), e = fmt(end);
+  if (s.y === e.y && s.mon === e.mon) return `${s.day}–${e.day} ${s.mon} ${s.y}`;
+  if (s.y === e.y) return `${s.day} ${s.mon} – ${e.day} ${e.mon} ${s.y}`;
+  return `${s.day} ${s.mon} ${s.y} – ${e.day} ${e.mon} ${e.y}`;
+}
+
 function monthsUpTo(toYear, toMonth) {
   const result = [];
   let y = 2025, m = 1;
@@ -67,15 +89,12 @@ export function TabEstadisticas({ onBack, T }) {
   const today = useMemo(() => todayISO(), []);
   const [viewMode, setViewMode] = useState("mes");
 
-  // --- Mes ---
-  const [year,  setYear]  = useState(() => Number(today.split("-")[0]));
-  const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
-  const monthStr = `${year}-${String(month+1).padStart(2,"0")}`;
-  const mesParams = useMemo(() => ({ route:"monthly", month: monthStr, token: API_TOKEN }), [monthStr]);
-  const { data: mesData, error: mesError } = useApiData(mesParams);
-
-  const prevMonth = () => month === 0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1);
-  const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
+  // --- Mes (período 4 semanas) ---
+  const [monday, setMonday] = useState(() => getMondayOfWeek(today));
+  const period4Dates  = useMemo(() => get4Weeks(monday), [monday]);
+  const period4DateSet = useMemo(() => new Set(period4Dates), [period4Dates]);
+  const prevPeriod = () => setMonday(d => offsetDate(d, -28));
+  const nextPeriod = () => setMonday(d => offsetDate(d,  28));
 
   // --- Semana ---
   const [weekRef, setWeekRef] = useState(() => today);
@@ -90,15 +109,15 @@ export function TabEstadisticas({ onBack, T }) {
   const [multiError,   setMultiError]   = useState("");
 
   useEffect(() => {
-    if (viewMode === "mes") return;
     setMultiLoading(true);
     setMultiEntries(null);
     setMultiError("");
 
     let months;
     if (viewMode === "semana") {
-      const ms = new Set(weekDates.map(d => d.slice(0,7)));
-      months = [...ms];
+      months = [...new Set(weekDates.map(d => d.slice(0,7)))];
+    } else if (viewMode === "mes") {
+      months = [...new Set(period4Dates.map(d => d.slice(0,7)))];
     } else {
       const [cy, cm] = today.split("-").map(Number);
       months = monthsUpTo(cy, cm);
@@ -113,31 +132,32 @@ export function TabEstadisticas({ onBack, T }) {
       setMultiError(String(e.message || e));
       setMultiLoading(false);
     });
-  }, [viewMode, weekRef]);
+  }, [viewMode, weekRef, monday]);
 
   // --- Stats activas ---
   const activeStats = useMemo(() => {
-    if (viewMode === "mes") {
-      if (!mesData?.ok) return [];
-      return computeStats(mesData.entries);
-    }
     if (!multiEntries) return [];
-    const entries = viewMode === "semana"
-      ? multiEntries.filter(e => weekDateSet.has(e.date))
-      : multiEntries;
+    let entries;
+    if (viewMode === "semana") {
+      entries = multiEntries.filter(e => weekDateSet.has(e.date));
+    } else if (viewMode === "mes") {
+      entries = multiEntries.filter(e => period4DateSet.has(e.date));
+    } else {
+      entries = multiEntries;
+    }
     return computeStats(entries);
-  }, [viewMode, mesData, multiEntries, weekDateSet]);
+  }, [viewMode, multiEntries, weekDateSet, period4DateSet]);
 
   const maxPeso = activeStats[0]?.peso || 1;
 
-  const isLoading = viewMode === "mes" ? !mesData : multiLoading;
-  const activeError = viewMode === "mes" ? mesError : multiError;
+  const isLoading = multiLoading;
+  const activeError = multiError;
 
   // Título grande
   const bigTitle = viewMode === "semana"
     ? weekRangeLabel(weekDates)
     : viewMode === "mes"
-    ? monthLabel(year, month)
+    ? period4Label(monday, period4Dates[27])
     : "Todos los meses";
 
   return (
@@ -175,10 +195,10 @@ export function TabEstadisticas({ onBack, T }) {
         {viewMode !== "historico" && (
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
             <button className="press"
-              onClick={viewMode==="semana" ? prevWeek : prevMonth}
+              onClick={viewMode==="semana" ? prevWeek : prevPeriod}
               style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
             <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>
-              {viewMode==="semana" ? weekRangeLabel(weekDates) : monthLabel(year, month)}
+              {viewMode==="semana" ? weekRangeLabel(weekDates) : period4Label(monday, period4Dates[27])}
             </div>
             {viewMode==="semana" && !weekDateSet.has(today) && (
               <button className="press" onClick={()=>setWeekRef(today)}
@@ -186,14 +206,14 @@ export function TabEstadisticas({ onBack, T }) {
                 HOY
               </button>
             )}
-            {viewMode==="mes" && (year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
-              <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);}}
+            {viewMode==="mes" && monday !== getMondayOfWeek(today) && (
+              <button className="press" onClick={()=>setMonday(getMondayOfWeek(today))}
                 style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
                 HOY
               </button>
             )}
             <button className="press"
-              onClick={viewMode==="semana" ? nextWeek : nextMonth}
+              onClick={viewMode==="semana" ? nextWeek : nextPeriod}
               style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
           </div>
         )}
