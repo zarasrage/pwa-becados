@@ -52,6 +52,11 @@ function isWeekend(iso) {
   return dow === 0 || dow === 6;
 }
 
+function getDow(iso) {
+  const [y,m,d] = iso.split("-").map(Number);
+  return new Date(y,m-1,d).getDay();
+}
+
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
 function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
@@ -189,7 +194,7 @@ function Contadores({ turnos, dates, tipo, T }) {
 }
 
 // ── SeminarioPicker ───────────────────────────────────────────────────────────
-function SeminarioPicker({ existing, onSave, onDelete, onClose, T }) {
+function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) {
   const [tag,       setTag]       = useState(existing?.tag       || "H");
   const [presenter, setPresenter] = useState(existing?.presentador || "");
   const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
@@ -257,7 +262,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onClose, T }) {
               fontFamily:"'JetBrains Mono',monospace"}}/>
         </div>
 
-        <div style={{display:"flex",gap:8}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {existing && (
             <button className="press" onClick={()=>onDelete(existing.id)}
               style={{flex:1,height:44,borderRadius:11,border:`1px solid #EF444440`,
@@ -265,10 +270,17 @@ function SeminarioPicker({ existing, onSave, onDelete, onClose, T }) {
               Eliminar
             </button>
           )}
+          {existing && (
+            <button className="press" onClick={()=>onAplazar(existing.id)}
+              style={{flex:1,height:44,borderRadius:11,border:`1px solid #F59E0B40`,
+                background:"#F59E0B18",fontSize:13,fontWeight:600,color:"#F59E0B",cursor:"pointer"}}>
+              Aplazar →
+            </button>
+          )}
           <button className="press"
             onClick={()=>canSave && onSave({ tag, presenter:presenter.trim(), titulo:titulo.trim(), hora })}
             disabled={!canSave}
-            style={{flex:2,height:44,borderRadius:11,border:"none",
+            style={{flexBasis:"100%",height:44,borderRadius:11,border:"none",
               background:canSave?"#E879F9":"#E879F940",
               fontSize:13,fontWeight:700,color:canSave?"#fff":"#ffffff60",
               cursor:canSave?"pointer":"default"}}>
@@ -296,6 +308,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [nocheMap, setNocheMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
+  const [refreshSem, setRefreshSem] = useState(0);
 
   const dates = useMemo(() => get4Weeks(monday), [monday]);
   const start = dates[0];
@@ -457,7 +470,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         }
         setSeminarios(map);
       });
-  }, [tipo, monday]);
+  }, [tipo, monday, refreshSem]);
 
   async function handleSaveSem(date, { tag, presenter, titulo, hora }, existingId) {
     setSemPicker(null); setSaving(true);
@@ -504,6 +517,22 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       await bumpDataVersion();
     }
     setSaving(false);
+  }
+
+  async function handleAplazarSem(date) {
+    setSemPicker(null); setSaving(true);
+    const dow = getDow(date);
+    const { data: futuros } = await supabase.from("seminarios")
+      .select("id,fecha").gte("fecha", date);
+    const aDesplazar = (futuros || []).filter(s => getDow(s.fecha) === dow);
+    await Promise.all(
+      aDesplazar.map(s =>
+        supabase.from("seminarios").update({ fecha: offsetDate(s.fecha, 7) }).eq("id", s.id)
+      )
+    );
+    await bumpDataVersion();
+    setSaving(false);
+    setRefreshSem(r => r + 1);
   }
 
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
@@ -811,6 +840,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           existing={semPicker.existing}
           onSave={vals => handleSaveSem(semPicker.date, vals, semPicker.existing?.id)}
           onDelete={id => handleDeleteSem(id, semPicker.date)}
+          onAplazar={() => handleAplazarSem(semPicker.date)}
           onClose={() => setSemPicker(null)}
           T={T}
         />
