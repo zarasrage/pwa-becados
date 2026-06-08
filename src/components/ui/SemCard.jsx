@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { SEMINAR_ACCENT } from "../../constants/turnos.js";
 
-export function SemCard({ presenter, title, tag, index, T }) {
+function addMins(timeStr, mins) {
+  const [h, m] = (timeStr || "07:30").split(":").map(Number);
+  const t = h * 60 + m + mins;
+  return `${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;
+}
+
+export function SemCard({ presenter, title, tag, time, index, T }) {
   const [pressed, setPressed] = useState(false);
+  const start = time || "07:30";
+  const end   = addMins(start, 29);
   return (
     <div className="anim"
       style={{
@@ -25,8 +33,8 @@ export function SemCard({ presenter, title, tag, index, T }) {
       onPointerLeave={() => setPressed(false)}
     >
       <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:SEMINAR_ACCENT,lineHeight:1.2}}>07:30</div>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEMINAR_ACCENT,opacity:0.45,lineHeight:1.2,marginTop:2}}>07:59</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:SEMINAR_ACCENT,lineHeight:1.2}}>{start}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEMINAR_ACCENT,opacity:0.45,lineHeight:1.2,marginTop:2}}>{end}</div>
       </div>
       <div style={{width:1,height:28,background:`${SEMINAR_ACCENT}25`,flexShrink:0}}/>
       <div style={{flex:1}}>

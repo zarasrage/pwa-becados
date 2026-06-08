@@ -155,7 +155,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
                   </div>
                   {day.seminario && (
                     <div style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>07:30</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>{day.seminario.time||"07:30"}</span>
                       <span style={{fontSize:12,color:"#E879F9",lineHeight:1.3,fontWeight:500}}>
                         {day.seminario.presenter}: {day.seminario.title}
                         <span style={{fontSize:10,opacity:0.65,marginLeft:5}}>{day.seminario.tag}</span>
