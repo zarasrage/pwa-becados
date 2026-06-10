@@ -3,7 +3,8 @@ import { supabase } from "../lib/supabase.js";
 import { bumpDataVersion } from "../lib/supabaseApi.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
 
-const SEMINARIO_ROTS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ","T"];
+const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
+const ROTS_SOLO_NOCHE   = ["T","NHT"];
 
 const TURNO_TABS = [
   { id:"N", label:"Noche",      color:"#4F6EFF" },
@@ -363,11 +364,14 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     });
   }, [tipo, monday]);
 
-  function elegiblesParaDia(date) {
+  function elegiblesParaDia(date, tipoTurno) {
+    const allowed = tipoTurno === "N"
+      ? [...ROTS_TODOS_TURNOS, ...ROTS_SOLO_NOCHE]
+      : ROTS_TODOS_TURNOS;
     return becados.filter(b => {
       const rangos = rotMap[b.nombre] || [];
       return rangos.some(r =>
-        SEMINARIO_ROTS.includes(r.codigo) &&
+        allowed.includes(r.codigo) &&
         r.fecha_inicio <= date && r.fecha_fin >= date
       );
     }).map(b => b.nombre);
@@ -805,7 +809,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:8}}>
                     {week.map(date => {
                       const weekend = isWeekend(date);
-                      const elegibles = elegiblesParaDia(date).filter(n=>!nombresAsignados(date).includes(n));
+                      const elegibles = elegiblesParaDia(date, tipo).filter(n=>!nombresAsignados(date).includes(n));
                       const disabled = elegibles.length === 0 || (weekend && tipo!=="N" && tipo!=="A");
                       return (
                         <div key={date} style={{
@@ -847,7 +851,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       )}
       {picker && (
         <BecadoPicker
-          elegibles={elegiblesParaDia(picker.date).filter(n=>!nombresAsignados(picker.date).includes(n))}
+          elegibles={elegiblesParaDia(picker.date, tipo).filter(n=>!nombresAsignados(picker.date).includes(n))}
           nocheAyer={nocheAyer(picker.date)}
           turnoType={tipo}
           onSelect={(n,t)=>handleAdd(picker.date,n,t)}
