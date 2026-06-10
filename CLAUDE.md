@@ -155,6 +155,36 @@ Tablas clave: `becados`, `rotaciones`, `turnos`, `seminarios`, `horario_items`, 
 - Floor spots definidos con `public/spot-picker.html`
 - Slider de hora + DateNav para simular cualquier momento
 
+## Design Skills (Plugin "Design" de Anthropic)
+
+Estos skills están disponibles. Úsalos invocando `/nombre-skill` o cuando la tarea lo requiera.
+
+### /design-critique
+Feedback estructurado de diseño sobre usabilidad, jerarquía y consistencia. Evalúa: primera impresión, usabilidad, jerarquía visual, consistencia y accesibilidad. Output en tabla con severidad (🔴🟡🟢) y recomendaciones priorizadas.
+
+### /accessibility-review
+Auditoría WCAG 2.1 AA. Cubre: contraste de color (≥4.5:1 texto normal, ≥3:1 texto grande), touch targets (≥44×44px), navegación por teclado, ARIA, screen readers. Output con tabla de hallazgos por categoría WCAG (Perceivable/Operable/Understandable/Robust).
+
+### /design-handoff
+Genera specs de handoff para desarrollo: medidas exactas, tokens de diseño, variantes de componentes, estados (hover/active/disabled/loading/error), breakpoints responsive, edge cases, animaciones (duración + easing) y notas de accesibilidad.
+
+### /design-system
+Audita, documenta o extiende el sistema de diseño. Tres modos:
+- `audit`: detecta valores hardcodeados, inconsistencias de naming, cobertura de estados
+- `document [componente]`: documenta variantes, props, estados, a11y, do's/don'ts
+- `extend [patrón]`: diseña nuevo componente respetando el sistema existente
+
+### /research-synthesis
+Sintetiza datos de investigación de usuarios (entrevistas, encuestas, tests de usabilidad, tickets de soporte) en temas, insights y recomendaciones priorizadas. Separa observaciones de interpretaciones, cuantifica hallazgos, identifica segmentos de usuarios.
+
+### /user-research
+Planifica y ejecuta estudios de investigación. Métodos: entrevistas (5-8p), usability testing (5-8p), surveys (100+), card sorting (15-30p), diary studies, A/B testing. Incluye guía de entrevista estructurada y frameworks de análisis (affinity mapping, journey mapping, JTBD).
+
+### /ux-copy
+Escribe o revisa microcopy: CTAs (verbo + acción específica), mensajes de error (qué pasó + por qué + cómo arreglar), empty states (qué es + por qué vacío + cómo empezar), diálogos de confirmación, tooltips, onboarding. Adapta tono al contexto (error=empático, éxito=celebratorio, neutro=conciso).
+
+---
+
 ## Reglas importantes
 - **Parches quirúrgicos**, no reescrituras completas
 - Ser preciso con str_replace — ha introducido bugs antes

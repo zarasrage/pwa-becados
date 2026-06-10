@@ -27,6 +27,7 @@ export const THEMES = {
     bg:"#FEE6F2", surface:"#FFF0F8", surface2:"#FCDAED", border:"#F4A8CE",
     text:"#1E0713", sub:"#8B1A4A", muted:"#CF6A9C", tabBg:"rgba(254,230,242,0.96)",
     skeleton:"#FCDAED", skeletonShine:"#FFF0F8", accent:"#E8186A", glow:"#E8186A",
+    glass: true,
   },
   ocean: {
     bg:"#04080F", surface:"#071424", surface2:"#0A1C32", border:"#0E3050",

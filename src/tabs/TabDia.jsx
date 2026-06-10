@@ -64,11 +64,11 @@ export function TabDia({ becado, onChangeBecado, T }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
             <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,lineHeight:1.1,
-              background:T.accent==="#E8186A" ? "linear-gradient(135deg,#FF1A75,#E8186A,#FF4D94)" : "none",
-              WebkitBackgroundClip:T.accent==="#E8186A" ? "text" : "unset",
-              WebkitTextFillColor:T.accent==="#E8186A" ? "transparent" : "unset",
-              color:T.accent==="#E8186A" ? "transparent" : T.text,
-              filter:T.accent==="#E8186A" ? "drop-shadow(0 0 8px #E8186A50)" : "none",
+              background:T.glass ? "linear-gradient(135deg,#FF1A75,#E8186A,#FF4D94)" : "none",
+              WebkitBackgroundClip:T.glass ? "text" : "unset",
+              WebkitTextFillColor:T.glass ? "transparent" : "unset",
+              color:T.glass ? "transparent" : T.text,
+              filter:T.glass ? "drop-shadow(0 0 8px #E8186A50)" : "none",
             }}>{becado}</div>
             <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
@@ -86,7 +86,7 @@ export function TabDia({ becado, onChangeBecado, T }) {
         <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
         <ErrorBox msg={error} T={T}/>
         {grouped === null ? (
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
             {[0,1,2,3].map(i => <SkeletonCard key={i} index={i} T={T}/>)}
           </div>
         ) : (() => {
@@ -107,7 +107,7 @@ export function TabDia({ becado, onChangeBecado, T }) {
           const sem = daily?.seminario || null;
           let cardIdx = 0;
           return (
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} time={sem.time} index={cardIdx++} T={T}/>}
               {(manana.length > 0 || isPoliAM) && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
