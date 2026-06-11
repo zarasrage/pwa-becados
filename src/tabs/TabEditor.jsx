@@ -23,7 +23,8 @@ const TAG_OPTS = [
   { id:"Seminario Columna", label:"Columna", color:"#C084FC" },
 ];
 
-const COL_LABELS = ["LUNES","MARTES","MIÉRC","JUEVES","VIERNES","SÁB","DOM"];
+const COL_LABELS_7 = ["LUNES","MARTES","MIÉRC","JUEVES","VIERNES","SÁB","DOM"];
+const COL_LABELS_5 = ["LUNES","MARTES","MIÉRC","JUEVES","VIERNES"];
 
 function getMondayOfWeek(iso) {
   const [y,m,d] = iso.split("-").map(Number);
@@ -540,13 +541,19 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }
 
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
+  const weekdayOnly = tipo !== "N";
+  const COL_LABELS = weekdayOnly ? COL_LABELS_5 : COL_LABELS_7;
+  const gridCols   = weekdayOnly ? "repeat(5,1fr)" : "repeat(7,1fr)";
 
-  // Dividir en 4 semanas de 7 días
+  // Dividir en 4 semanas; para tipos sin finde filtrar Sáb/Dom
   const weeks = useMemo(() => {
     const ws = [];
-    for (let i = 0; i < 28; i += 7) ws.push(dates.slice(i, i+7));
+    for (let i = 0; i < 28; i += 7) {
+      const week = dates.slice(i, i+7);
+      ws.push(weekdayOnly ? week.filter(d => !isWeekend(d)) : week);
+    }
     return ws;
-  }, [dates]);
+  }, [dates, weekdayOnly]);
 
   // Número máx de becados en cualquier celda (para altura uniforme)
   // Lo calculamos por semana para que cada semana sea independiente
@@ -633,12 +640,12 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         )}
 
         {/* Cabecera días */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:2}}>
+        <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:2}}>
           {COL_LABELS.map((label,i) => (
             <div key={i} style={{textAlign:"center",fontSize:13,fontWeight:700,
               letterSpacing:"0.04em",padding:"4px 2px",
-              color: i>=5 ? T.muted : T.text,
-              background: i>=5 ? T.surface2 : `${color}18`,
+              color: T.text,
+              background: `${color}18`,
               borderRadius:4}}>
               {label}
             </div>
@@ -658,7 +665,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               return (
                 <div key={wi} style={{marginBottom:4}}>
                   {/* Fila de números */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
                       const weekend = isWeekend(date);
@@ -677,7 +684,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
                   {/* Filas de seminarios */}
                   {Array.from({length: maxSems}).map((_, rowIdx) => (
-                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                       {week.map(date => {
                         const sems = seminarios[date] || [];
                         const sem = sems[rowIdx];
@@ -713,7 +720,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   ))}
 
                   {/* Fila de botones + */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:8}}>
                     {week.map(date => {
                       const weekend = isWeekend(date);
                       return (
@@ -766,7 +773,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
                   {/* Filas de becados */}
                   {Array.from({length: maxRows}).map((_, rowIdx) => (
-                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                       {week.map(date => {
                         const weekend = isWeekend(date);
                         const asignados = yaAsignados(date);
@@ -795,6 +802,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                   fontSize:12,fontWeight:600,textAlign:"center",
                                   color: entryColor,
                                   lineHeight:1.2,
+                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                                  display:"block",
                                 }}>
                                 {conflicto && "⚠ "}{nombre}
                               </button>
@@ -806,7 +815,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   ))}
 
                   {/* Fila de botones + */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:8}}>
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:8}}>
                     {week.map(date => {
                       const weekend = isWeekend(date);
                       const elegibles = elegiblesParaDia(date, tipo).filter(n=>!nombresAsignados(date).includes(n));

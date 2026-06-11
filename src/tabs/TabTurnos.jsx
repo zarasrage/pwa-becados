@@ -162,7 +162,7 @@ export function TabTurnos({ onBack, T }) {
         {sub === "S" ? (
           !data ? <Spinner color={SEM_COLOR}/> : (
             <>
-              <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
+              <CalendarGrid slots={slots} today={today} T={T} hideWeekends renderCell={(iso, i) => {
                 const dayNum  = Number(iso.split("-")[2]);
                 const isToday = iso === today;
                 const sem     = lookup[iso] || null;
@@ -267,7 +267,7 @@ export function TabTurnos({ onBack, T }) {
           )
         ) : (
           !data ? <Spinner color={turnoColor}/> : (
-            <CalendarGrid slots={slots} today={today} T={T} renderCell={(iso, i) => {
+            <CalendarGrid slots={slots} today={today} T={T} hideWeekends={sub !== "N"} renderCell={(iso, i) => {
               const dayNum  = Number(iso.split("-")[2]);
               const isToday = iso === today;
               const cell    = lookup[iso] || { names: [], hasAM: false };
