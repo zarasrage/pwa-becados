@@ -34,7 +34,7 @@ export function SemCard({ presenter, title, tag, time, index, T }) {
     >
       <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
         <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:SEMINAR_ACCENT,lineHeight:1.2}}>{start}</div>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEMINAR_ACCENT,opacity:0.45,lineHeight:1.2,marginTop:2}}>{end}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:SEMINAR_ACCENT,opacity:0.45,lineHeight:1.2,marginTop:2}}>{end}</div>
       </div>
       <div style={{width:1,height:28,background:`${SEMINAR_ACCENT}25`,flexShrink:0}}/>
       <div style={{flex:1}}>

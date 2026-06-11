@@ -13,7 +13,7 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
       <div style={{position:"fixed",top:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"#348FFF08",filter:"blur(50px)",pointerEvents:"none",zIndex:0}}/>
 
       <div style={{padding:"calc(var(--sat) + 56px) 16px 14px",position:"relative",zIndex:1}}>
-        <div style={{fontSize:11,fontWeight:600,letterSpacing:"0.12em",color:T.muted,textTransform:"uppercase",marginBottom:6}}>
+        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.12em",color:T.muted,textTransform:"uppercase",marginBottom:6}}>
           Traumatología · Becados
         </div>
         <p style={{fontSize:14,color:T.sub,lineHeight:1.5,marginBottom:12}}>
@@ -76,7 +76,7 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
           const grpCfg = univCfg.groups[gi] || univCfg.groups[0];
           return (
             <div key={gi} className="anim" style={{marginBottom:20,animationDelay:`${gi*70+120}ms`}}>
-              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:grpCfg.color,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+              <div style={{fontSize:12,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:grpCfg.color,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
                 <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:grpCfg.color}}/>
                 {grpCfg.label}
               </div>
@@ -99,7 +99,7 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
         })}
 
         <div className="anim" style={{marginBottom:20,animationDelay:"320ms"}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+          <div style={{fontSize:12,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:T.muted,marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
             <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:T.muted}}/>
             Modo demo
           </div>
@@ -121,7 +121,7 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
               🗺
             </span>
             <span style={{fontSize:14,fontWeight:500,color:T.sub,flex:1}}>Mapa en vivo</span>
-            <span style={{fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"2px 7px",border:`1px solid ${T.border}`}}>beta</span>
+            <span style={{fontSize:12,color:T.muted,background:T.surface2,borderRadius:99,padding:"2px 7px",border:`1px solid ${T.border}`}}>beta</span>
           </button>
         </div>
       </div>

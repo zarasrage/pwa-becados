@@ -28,7 +28,7 @@ export function TurnoCard({ tipo, index, T }) {
     >
       <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
         <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:500,color:t.accent,lineHeight:1.2}}>{t.desde}</div>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:t.accent,opacity:0.45,lineHeight:1.2,marginTop:2}}>{t.hasta}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:t.accent,opacity:0.45,lineHeight:1.2,marginTop:2}}>{t.hasta}</div>
       </div>
       <div style={{width:1,height:28,background:`${t.accent}25`,flexShrink:0}}/>
       <div style={{flex:1}}>

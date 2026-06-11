@@ -32,7 +32,7 @@ export function TabBar({ active, onChange, T }) {
               filter: isGlass && isActive ? "drop-shadow(0 0 6px #E8186A80)" : "none",
               transition:"filter 0.2s",
             }}>{tab.icon}</span>
-            <span style={{fontSize:10,fontWeight:isActive?700:400,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
+            <span style={{fontSize:12,fontWeight:isActive?700:500,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
             <span style={{
               width:isActive?22:0,height:isGlass?3:2,borderRadius:99,
               background: isGlass ? "linear-gradient(90deg,#FF4D94,#E8186A)" : (T.accent||"#348FFF"),

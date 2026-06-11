@@ -34,7 +34,7 @@ export function ActivityCard({ from, to, activity, accent, light, glow, index, T
     >
       <div style={{flexShrink:0,minWidth:48,textAlign:"center"}}>
         <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:600,color:accent,lineHeight:1.2}}>{from}</div>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:accent,opacity:0.55,lineHeight:1.2,marginTop:2}}>{to}</div>
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:accent,opacity:0.55,lineHeight:1.2,marginTop:2}}>{to}</div>
       </div>
       <div style={{width:1,height:32,background:`${accent}35`,flexShrink:0}}/>
       <div style={{fontSize:14,color:T.text,fontWeight: isGlass ? 500 : 400,lineHeight:1.35,flex:1}}>{activity}</div>
