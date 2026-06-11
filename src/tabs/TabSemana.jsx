@@ -95,11 +95,11 @@ export function TabSemana({ becado, onChangeBecado, T }) {
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
+        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
         <div style={{marginBottom:12}}>
           <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
             <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
-            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
+            <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para cambiar</div>
           </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
@@ -108,7 +108,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text}}>{weekRangeLabel(weekDates)}</div>
           {!isThisWeek && (
             <button className="press" onClick={()=>setRefDate(today)}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
@@ -137,28 +137,28 @@ export function TabSemana({ becado, onChangeBecado, T }) {
                       <span style={{fontSize:12,fontWeight:700,color: isToday ? c.accent : T.sub,textTransform:"capitalize",fontFamily:"'Bricolage Grotesque',sans-serif"}}>
                         {weekLabel(day.date)}
                       </span>
-                      {isToday && <span style={{fontSize:9,fontWeight:700,background:c.accent,color:"#fff",borderRadius:99,padding:"1px 6px",letterSpacing:"0.05em"}}>HOY</span>}
+                      {isToday && <span style={{fontSize:13,fontWeight:700,background:c.accent,color:"#fff",borderRadius:99,padding:"1px 6px",letterSpacing:"0.05em"}}>HOY</span>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
                       {day.rotationCode ? (
                         <div style={{display:"flex",alignItems:"center",gap:4}}>
                           <span style={{width:6,height:6,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 5px ${c.accent}`}}/>
-                          <span style={{fontSize:11,fontWeight:600,color:c.accent}}>{c.name}</span>
+                          <span style={{fontSize:13,fontWeight:600,color:c.accent}}>{c.name}</span>
                         </div>
                       ) : (
-                        <span style={{fontSize:11,color:T.muted}}>Sin rotación</span>
+                        <span style={{fontSize:13,color:T.muted}}>Sin rotación</span>
                       )}
-                      {day.turno?.diaCode && (() => { const t=TURNO[day.turno.diaCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
-                      {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
-                      {day.turno?.artroCode && (() => { const t=TURNO[day.turno.artroCode]; return t ? <span style={{fontSize:10,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.diaCode && (() => { const t=TURNO[day.turno.diaCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.artroCode && (() => { const t=TURNO[day.turno.artroCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
                     </div>
                   </div>
                   {day.seminario && (
                     <div style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>{day.seminario.time||"07:30"}</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>{day.seminario.time||"07:30"}</span>
                       <span style={{fontSize:12,color:"#E879F9",lineHeight:1.3,fontWeight:500}}>
                         {day.seminario.presenter}: {day.seminario.title}
-                        <span style={{fontSize:10,opacity:0.65,marginLeft:5}}>{day.seminario.tag}</span>
+                        <span style={{fontSize:12,opacity:0.65,marginLeft:5}}>{day.seminario.tag}</span>
                       </span>
                     </div>
                   )}
@@ -166,7 +166,7 @@ export function TabSemana({ becado, onChangeBecado, T }) {
                     <div style={{padding:"8px 13px 10px",display:"flex",flexDirection:"column",gap:4}}>
                       {grouped.map((it,gi)=>(
                         <div key={gi} style={{display:"flex",alignItems:"baseline",gap:8}}>
-                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:c.accent,opacity:0.7,flexShrink:0,minWidth:40}}>{it.from}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:c.accent,opacity:0.7,flexShrink:0,minWidth:40}}>{it.from}</span>
                           <span style={{fontSize:12,color:T.sub,lineHeight:1.3}}>{it.activity}</span>
                         </div>
                       ))}

@@ -21,7 +21,7 @@ export function TabFellows({ onBack, T }) {
           </button>
           <div>
             <div style={{ fontSize:15,fontWeight:700,color:T.text }}>Fellows & Staff</div>
-            <div style={{ fontSize:11,color:T.muted }}>Subespecialidad</div>
+            <div style={{ fontSize:13,color:T.muted }}>Subespecialidad</div>
           </div>
         </div>
 
@@ -45,8 +45,8 @@ export function TabFellows({ onBack, T }) {
               <div key={esp} style={{ marginBottom:20 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
                   <div style={{ width:8,height:8,borderRadius:"50%",background:color,flexShrink:0 }}/>
-                  <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color }}>{esp}</div>
-                  <div style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}` }}>
+                  <div style={{ fontSize:13,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color }}>{esp}</div>
+                  <div style={{ fontSize:12,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}` }}>
                     {fellows.length} {fellows.length === 1 ? "fellow" : "fellows"}
                   </div>
                 </div>
@@ -58,9 +58,9 @@ export function TabFellows({ onBack, T }) {
                       </span>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:14,fontWeight:500,color:T.text }}>{f.nombre}</div>
-                        <div style={{ fontSize:11,color:T.muted,marginTop:1 }}>Fellow · {esp}</div>
+                        <div style={{ fontSize:13,color:T.muted,marginTop:1 }}>Fellow · {esp}</div>
                       </div>
-                      <div style={{ fontSize:10,color,background:`${color}15`,borderRadius:99,padding:"2px 9px",fontWeight:600,border:`1px solid ${color}33` }}>
+                      <div style={{ fontSize:12,color,background:`${color}15`,borderRadius:99,padding:"2px 9px",fontWeight:600,border:`1px solid ${color}33` }}>
                         {esp}
                       </div>
                     </div>
@@ -76,8 +76,8 @@ export function TabFellows({ onBack, T }) {
             <div key={eq.id} style={{ marginBottom:20 }}>
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
                 <div style={{ width:8,height:8,borderRadius:"50%",background:eq.color,flexShrink:0 }}/>
-                <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:eq.color }}>{eq.nombre}</div>
-                <div style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}` }}>
+                <div style={{ fontSize:13,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:eq.color }}>{eq.nombre}</div>
+                <div style={{ fontSize:12,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}` }}>
                   {eq.cirujanos.length} cirujanos
                 </div>
               </div>
@@ -89,7 +89,7 @@ export function TabFellows({ onBack, T }) {
                     </span>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14,fontWeight:500,color:T.text }}>{titleCase(c)}</div>
-                      <div style={{ fontSize:11,color:T.muted,marginTop:1 }}>Staff · {eq.nombre}</div>
+                      <div style={{ fontSize:13,color:T.muted,marginTop:1 }}>Staff · {eq.nombre}</div>
                     </div>
                   </div>
                 ))}

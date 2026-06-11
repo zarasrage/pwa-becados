@@ -125,13 +125,13 @@ export function TabTurnos({ onBack, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
+        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Turnos del mes</div>
         <div style={{marginBottom:12}}>
           <button className="press" onClick={onBack} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
             <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
               {monthLabel(year, month)}
             </div>
-            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para volver</div>
+            <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para volver</div>
           </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
@@ -139,7 +139,7 @@ export function TabTurnos({ onBack, T }) {
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
           {(year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
             <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);setSelectedSem(null);}}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
@@ -148,7 +148,7 @@ export function TabTurnos({ onBack, T }) {
         <div style={{display:"flex",gap:6,marginBottom:14}}>
           {TURNO_TABS.map(t => (
             <button key={t.id} className="press" onClick={() => { setSub(t.id); setSelectedSem(null); }}
-              style={{flex:1,height:34,borderRadius:9,border:`1px solid ${sub===t.id?t.color+"60":T.border}`,background:sub===t.id?`${t.color}18`:T.surface2,fontSize:11,fontWeight:sub===t.id?700:400,color:sub===t.id?t.color:T.muted,transition:"all 0.15s"}}>
+              style={{flex:1,height:34,borderRadius:9,border:`1px solid ${sub===t.id?t.color+"60":T.border}`,background:sub===t.id?`${t.color}18`:T.surface2,fontSize:13,fontWeight:sub===t.id?700:400,color:sub===t.id?t.color:T.muted,transition:"all 0.15s"}}>
               {t.label}
             </button>
           ))}
@@ -178,9 +178,9 @@ export function TabTurnos({ onBack, T }) {
                       display: "flex", flexDirection: "column", gap: 1,
                       cursor: sem ? "pointer" : "default",
                     }}>
-                    <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?SEM_COLOR:"transparent",color:isToday?"#fff":sem?SEM_COLOR:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                    <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?SEM_COLOR:"transparent",color:isToday?"#fff":sem?SEM_COLOR:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                     {sem && (
-                      <div style={{fontSize:9,fontWeight:600,color:SEM_COLOR,background:`${SEM_COLOR}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      <div style={{fontSize:13,fontWeight:600,color:SEM_COLOR,background:`${SEM_COLOR}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                         {sem.presenter}
                       </div>
                     )}
@@ -192,7 +192,7 @@ export function TabTurnos({ onBack, T }) {
                 <div className="anim" style={{marginTop:14,background:T.surface,border:`1px solid ${SEM_COLOR}40`,borderLeft:`3px solid ${SEM_COLOR}`,borderRadius:12,padding:"14px 16px",position:"relative"}}>
                   <button className="press" onClick={() => setSelectedSem(null)}
                     style={{position:"absolute",top:10,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1}}>✕</button>
-                  <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:SEM_COLOR,marginBottom:8}}>
+                  <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:SEM_COLOR,marginBottom:8}}>
                     {formatDate(selectedSem.date)}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -203,7 +203,7 @@ export function TabTurnos({ onBack, T }) {
                   <div style={{fontSize:14,color:T.text,lineHeight:1.4,marginBottom:6}}>{selectedSem.sem.title}</div>
                   {selectedSem.sem.tag && (
                     <div style={{display:"inline-flex",alignItems:"center",background:`${SEM_COLOR}15`,border:`1px solid ${SEM_COLOR}30`,borderRadius:99,padding:"3px 10px"}}>
-                      <span style={{fontSize:11,color:SEM_COLOR,fontWeight:500}}>{selectedSem.sem.tag}</span>
+                      <span style={{fontSize:13,color:SEM_COLOR,fontWeight:500}}>{selectedSem.sem.tag}</span>
                     </div>
                   )}
                 </div>
@@ -216,9 +216,9 @@ export function TabTurnos({ onBack, T }) {
                   return (
                     <button key={area.key} className="press"
                       onClick={() => setSemArea(isOpen ? null : area.key)}
-                      style={{flex:1,height:40,borderRadius:9,border:`1px solid ${isOpen?SEM_COLOR+"80":T.border}`,background:isOpen?`${SEM_COLOR}20`:T.surface2,fontSize:11,fontWeight:isOpen?700:400,color:isOpen?SEM_COLOR:T.muted,transition:"all 0.15s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
+                      style={{flex:1,height:40,borderRadius:9,border:`1px solid ${isOpen?SEM_COLOR+"80":T.border}`,background:isOpen?`${SEM_COLOR}20`:T.surface2,fontSize:13,fontWeight:isOpen?700:400,color:isOpen?SEM_COLOR:T.muted,transition:"all 0.15s",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:1}}>
                       <span>{area.key}</span>
-                      <span style={{fontSize:9,opacity:0.7,fontWeight:400}}>{area.dia}</span>
+                      <span style={{fontSize:13,opacity:0.7,fontWeight:400}}>{area.dia}</span>
                     </button>
                   );
                 })}
@@ -228,7 +228,7 @@ export function TabTurnos({ onBack, T }) {
               {semArea && (
                 <div className="anim" style={{marginBottom:14,background:T.surface,border:`1px solid ${SEM_COLOR}30`,borderLeft:`3px solid ${SEM_COLOR}`,borderRadius:12,padding:"12px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:SEM_COLOR}}>
+                    <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:SEM_COLOR}}>
                       Próximos · {semArea}
                     </div>
                     <button className="press" onClick={()=>setSemArea(null)}
@@ -242,21 +242,21 @@ export function TabTurnos({ onBack, T }) {
                       {upcoming.map((e,i) => (
                         <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",paddingBottom:i<upcoming.length-1?8:0,borderBottom:i<upcoming.length-1?`1px solid ${T.border}`:"none"}}>
                           <div style={{flexShrink:0,minWidth:52}}>
-                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:700,color:SEM_COLOR,lineHeight:1.3}}>{formatDate(e.date).split(",")[0]}</div>
-                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:T.muted,lineHeight:1.3}}>{new Date(...e.date.split("-").map((v,i)=>i===1?v-1:+v)).toLocaleDateString("es-CL",{day:"numeric",month:"short"})}</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:SEM_COLOR,lineHeight:1.3}}>{formatDate(e.date).split(",")[0]}</div>
+                            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:T.muted,lineHeight:1.3}}>{new Date(...e.date.split("-").map((v,i)=>i===1?v-1:+v)).toLocaleDateString("es-CL",{day:"numeric",month:"short"})}</div>
                           </div>
                           <div style={{width:1,height:32,background:`${SEM_COLOR}25`,flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name||e.presenter}</div>
-                            {(e.title||e.description) && <div style={{fontSize:11,color:T.sub,lineHeight:1.3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title||e.description}</div>}
+                            {(e.title||e.description) && <div style={{fontSize:13,color:T.sub,lineHeight:1.3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title||e.description}</div>}
                           </div>
-                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:SEM_COLOR,opacity:0.7,flexShrink:0}}>{e.time||"07:30"}</div>
+                          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:SEM_COLOR,opacity:0.7,flexShrink:0}}>{e.time||"07:30"}</div>
                         </div>
                       ))}
                       {upcomingMore && (
                         <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:8,opacity:0.5}}>
                           <Spinner color={SEM_COLOR}/>
-                          <span style={{fontSize:11,color:SEM_COLOR}}>cargando más...</span>
+                          <span style={{fontSize:13,color:SEM_COLOR}}>cargando más...</span>
                         </div>
                       )}
                     </div>
@@ -275,12 +275,12 @@ export function TabTurnos({ onBack, T }) {
               const has     = names.length > 0;
               return (
                 <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1}}>
-                  <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                   {names.slice(0,3).map((entry,ni) => {
                     const isAM = sub === "P" && entry.isAM;
-                    return <div key={ni} style={{fontSize:9,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.name}</div>;
+                    return <div key={ni} style={{fontSize:13,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{entry.name}</div>;
                   })}
-                  {names.length > 3 && <div style={{fontSize:8,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
+                  {names.length > 3 && <div style={{fontSize:12,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
                 </div>
               );
             }}/>

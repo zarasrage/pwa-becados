@@ -71,7 +71,7 @@ function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T })
         <div onClick={e=>e.stopPropagation()} style={{background:T.surface,
           borderRadius:"16px 16px 0 0",padding:"20px 16px calc(var(--sab)+24px)",
           boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
+          <div style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
             textTransform:"uppercase",marginBottom:16}}>
             Tipo de Poli
           </div>
@@ -102,11 +102,11 @@ function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T })
         paddingBottom:"calc(var(--sab)+16px)",boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
         <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${T.border}`,
           display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <span style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+          <span style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>
             Agregar becado
           </span>
           {turnoType === "P" && (
-            <span style={{fontSize:11,fontWeight:700,color:"#06B6D4",background:"#06B6D418",
+            <span style={{fontSize:13,fontWeight:700,color:"#06B6D4",background:"#06B6D418",
               border:"1px solid #06B6D440",borderRadius:99,padding:"2px 8px",cursor:"pointer"}}
               onClick={()=>setPoliSub(null)}>
               {poliSub==="p"?"🌅 AM":"🌇 PM"} ↩
@@ -126,7 +126,7 @@ function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T })
                 textAlign:"left",cursor:conflicto?"not-allowed":"pointer",opacity:conflicto?0.6:1}}>
               <span style={{fontSize:14,fontWeight:500,color:conflicto?"#EF4444":T.text}}>{nombre}</span>
               {conflicto && (
-                <span style={{fontSize:10,fontWeight:700,color:"#EF4444",
+                <span style={{fontSize:12,fontWeight:700,color:"#EF4444",
                   background:"#EF444418",border:"1px solid #EF444440",
                   borderRadius:99,padding:"2px 8px"}}>Noche ayer</span>
               )}
@@ -167,7 +167,7 @@ function Contadores({ turnos, dates, tipo, T }) {
   return (
     <div style={{margin:"16px 0 0",background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,overflow:"hidden"}}>
       <div style={{padding:"10px 14px",borderBottom:`1px solid ${T.border}`,
-        fontSize:11,fontWeight:700,color:T.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+        fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>
         Conteo del período
       </div>
       <div style={{padding:"6px 0"}}>
@@ -179,7 +179,7 @@ function Contadores({ turnos, dates, tipo, T }) {
               borderBottom:`1px solid ${T.border}20`}}>
               <span style={{fontSize:12,color:warn?"#EF4444":T.text,fontWeight:warn?700:400}}>{nombre}</span>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                {warn && <span style={{fontSize:10,color:"#EF4444",fontWeight:700}}>⚠ &lt;6d</span>}
+                {warn && <span style={{fontSize:12,color:"#EF4444",fontWeight:700}}>⚠ &lt;6d</span>}
                 <span style={{fontSize:12,fontWeight:700,color:COLOR[tipo],
                   background:`${COLOR[tipo]}18`,border:`1px solid ${COLOR[tipo]}30`,
                   borderRadius:99,padding:"2px 9px",minWidth:24,textAlign:"center"}}>
@@ -210,21 +210,21 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
         borderRadius:"16px 16px 0 0",padding:"20px 16px calc(var(--sab)+24px)",
         boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
 
-        <div style={{fontSize:11,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
+        <div style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
           textTransform:"uppercase",marginBottom:14}}>
           {existing ? "Editar seminario" : "Nuevo seminario"}
         </div>
 
         {/* Tag chips */}
         <div style={{marginBottom:12}}>
-          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Rotación</div>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Rotación</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {TAG_OPTS.map(t => (
               <button key={t.id} className="press" onClick={()=>setTag(t.id)}
                 style={{padding:"4px 10px",borderRadius:99,
                   border:`1.5px solid ${tag===t.id?t.color:T.border}`,
                   background:tag===t.id?`${t.color}20`:"transparent",
-                  fontSize:11,fontWeight:tag===t.id?700:500,
+                  fontSize:13,fontWeight:tag===t.id?700:500,
                   color:tag===t.id?t.color:T.muted,cursor:"pointer"}}>
                 {t.label}
               </button>
@@ -234,7 +234,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
 
         {/* Presentador — free text */}
         <div style={{marginBottom:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Presentador</div>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Presentador</div>
           <input value={presenter} onChange={e=>setPresenter(e.target.value)}
             placeholder="Nombre del presentador"
             style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",
@@ -244,7 +244,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
 
         {/* Título */}
         <div style={{marginBottom:10}}>
-          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Título <span style={{fontWeight:400}}>(opcional)</span></div>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Título <span style={{fontWeight:400}}>(opcional)</span></div>
           <input value={titulo} onChange={e=>setTitulo(e.target.value)}
             placeholder="Título del seminario"
             style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",
@@ -254,7 +254,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
 
         {/* Hora */}
         <div style={{marginBottom:18}}>
-          <div style={{fontSize:10,fontWeight:600,color:T.muted,marginBottom:6}}>Hora</div>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Hora</div>
           <input value={hora} onChange={e=>setHora(e.target.value)}
             placeholder="07:30"
             style={{width:110,padding:"10px 12px",borderRadius:10,
@@ -567,7 +567,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1}}>
-            <div style={{fontSize:9,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>{tipo==="S"?"Editor de seminarios":"Editor de turnos"}</div>
+            <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>{tipo==="S"?"Editor de seminarios":"Editor de turnos"}</div>
             <div style={{fontSize:12,fontWeight:600,color:T.sub,textTransform:"capitalize"}}>
               {periodLabel(dates)}
             </div>
@@ -577,11 +577,11 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               <button className="press" onClick={handleUndo} disabled={saving}
                 style={{display:"flex",alignItems:"center",gap:4,height:28,padding:"0 10px",
                   borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,
-                  fontSize:11,fontWeight:600,color:saving?T.muted:T.text,cursor:saving?"not-allowed":"pointer"}}>
-                ↩ <span style={{fontSize:10,color:T.muted}}>({historial.length})</span>
+                  fontSize:13,fontWeight:600,color:saving?T.muted:T.text,cursor:saving?"not-allowed":"pointer"}}>
+                ↩ <span style={{fontSize:12,color:T.muted}}>({historial.length})</span>
               </button>
             )}
-            {saving && <div style={{fontSize:10,color:T.muted}}>Guardando…</div>}
+            {saving && <div style={{fontSize:12,color:T.muted}}>Guardando…</div>}
           </div>
         </div>
 
@@ -591,7 +591,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
             <button key={tab.id} className="press" onClick={() => { setTipo(tab.id); setHistorial([]); }}
               style={{flex:1,height:28,borderRadius:8,border:"none",
                 background: tipo===tab.id ? tab.color : "transparent",
-                fontSize:11,fontWeight:tipo===tab.id?700:500,
+                fontSize:13,fontWeight:tipo===tab.id?700:500,
                 color: tipo===tab.id?"#fff":T.muted,transition:"all 0.15s"}}>
               {tab.label}
             </button>
@@ -607,7 +607,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           {getMondayOfWeek(today) !== monday && (
             <button className="press" onClick={()=>setMonday(getMondayOfWeek(today))}
               style={{height:28,padding:"0 10px",borderRadius:7,border:`1px solid ${color}60`,
-                background:`${color}14`,fontSize:10,fontWeight:700,color,flexShrink:0}}>
+                background:`${color}14`,fontSize:12,fontWeight:700,color,flexShrink:0}}>
               HOY
             </button>
           )}
@@ -623,11 +623,11 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           <div style={{display:"flex",gap:10,marginBottom:6}}>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:"#0EA5E9"}}/>
-              <span style={{fontSize:10,color:T.muted}}>AM</span>
+              <span style={{fontSize:12,color:T.muted}}>AM</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:"#06B6D4"}}/>
-              <span style={{fontSize:10,color:T.muted}}>PM</span>
+              <span style={{fontSize:12,color:T.muted}}>PM</span>
             </div>
           </div>
         )}
@@ -635,7 +635,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         {/* Cabecera días */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:2}}>
           {COL_LABELS.map((label,i) => (
-            <div key={i} style={{textAlign:"center",fontSize:9,fontWeight:700,
+            <div key={i} style={{textAlign:"center",fontSize:13,fontWeight:700,
               letterSpacing:"0.04em",padding:"4px 2px",
               color: i>=5 ? T.muted : T.text,
               background: i>=5 ? T.surface2 : `${color}18`,
@@ -692,13 +692,13 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                   background:"none",padding:"3px 3px",cursor:"pointer",
                                   display:"flex",flexDirection:"column",alignItems:"center",
                                   justifyContent:"center",gap:1}}>
-                                <div style={{fontSize:8,fontWeight:700,
+                                <div style={{fontSize:12,fontWeight:700,
                                   color:tagOpt?.color||"#E879F9",lineHeight:1.2,
                                   background:`${tagOpt?.color||"#E879F9"}18`,
                                   borderRadius:3,padding:"1px 4px"}}>
                                   {tagOpt?.label||sem.tag}
                                 </div>
-                                <div style={{fontSize:8,color:T.sub,lineHeight:1.2,
+                                <div style={{fontSize:12,color:T.sub,lineHeight:1.2,
                                   maxWidth:"100%",overflow:"hidden",
                                   textOverflow:"ellipsis",whiteSpace:"nowrap",
                                   padding:"0 2px"}}>
@@ -792,7 +792,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                 style={{
                                   width:"100%",height:"100%",border:"none",background:"none",
                                   padding:"2px 3px",cursor:"pointer",
-                                  fontSize:10,fontWeight:600,textAlign:"center",
+                                  fontSize:12,fontWeight:600,textAlign:"center",
                                   color: entryColor,
                                   lineHeight:1.2,
                                 }}>

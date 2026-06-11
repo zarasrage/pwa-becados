@@ -57,10 +57,10 @@ export function TabMes({ becado, onChangeBecado, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
+        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
         <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left",marginBottom:12}}>
           <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
-          <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para cambiar</div>
+          <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para cambiar</div>
         </button>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
           <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
@@ -68,7 +68,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
           <button className="press" onClick={refresh} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:T.sub,flexShrink:0}}>↻</button>
           {(year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
             <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);}}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
@@ -79,7 +79,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
           {[["P","Poli","#06B6D4"],["D","Día","#F59E0B"],["N","Noche","#4F6EFF"],["A","Artro","#72FF00"],["S","Seminario","#E879F9"]].map(([id,label,color])=>(
             <div key={id} style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:color}}/>
-              <span style={{fontSize:10,color:T.muted}}>{label}</span>
+              <span style={{fontSize:12,color:T.muted}}>{label}</span>
             </div>
           ))}
         </div>
@@ -124,10 +124,10 @@ export function TabMes({ becado, onChangeBecado, T }) {
                     display:"flex", flexDirection:"column", gap:2,
                     cursor: hasContent ? "pointer" : "default",
                   }}>
-                  <div style={{fontSize:9,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":"transparent",color:isToday?"#fff":T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":"transparent",color:isToday?"#fff":T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:1}}>
                     {badges.map((b,bi)=>(
-                      <div key={bi} style={{fontSize:11,fontWeight:700,color:b.color,background:`${b.color}${b.glow?"40":"25"}`,borderRadius:3,padding:"1px 3px",lineHeight:1.3,boxShadow:b.glow?`0 0 6px ${b.color}90`:"none"}}>{b.label}</div>
+                      <div key={bi} style={{fontSize:13,fontWeight:700,color:b.color,background:`${b.color}${b.glow?"40":"25"}`,borderRadius:3,padding:"1px 3px",lineHeight:1.3,boxShadow:b.glow?`0 0 6px ${b.color}90`:"none"}}>{b.label}</div>
                     ))}
                   </div>
                 </div>
@@ -150,7 +150,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
                   <button className="press" onClick={() => setSelectedDay(null)}
                     style={{position:"absolute",top:10,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1,cursor:"pointer"}}>✕</button>
 
-                  <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"capitalize",color:popupColor,marginBottom:10}}>
+                  <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.06em",textTransform:"capitalize",color:popupColor,marginBottom:10}}>
                     {formatDayLabel(selectedDay)}
                   </div>
 
@@ -163,12 +163,12 @@ export function TabMes({ becado, onChangeBecado, T }) {
 
                   {sem && (
                     <div style={{background:`#E879F912`,border:`1px solid #E879F930`,borderRadius:8,padding:"10px 12px",marginBottom: turnoCodes.length > 0 ? 8 : 0}}>
-                      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#E879F9",marginBottom:6,opacity:0.7}}>
+                      <div style={{fontSize:12,fontWeight:700,letterSpacing:"0.07em",textTransform:"uppercase",color:"#E879F9",marginBottom:6,opacity:0.7}}>
                         Seminario {sem.tag || ""}
                       </div>
                       {sem.presenter && (
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom: sem.title ? 6 : 0}}>
-                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#E879F9",opacity:0.7}}>{sem.time || "07:30"}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:"#E879F9",opacity:0.7}}>{sem.time || "07:30"}</span>
                           <span style={{width:1,height:14,background:"#E879F930"}}/>
                           <span style={{fontSize:14,fontWeight:700,color:"#E879F9"}}>{sem.presenter}</span>
                         </div>
@@ -191,7 +191,7 @@ export function TabMes({ becado, onChangeBecado, T }) {
                           <div key={code} style={{display:"flex",alignItems:"center",gap:10,background:`${t.accent}10`,border:`1px solid ${t.accent}25`,borderLeft:`3px solid ${t.accent}`,borderRadius:8,padding:"8px 12px"}}>
                             <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:t.accent,lineHeight:1.2,minWidth:44}}>
                               {t.desde}
-                              <div style={{fontSize:9,opacity:0.5,marginTop:1}}>{t.hasta}</div>
+                              <div style={{fontSize:13,opacity:0.5,marginTop:1}}>{t.hasta}</div>
                             </div>
                             <div style={{width:1,height:24,background:`${t.accent}25`}}/>
                             <div style={{fontSize:13,fontWeight:500,color:T.text}}>{t.label}</div>

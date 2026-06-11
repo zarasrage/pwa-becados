@@ -137,16 +137,16 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
         <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
           <div style={{ minWidth:44,textAlign:"center",background:`${color}18`,borderRadius:8,padding:"4px 0" }}>
             <div style={{ fontSize:13,fontWeight:700,color,lineHeight:1 }}>{formatHora(r.hora)}</div>
-            {r.hora_fin && <div style={{ fontSize:10,color:T.muted,lineHeight:1,marginTop:2 }}>{formatHora(r.hora_fin)}</div>}
+            {r.hora_fin && <div style={{ fontSize:12,color:T.muted,lineHeight:1,marginTop:2 }}>{formatHora(r.hora_fin)}</div>}
           </div>
           <div style={{ flex:1,minWidth:0 }}>
             <div style={{ fontSize:13,fontWeight:600,color:T.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textDecoration:r.cancelada?"line-through":"none" }}>
               {r.paciente || "—"}
             </div>
-            <div style={{ fontSize:11,color:T.muted,marginTop:1 }}>
+            <div style={{ fontSize:13,color:T.muted,marginTop:1 }}>
               {r.rut || "—"}
-              {r.tipo_paciente && <span style={{ marginLeft:6,background:`${color}22`,color,borderRadius:99,padding:"1px 6px",fontSize:10,fontWeight:600 }}>{r.tipo_paciente}</span>}
-              {r.cancelada && <span style={{ marginLeft:6,background:"#FF6B6B22",color:"#FF6B6B",borderRadius:99,padding:"1px 6px",fontSize:10,fontWeight:600 }}>CANCELADA</span>}
+              {r.tipo_paciente && <span style={{ marginLeft:6,background:`${color}22`,color,borderRadius:99,padding:"1px 6px",fontSize:12,fontWeight:600 }}>{r.tipo_paciente}</span>}
+              {r.cancelada && <span style={{ marginLeft:6,background:"#FF6B6B22",color:"#FF6B6B",borderRadius:99,padding:"1px 6px",fontSize:12,fontWeight:600 }}>CANCELADA</span>}
             </div>
             {r.diagnostico && (
               <div style={{ fontSize:12,color:T.sub,marginTop:4,fontStyle:"italic",...(!isOpen&&{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}) }}>
@@ -162,7 +162,7 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
           {/* Columna derecha: cirujano arriba, asistentes abajo */}
           <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0 }}>
             {r.equipo && (
-              <span style={{ fontSize:10,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>
+              <span style={{ fontSize:12,color:T.muted,background:T.surface2,borderRadius:99,padding:"1px 7px",border:`1px solid ${T.border}`,whiteSpace:"nowrap" }}>
                 {getApellidoCirujano(r.equipo)}
               </span>
             )}
@@ -170,9 +170,9 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
               const c = colorParaAsistente(nombre);
               return (
                 <span key={nombre} onClick={e => { e.stopPropagation(); onRemover(nombre); }}
-                  style={{ fontSize:10,fontWeight:600,color:c,background:`${c}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${c}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3,cursor:"pointer" }}>
+                  style={{ fontSize:12,fontWeight:600,color:c,background:`${c}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${c}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3,cursor:"pointer" }}>
                   {nombre.split(" ")[0]}
-                  <span style={{ fontSize:9,opacity:0.6 }}>✕</span>
+                  <span style={{ fontSize:13,opacity:0.6 }}>✕</span>
                 </span>
               );
             })}
@@ -183,14 +183,14 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
         {r.info_cirugia && (
           <div onClick={e => e.stopPropagation()}>
             {infoOpen && (
-              <div style={{ fontSize:11,color:T.sub,marginTop:6,padding:"6px 8px",background:T.surface2,borderRadius:8,border:`1px solid ${T.border}`,lineHeight:1.5 }}>
+              <div style={{ fontSize:13,color:T.sub,marginTop:6,padding:"6px 8px",background:T.surface2,borderRadius:8,border:`1px solid ${T.border}`,lineHeight:1.5 }}>
                 {r.info_cirugia}
               </div>
             )}
             <div style={{ display:"flex",justifyContent:"flex-end",marginTop:3 }}>
               <button onClick={() => setInfoOpen(v => !v)}
-                style={{ fontSize:10,color:T.muted,background:"transparent",border:"none",padding:"2px 0",cursor:"pointer",display:"flex",alignItems:"center",gap:3 }}>
-                <span style={{ fontSize:11 }}>ℹ️</span>
+                style={{ fontSize:12,color:T.muted,background:"transparent",border:"none",padding:"2px 0",cursor:"pointer",display:"flex",alignItems:"center",gap:3 }}>
+                <span style={{ fontSize:13 }}>ℹ️</span>
                 <span>{infoOpen ? "Ocultar" : "Ver info"}</span>
               </button>
             </div>
@@ -201,14 +201,14 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
           <div onClick={e => e.stopPropagation()} style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${T.border}`,display:"flex",flexDirection:"column",gap:6 }}>
             {becadosDisp.length > 0 && (
               <div>
-                <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
+                <div style={{ fontSize:12,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Becados rotando</div>
                 <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
                   {becadosDisp.map(nombre => {
                     const asig = asistentes.includes(nombre);
                     const c = colorParaAsistente(nombre);
                     return (
                       <button key={nombre} onClick={() => toggleAsistente(nombre)}
-                        style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
+                        style={{ borderRadius:99,padding:"3px 10px",fontSize:13,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
                         {asig ? "✓ " : ""}{nombre.split(" ")[0]}
                       </button>
                     );
@@ -218,14 +218,14 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
             )}
             {fellowsDisp.length > 0 && (
               <div>
-                <div style={{ fontSize:10,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
+                <div style={{ fontSize:12,color:T.muted,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:4 }}>Fellows</div>
                 <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
                   {fellowsDisp.map(f => {
                     const asig = asistentes.includes(f.nombre);
                     const c = colorParaAsistente(f.nombre);
                     return (
                       <button key={f.nombre} onClick={() => toggleAsistente(f.nombre)}
-                        style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
+                        style={{ borderRadius:99,padding:"3px 10px",fontSize:13,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
                         {asig ? "✓ " : ""}{f.nombre.split(" ")[0]}
                       </button>
                     );
@@ -235,17 +235,17 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
             )}
             <div style={{ display:"flex",gap:4,flexWrap:"wrap" }}>
               <button onClick={() => setOtroMode(true)}
-                style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
+                style={{ borderRadius:99,padding:"3px 10px",fontSize:13,fontWeight:600,border:`1px solid ${T.border}`,background:T.surface2,color:T.sub,cursor:"pointer" }}>
                 + Otro
               </button>
               {asistentes.length > 0 && (
                 <button onClick={() => { onRemoverTodos(); onToggle(); }}
-                  style={{ borderRadius:99,padding:"3px 10px",fontSize:11,fontWeight:600,border:"1px solid #FF6B6B44",background:"#FF6B6B11",color:"#FF6B6B",cursor:"pointer" }}>
+                  style={{ borderRadius:99,padding:"3px 10px",fontSize:13,fontWeight:600,border:"1px solid #FF6B6B44",background:"#FF6B6B11",color:"#FF6B6B",cursor:"pointer" }}>
                   Desasignar todos
                 </button>
               )}
               <button onClick={() => { setOtroMode(false); setOtroTexto(""); onToggle(); }}
-                style={{ borderRadius:99,padding:"3px 10px",fontSize:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
+                style={{ borderRadius:99,padding:"3px 10px",fontSize:13,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer" }}>
                 Cerrar
               </button>
             </div>
@@ -378,7 +378,7 @@ export function TabPabellones({ onBack, T }) {
           </button>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:15,fontWeight:700,color:T.text }}>Pabellones</div>
-            <div style={{ fontSize:11,color:T.muted,textTransform:"capitalize" }}>{formatDate(fecha)}</div>
+            <div style={{ fontSize:13,color:T.muted,textTransform:"capitalize" }}>{formatDate(fecha)}</div>
           </div>
         </div>
 
@@ -395,17 +395,17 @@ export function TabPabellones({ onBack, T }) {
 
         <div style={{ display:"flex",gap:6,padding:"8px 16px 0",overflowX:"auto",scrollbarWidth:"none" }}>
           <button className="press" onClick={() => setEquipoSel(null)}
-            style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:11,fontWeight:600,border:`1px solid ${!equipoSel?"#348FFF":T.border}`,background:!equipoSel?"#348FFF":T.surface,color:!equipoSel?"#fff":T.sub }}>
+            style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:13,fontWeight:600,border:`1px solid ${!equipoSel?"#348FFF":T.border}`,background:!equipoSel?"#348FFF":T.surface,color:!equipoSel?"#fff":T.sub }}>
             Todos
           </button>
           {EQUIPOS.map(eq => (
             <button key={eq.id} className="press" onClick={() => setEquipoSel(equipoSel===eq.id ? null : eq.id)}
-              style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:11,fontWeight:600,border:`1px solid ${equipoSel===eq.id?eq.color:T.border}`,background:equipoSel===eq.id?eq.color:T.surface,color:equipoSel===eq.id?"#fff":T.sub }}>
+              style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:13,fontWeight:600,border:`1px solid ${equipoSel===eq.id?eq.color:T.border}`,background:equipoSel===eq.id?eq.color:T.surface,color:equipoSel===eq.id?"#fff":T.sub }}>
               {eq.nombre}
             </button>
           ))}
           <button className="press" onClick={() => setEquipoSel(equipoSel==="otros" ? null : "otros")}
-            style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:11,fontWeight:600,border:`1px solid ${equipoSel==="otros"?"#94A3B8":T.border}`,background:equipoSel==="otros"?"#94A3B8":T.surface,color:equipoSel==="otros"?"#fff":T.sub }}>
+            style={{ flexShrink:0,borderRadius:99,padding:"5px 12px",fontSize:13,fontWeight:600,border:`1px solid ${equipoSel==="otros"?"#94A3B8":T.border}`,background:equipoSel==="otros"?"#94A3B8":T.surface,color:equipoSel==="otros"?"#fff":T.sub }}>
             Otros
           </button>
         </div>
@@ -428,16 +428,16 @@ export function TabPabellones({ onBack, T }) {
             <div style={{ display:"flex",gap:8,marginBottom:16 }}>
               <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
                 <div style={{ fontSize:16,fontWeight:700,color:equipoColor||T.text }}>{total}</div>
-                <div style={{ fontSize:10,color:T.muted }}>cirugías</div>
+                <div style={{ fontSize:12,color:T.muted }}>cirugías</div>
               </div>
               <div style={{ flex:1,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
                 <div style={{ fontSize:16,fontWeight:700,color:T.text }}>{pabellones.length}</div>
-                <div style={{ fontSize:10,color:T.muted }}>pabellones</div>
+                <div style={{ fontSize:12,color:T.muted }}>pabellones</div>
               </div>
               {canceladas > 0 && (
                 <div style={{ flex:1,background:"#FF6B6B11",border:`1px solid #FF6B6B33`,borderRadius:10,padding:"5px 8px",textAlign:"center" }}>
                   <div style={{ fontSize:16,fontWeight:700,color:"#FF6B6B" }}>{canceladas}</div>
-                  <div style={{ fontSize:10,color:"#FF6B6B" }}>canceladas</div>
+                  <div style={{ fontSize:12,color:"#FF6B6B" }}>canceladas</div>
                 </div>
               )}
             </div>
@@ -448,7 +448,7 @@ export function TabPabellones({ onBack, T }) {
                 <div key={pab} style={{ marginBottom:20 }}>
                   <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
                     <div style={{ width:8,height:8,borderRadius:"50%",background:color,flexShrink:0 }}/>
-                    <div style={{ fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color }}>{pab}</div>
+                    <div style={{ fontSize:13,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color }}>{pab}</div>
                   </div>
                   <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
                     {grouped[pab].map((r, i) => (

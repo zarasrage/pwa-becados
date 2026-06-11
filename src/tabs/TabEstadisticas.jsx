@@ -166,11 +166,11 @@ export function TabEstadisticas({ onBack, T }) {
 
         {/* Header row */}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
-          <div style={{fontSize:10,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>Estadísticas</div>
+          <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>Estadísticas</div>
           <div style={{display:"flex",gap:4}}>
             {MODES.map(mode => (
               <button key={mode} className="press" onClick={() => setViewMode(mode)} style={{
-                fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:99,
+                fontSize:12,fontWeight:700,padding:"3px 8px",borderRadius:99,
                 border:`1px solid ${viewMode===mode ? T.accent : T.border}`,
                 background: viewMode===mode ? `${T.accent}20` : T.surface2,
                 color: viewMode===mode ? T.accent : T.muted,
@@ -187,7 +187,7 @@ export function TabEstadisticas({ onBack, T }) {
             <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1,textTransform:"capitalize"}}>
               {bigTitle}
             </div>
-            <div style={{fontSize:11,color:T.muted,marginTop:2}}>toca para volver</div>
+            <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para volver</div>
           </button>
         </div>
 
@@ -202,13 +202,13 @@ export function TabEstadisticas({ onBack, T }) {
             </div>
             {viewMode==="semana" && !weekDateSet.has(today) && (
               <button className="press" onClick={()=>setWeekRef(today)}
-                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
                 HOY
               </button>
             )}
             {viewMode==="mes" && monday !== getMondayOfWeek(today) && (
               <button className="press" onClick={()=>setMonday(getMondayOfWeek(today))}
-                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:11,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
                 HOY
               </button>
             )}
@@ -230,8 +230,8 @@ export function TabEstadisticas({ onBack, T }) {
           ].map(([,color,label,pts],i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:color}}/>
-              <span style={{fontSize:10,color:T.muted}}>{label}</span>
-              <span style={{fontSize:10,color:T.muted,opacity:0.55}}>{pts}</span>
+              <span style={{fontSize:12,color:T.muted}}>{label}</span>
+              <span style={{fontSize:12,color:T.muted,opacity:0.55}}>{pts}</span>
             </div>
           ))}
         </div>
@@ -271,7 +271,7 @@ export function TabEstadisticas({ onBack, T }) {
                       width:22,height:22,borderRadius:6,flexShrink:0,
                       background: i===0?"#FF550022":i===1?"#F59E0B22":i===2?"#64748B22":"transparent",
                       display:"flex",alignItems:"center",justifyContent:"center",
-                      fontSize:11,fontWeight:800,
+                      fontSize:13,fontWeight:800,
                       color: i===0?"#FF5500":i===1?"#F59E0B":i===2?"#94A3B8":T.muted,
                     }}>
                       {i+1}
@@ -282,21 +282,21 @@ export function TabEstadisticas({ onBack, T }) {
                         {s.name}
                       </div>
                       <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
-                        {s.P > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.P,background:`${TIPO_COLOR.P}20`,borderRadius:99,padding:"1px 6px"}}>P×{s.P}</span>}
-                        {s.D > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.D,background:`${TIPO_COLOR.D}20`,borderRadius:99,padding:"1px 6px"}}>D×{s.D}</span>}
-                        {s.nNormal > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}20`,borderRadius:99,padding:"1px 6px"}}>N×{s.nNormal}</span>}
-                        {s.nFinde > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}30`,borderRadius:99,padding:"1px 6px"}}>finde×{s.nFinde}</span>}
-                        {s.nFeriado > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}30`,borderRadius:99,padding:"1px 6px"}}>fer×{s.nFeriado}</span>}
-                        {s.A > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.A,background:`${TIPO_COLOR.A}20`,borderRadius:99,padding:"1px 6px"}}>A×{s.A}</span>}
-                        {s.S > 0 && <span style={{fontSize:10,fontWeight:700,color:TIPO_COLOR.S,background:`${TIPO_COLOR.S}20`,borderRadius:99,padding:"1px 6px"}}>Sem×{s.S}</span>}
+                        {s.P > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.P,background:`${TIPO_COLOR.P}20`,borderRadius:99,padding:"1px 6px"}}>P×{s.P}</span>}
+                        {s.D > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.D,background:`${TIPO_COLOR.D}20`,borderRadius:99,padding:"1px 6px"}}>D×{s.D}</span>}
+                        {s.nNormal > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}20`,borderRadius:99,padding:"1px 6px"}}>N×{s.nNormal}</span>}
+                        {s.nFinde > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}30`,borderRadius:99,padding:"1px 6px"}}>finde×{s.nFinde}</span>}
+                        {s.nFeriado > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.N,background:`${TIPO_COLOR.N}30`,borderRadius:99,padding:"1px 6px"}}>fer×{s.nFeriado}</span>}
+                        {s.A > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.A,background:`${TIPO_COLOR.A}20`,borderRadius:99,padding:"1px 6px"}}>A×{s.A}</span>}
+                        {s.S > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.S,background:`${TIPO_COLOR.S}20`,borderRadius:99,padding:"1px 6px"}}>Sem×{s.S}</span>}
                       </div>
                     </div>
 
                     <div style={{textAlign:"right",flexShrink:0}}>
                       <div style={{fontSize:20,fontWeight:800,color:accent,lineHeight:1}}>{s.peso}</div>
-                      <div style={{fontSize:9,color:T.muted,marginTop:1}}>{s.total} turnos</div>
+                      <div style={{fontSize:13,color:T.muted,marginTop:1}}>{s.total} turnos</div>
                       {s.nFeriado > 0 && (
-                        <div style={{fontSize:9,fontWeight:700,color:"#FF5500",marginTop:2,background:"#FF550015",borderRadius:99,padding:"1px 5px",display:"inline-block"}}>
+                        <div style={{fontSize:13,fontWeight:700,color:"#FF5500",marginTop:2,background:"#FF550015",borderRadius:99,padding:"1px 5px",display:"inline-block"}}>
                           📅 {s.nFeriado} fer.
                         </div>
                       )}
