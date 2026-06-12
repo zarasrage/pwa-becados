@@ -11,6 +11,7 @@ import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
+import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
 
 function formatDayLabel(iso) {
@@ -57,22 +58,18 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi mes</div>
-        <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left",marginBottom:12}}>
-          <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
-          <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para cambiar</div>
-        </button>
+        <BecadoHeader eyebrow="Mi mes" name={becado} onTap={onChangeBecado} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-          <button className="press" onClick={prevMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+          <button className="press" onClick={prevMonth} style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>
-          <button className="press" onClick={refresh} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:T.sub,flexShrink:0}}>↻</button>
+          <button className="press" onClick={refresh} style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:T.sub,flexShrink:0}}>↻</button>
           {(year !== Number(today.split("-")[0]) || month !== Number(today.split("-")[1])-1) && (
             <button className="press" onClick={()=>{setYear(Number(today.split("-")[0]));setMonth(Number(today.split("-")[1])-1);}}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:44,padding:"0 14px",borderRadius:10,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
-          <button className="press" onClick={nextMonth} style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+          <button className="press" onClick={nextMonth} style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
 
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>

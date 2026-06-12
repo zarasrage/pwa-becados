@@ -16,6 +16,7 @@ import { SectionDivider } from "../components/ui/SectionDivider.jsx";
 import { ActivityCard } from "../components/ui/ActivityCard.jsx";
 import { TurnoCard } from "../components/ui/TurnoCard.jsx";
 import { SemCard } from "../components/ui/SemCard.jsx";
+import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
 export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
   const today = useMemo(()=>todayISO(),[]);
@@ -60,25 +61,13 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
       )}
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0",position:"relative",zIndex:1}}>
-        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi día</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-          <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
-            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,lineHeight:1.1,
-              background:T.glass ? "linear-gradient(135deg,#FF1A75,#E8186A,#FF4D94)" : "none",
-              WebkitBackgroundClip:T.glass ? "text" : "unset",
-              WebkitTextFillColor:T.glass ? "transparent" : "unset",
-              color:T.glass ? "transparent" : T.text,
-              filter:T.glass ? "drop-shadow(0 0 8px #E8186A50)" : "none",
-            }}>{becado}</div>
-            <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para cambiar</div>
-          </button>
-          {daily?.rotationCode && (
-            <div style={{display:"flex",alignItems:"center",gap:6,background:c.light,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"5px 11px",flexShrink:0,marginTop:16}}>
+        <BecadoHeader eyebrow="Mi día" name={becado} onTap={onChangeBecado} T={T}
+          right={daily?.rotationCode && (
+            <div style={{display:"flex",alignItems:"center",gap:6,background:c.light,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"5px 11px",flexShrink:0,marginTop:2}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 6px ${c.accent}`}}/>
               <span style={{fontSize:13,fontWeight:600,color:c.accent}}>{c.name}</span>
             </div>
-          )}
-        </div>
+          )}/>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
 

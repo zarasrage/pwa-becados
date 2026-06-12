@@ -1,9 +1,33 @@
+const ICONS = {
+  // Día — sol (un día concreto)
+  horario: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={a?2.4:2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+    </svg>
+  ),
+  // Semana — filas (lista de días)
+  semana: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={a?2.4:2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="4" rx="1"/>
+      <rect x="3" y="14" width="18" height="4" rx="1"/>
+    </svg>
+  ),
+  // Mes — calendario en grilla
+  mes: (a) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={a?2.4:2} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="17" rx="2"/>
+      <path d="M3 9h18M8 2v4M16 2v4M8 13h.01M12 13h.01M16 13h.01M8 17h.01M12 17h.01"/>
+    </svg>
+  ),
+};
+
 export function TabBar({ active, onChange, T }) {
   const isGlass = !!T.glass;
   const tabs = [
-    { id:"horario",    icon:"◑", label:"Día" },
-    { id:"semana",     icon:"▦", label:"Semana" },
-    { id:"mes",        icon:"▦□", label:"Mes" },
+    { id:"horario", label:"Día" },
+    { id:"semana",  label:"Semana" },
+    { id:"mes",     label:"Mes" },
   ];
   return (
     <div style={{
@@ -28,10 +52,10 @@ export function TabBar({ active, onChange, T }) {
             onClick={()=>onChange(tab.id)}
           >
             <span style={{
-              fontSize:18, lineHeight:1,
+              display:"flex",alignItems:"center",justifyContent:"center",height:22,
               filter: isGlass && isActive ? "drop-shadow(0 0 6px #E8186A80)" : "none",
               transition:"filter 0.2s",
-            }}>{tab.icon}</span>
+            }}>{ICONS[tab.id](isActive)}</span>
             <span style={{fontSize:12,fontWeight:isActive?700:500,letterSpacing:"0.04em",fontFamily:"'Bricolage Grotesque',sans-serif"}}>{tab.label}</span>
             <span style={{
               width:isActive?22:0,height:isGlass?3:2,borderRadius:99,

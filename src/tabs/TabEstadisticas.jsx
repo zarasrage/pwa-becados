@@ -196,25 +196,25 @@ export function TabEstadisticas({ onBack, T }) {
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
             <button className="press"
               onClick={viewMode==="semana" ? prevWeek : prevPeriod}
-              style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+              style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
             <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>
               {viewMode==="semana" ? weekRangeLabel(weekDates) : period4Label(monday, period4Dates[27])}
             </div>
             {viewMode==="semana" && !weekDateSet.has(today) && (
               <button className="press" onClick={()=>setWeekRef(today)}
-                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                style={{height:44,padding:"0 14px",borderRadius:10,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
                 HOY
               </button>
             )}
             {viewMode==="mes" && monday !== getMondayOfWeek(today) && (
               <button className="press" onClick={()=>setMonday(getMondayOfWeek(today))}
-                style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+                style={{height:44,padding:"0 14px",borderRadius:10,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
                 HOY
               </button>
             )}
             <button className="press"
               onClick={viewMode==="semana" ? nextWeek : nextPeriod}
-              style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+              style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
           </div>
         )}
 

@@ -11,6 +11,7 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
+import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
 export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
   const today = useMemo(()=>todayISO(),[]);
@@ -95,25 +96,19 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <div style={{fontSize:12,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase",marginBottom:4}}>Mi semana</div>
-        <div style={{marginBottom:12}}>
-          <button className="press" onClick={onChangeBecado} style={{background:"none",border:"none",padding:0,textAlign:"left"}}>
-            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:26,fontWeight:800,color:T.text,lineHeight:1.1}}>{becado}</div>
-            <div style={{fontSize:13,color:T.muted,marginTop:2}}>toca para cambiar</div>
-          </button>
-        </div>
+        <BecadoHeader eyebrow="Mi semana" name={becado} onTap={onChangeBecado} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
+            style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text}}>{weekRangeLabel(weekDates)}</div>
           {!isThisWeek && (
             <button className="press" onClick={()=>setRefDate(today)}
-              style={{height:32,padding:"0 11px",borderRadius:8,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
+              style={{height:44,padding:"0 14px",borderRadius:10,border:`1px solid ${T?.accent||"#348FFF"}60`,background:`${T?.accent||"#348FFF"}14`,fontSize:13,fontWeight:700,color:T?.accent||"#348FFF",letterSpacing:"0.05em",flexShrink:0}}>
               HOY
             </button>
           )}
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,7))}
-            style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
+            style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
       </div>
 
