@@ -10,18 +10,18 @@ const LINKS = [
 export function QuickLinks({ onNav, T }) {
   return (
     <div style={{
-      display:"flex",gap:7,overflowX:"auto",padding:"0 16px 2px",marginBottom:14,
-      WebkitOverflowScrolling:"touch",scrollbarWidth:"none",
+      display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,padding:"0 16px",marginBottom:14,
     }}>
       {LINKS.map(l => (
         <button key={l.id} className="press" onClick={() => onNav(l.id)}
           style={{
-            display:"inline-flex",alignItems:"center",gap:6,flexShrink:0,
-            background:T.surface,border:`1px solid ${T.border}`,borderRadius:99,
-            padding:"7px 13px",fontSize:13,fontWeight:600,color:T.sub,
-            whiteSpace:"nowrap",cursor:"pointer",
+            display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,
+            background:T.surface,border:`1px solid ${T.border}`,borderRadius:11,
+            padding:"9px 6px",fontSize:12.5,fontWeight:600,color:T.sub,
+            whiteSpace:"nowrap",cursor:"pointer",minWidth:0,overflow:"hidden",
           }}>
-          <span style={{fontSize:14,lineHeight:1}}>{l.icon}</span>{l.label}
+          <span style={{fontSize:14,lineHeight:1,flexShrink:0}}>{l.icon}</span>
+          <span style={{minWidth:0,overflow:"hidden",textOverflow:"ellipsis"}}>{l.label}</span>
         </button>
       ))}
     </div>
