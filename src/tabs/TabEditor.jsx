@@ -805,7 +805,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                                   display:"block",
                                 }}>
-                                {conflicto && "⚠ "}{nombre}
+                                {conflicto && "⚠ "}{nombre.slice(0,6)}
                               </button>
                             ) : null}
                           </div>

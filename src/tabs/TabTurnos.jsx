@@ -181,8 +181,8 @@ export function TabTurnos({ onBack, T }) {
                     }}>
                     <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?SEM_COLOR:"transparent",color:isToday?"#fff":sem?SEM_COLOR:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                     {sem && (
-                      <div style={{fontSize:13,fontWeight:600,color:SEM_COLOR,background:`${SEM_COLOR}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {sem.presenter}
+                      <div style={{fontSize:13,fontWeight:600,color:SEM_COLOR,background:`${SEM_COLOR}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,whiteSpace:"nowrap"}}>
+                        {sem.presenter.slice(0,6)}
                       </div>
                     )}
                   </div>
@@ -279,7 +279,7 @@ export function TabTurnos({ onBack, T }) {
                   <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                   {names.slice(0,3).map((entry,ni) => {
                     const isAM = sub === "P" && entry.isAM;
-                    return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>{entry.name}</div>;
+                    return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,whiteSpace:"nowrap",maxWidth:"100%"}}>{entry.name.slice(0,6)}</div>;
                   })}
                   {names.length > 3 && <div style={{fontSize:11,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
                 </div>
