@@ -3,7 +3,7 @@ import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { DEMO_BECADO } from "../data/demo.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
-export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos, onShowMapa, onShowEstadisticas, onShowEquipos, onShowPabellones, onShowFellows, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
   const [univ, setUniv] = useState("UNAB");
   const univCfg  = UNIVERSIDADES[univ];
   const groups   = univCfg.getGroups(becados);
@@ -36,32 +36,6 @@ export function SelectScreen({ becados, onSelect, onShowRotaciones, onShowTurnos
           ))}
         </div>
 
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button className="press anim" onClick={onShowRotaciones}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"80ms"}}>
-            <span>⊞</span> Rotaciones
-          </button>
-          <button className="press anim" onClick={onShowTurnos}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"180ms"}}>
-            <span>◷</span> Mensual
-          </button>
-          <button className="press anim" onClick={onShowEquipos}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"220ms"}}>
-            <span>⬡</span> Por Equipo
-          </button>
-          <button className="press anim" onClick={onShowPabellones}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"260ms"}}>
-            <span>🔪</span> Pabellones
-          </button>
-          <button className="press anim" onClick={onShowFellows}
-            style={{display:"inline-flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:600,color:T.sub,animationDelay:"300ms"}}>
-            <span>⭐</span> Fellows
-          </button>
-          <button className="press anim" onClick={onShowEstadisticas}
-            style={{display:"inline-flex",alignItems:"center",justifyContent:"center",background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"8px 10px",fontSize:15,animationDelay:"280ms"}}>
-            📊
-          </button>
-        </div>
       </div>
 
       {error && <div style={{margin:"0 16px 12px",position:"relative",zIndex:1}}><ErrorBox msg={error} T={T}/></div>}

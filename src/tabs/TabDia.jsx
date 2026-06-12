@@ -17,7 +17,7 @@ import { ActivityCard } from "../components/ui/ActivityCard.jsx";
 import { TurnoCard } from "../components/ui/TurnoCard.jsx";
 import { SemCard } from "../components/ui/SemCard.jsx";
 
-export function TabDia({ becado, onChangeBecado, T }) {
+export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const isOnline = useOnline();
@@ -81,6 +81,8 @@ export function TabDia({ becado, onChangeBecado, T }) {
         </div>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
       </div>
+
+      <div style={{position:"relative",zIndex:1}}>{quickLinks}</div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
         <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>

@@ -22,6 +22,7 @@ import { GearBtn } from "./components/ui/GearBtn.jsx";
 import { MapaVivo } from "./components/map/MapaVivo.jsx";
 import { SelectScreen } from "./screens/SelectScreen.jsx";
 import { TabBar } from "./screens/TabBar.jsx";
+import { QuickLinks } from "./components/ui/QuickLinks.jsx";
 import { TabDia } from "./tabs/TabDia.jsx";
 import { TabRotaciones } from "./tabs/TabRotaciones.jsx";
 import { TabSemana } from "./tabs/TabSemana.jsx";
@@ -122,9 +123,21 @@ export default function App() {
     setBecado("");
     setActiveTab("horario");
   };
-  const handleShowRotaciones = () => { setShowRotaciones(true); };
-  const handleShowTurnos     = () => { setShowTurnos(true); };
   const handleShowMapa       = () => { setShowMapa(true); };
+
+  const handleNav = (id) => {
+    if (id === "rotaciones")   setShowRotaciones(true);
+    if (id === "turnos")       setShowTurnos(true);
+    if (id === "equipos")      setShowEquipos(true);
+    if (id === "pabellones")   setShowPabellones(true);
+    if (id === "fellows")      setShowFellows(true);
+    if (id === "estadisticas") setShowEstadisticas(true);
+  };
+
+  const anyOverlay = showRotaciones || showTurnos || showMapa || showEstadisticas
+    || showEquipos || showEditor || showPabellones || showFellows;
+
+  const quickLinks = <QuickLinks onNav={handleNav} T={T}/>;
 
   if (loadingInit) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",maxWidth:480,margin:"0 auto"}}>
@@ -142,7 +155,7 @@ export default function App() {
       maxWidth:480,
       margin:"0 auto",
       fontFamily:"'Inter',sans-serif",
-      paddingBottom: becado ? "calc(72px + var(--sab))" : 0,
+      paddingBottom: (becado && !anyOverlay) ? "calc(72px + var(--sab))" : 0,
       position:"relative",
     }}>
       <style>{CSS}</style>
@@ -167,30 +180,30 @@ export default function App() {
       {theme === "wabi"      && <WabiEffect/>}
       {theme === "amanecer"  && <AmanecerEffect/>}
 
-      {!becado ? (
-        showRotaciones
-          ? <TabRotaciones onChangeBecado={()=>setShowRotaciones(false)} T={T}/>
-        : showTurnos
-          ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
-        : showMapa
-          ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
-        : showEstadisticas
-          ? <TabEstadisticas onBack={() => setShowEstadisticas(false)} T={T}/>
-        : showEquipos
-          ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
-        : showEditor
-          ? <TabEditor onBack={() => setShowEditor(false)} allowedTipos={editorTipos} T={T}/>
-        : showPabellones
-          ? <TabPabellones onBack={() => setShowPabellones(false)} T={T}/>
-        : showFellows
-          ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
-          : <SelectScreen becados={becados} onSelect={handleSelect} onShowRotaciones={handleShowRotaciones} onShowTurnos={handleShowTurnos} onShowMapa={handleShowMapa} onShowEstadisticas={() => setShowEstadisticas(true)} onShowEquipos={() => setShowEquipos(true)} onShowPabellones={() => setShowPabellones(true)} onShowFellows={() => setShowFellows(true)} error={initError} T={T}/>
-
+      {/* Overlays — accesibles desde SelectScreen o desde los tabs de un becado */}
+      {showRotaciones
+        ? <TabRotaciones onChangeBecado={()=>setShowRotaciones(false)} T={T}/>
+      : showTurnos
+        ? <TabTurnos onBack={() => setShowTurnos(false)} T={T}/>
+      : showMapa
+        ? <MapaVivo becados={becados} T={T} onBack={() => setShowMapa(false)}/>
+      : showEstadisticas
+        ? <TabEstadisticas onBack={() => setShowEstadisticas(false)} T={T}/>
+      : showEquipos
+        ? <TabEquipos onChangeBecado={() => setShowEquipos(false)} T={T}/>
+      : showEditor
+        ? <TabEditor onBack={() => setShowEditor(false)} allowedTipos={editorTipos} T={T}/>
+      : showPabellones
+        ? <TabPabellones onBack={() => setShowPabellones(false)} T={T}/>
+      : showFellows
+        ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
+      : !becado ? (
+          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} error={initError} T={T}/>
       ) : (
         <>
-          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} T={T}/></div>
-          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} T={T}/></div>
+          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
+          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
+          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}

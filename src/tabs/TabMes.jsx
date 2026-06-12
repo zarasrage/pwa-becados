@@ -18,7 +18,7 @@ function formatDayLabel(iso) {
   return new Date(y, m - 1, d).toLocaleDateString("es-CL", { weekday:"long", day:"numeric", month:"long" });
 }
 
-export function TabMes({ becado, onChangeBecado, T }) {
+export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
@@ -84,6 +84,8 @@ export function TabMes({ becado, onChangeBecado, T }) {
           ))}
         </div>
       </div>
+
+      {quickLinks}
 
       <div style={{padding:"0 16px"}}>
         <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>

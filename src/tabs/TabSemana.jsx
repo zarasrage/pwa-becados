@@ -12,7 +12,7 @@ import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
 
-export function TabSemana({ becado, onChangeBecado, T }) {
+export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(() => {
     const d = new Date();
@@ -116,6 +116,8 @@ export function TabSemana({ becado, onChangeBecado, T }) {
             style={{width:32,height:32,borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>›</button>
         </div>
       </div>
+
+      {quickLinks}
 
       <div style={{padding:"0 16px"}}>
         <OfflineBanner isOnline={isOnline} isStale={updating} T={T}/>
