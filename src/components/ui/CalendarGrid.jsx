@@ -14,8 +14,8 @@ export function CalendarGrid({ slots, today, renderCell, T, hideWeekends }) {
           <div key={d} style={{textAlign:"center",fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.04em",padding:"2px 0"}}>{d}</div>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:2}}>
-        {filtered.map((iso, i) => iso ? renderCell(iso, i) : <div key={i}/>)}
+      <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:2,width:"100%",overflow:"hidden"}}>
+        {filtered.map((iso, i) => iso ? renderCell(iso, i) : <div key={i} style={{minWidth:0}}/>)}
       </div>
     </>
   );

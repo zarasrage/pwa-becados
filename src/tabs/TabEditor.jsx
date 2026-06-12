@@ -792,7 +792,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                             minHeight:26,
                             background: weekend && !nombre ? T.surface2 : entryBg,
                             display:"flex",alignItems:"center",justifyContent:"center",
-                            position:"relative",
+                            position:"relative",minWidth:0,overflow:"hidden",
                           }}>
                             {nombre ? (
                               <button className="press" onClick={() => handleRemove(date, nombre, entryTipo)}
