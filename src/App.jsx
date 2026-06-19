@@ -38,7 +38,7 @@ import { useSplash } from "./hooks/useSplash.js";
 export default function App() {
   const showSplash = useSplash();
   const [previewSplash, setPreviewSplash] = useState(false);
-  const [theme, setTheme]             = useState(() => safeStorage.get("theme") || "dark");
+  const [theme, setTheme]             = useState(() => safeStorage.get("theme") || "light");
   const [showSettings, setShowSettings] = useState(false);
   const [becado, setBecado]           = useState(() => safeStorage.get("selectedBecado") || "");
   const [becados, setBecados]         = useState([]);
