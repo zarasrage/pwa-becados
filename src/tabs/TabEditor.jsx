@@ -802,10 +802,10 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                   fontSize:12,fontWeight:600,textAlign:"center",
                                   color: entryColor,
                                   lineHeight:1.2,
-                                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                                  overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap",
                                   display:"block",
                                 }}>
-                                {conflicto && "⚠ "}{tipo==="N" ? nombre.slice(0,6) : nombre}
+                                {conflicto && "⚠ "}{nombre}
                               </button>
                             ) : null}
                           </div>

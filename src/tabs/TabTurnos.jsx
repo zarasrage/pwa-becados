@@ -248,8 +248,8 @@ export function TabTurnos({ onBack, T }) {
                           </div>
                           <div style={{width:1,height:32,background:`${SEM_COLOR}25`,flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.name||e.presenter}</div>
-                            {(e.title||e.description) && <div style={{fontSize:13,color:T.sub,lineHeight:1.3,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title||e.description}</div>}
+                            <div style={{fontSize:12,fontWeight:700,color:T.text,overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap"}}>{e.name||e.presenter}</div>
+                            {(e.title||e.description) && <div style={{fontSize:13,color:T.sub,lineHeight:1.3,marginTop:1,overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap"}}>{e.title||e.description}</div>}
                           </div>
                           <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:SEM_COLOR,opacity:0.7,flexShrink:0}}>{e.time||"07:30"}</div>
                         </div>
@@ -279,7 +279,7 @@ export function TabTurnos({ onBack, T }) {
                   <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                   {names.slice(0,3).map((entry,ni) => {
                     const isAM = sub === "P" && entry.isAM;
-                    return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}}>{sub==="N" ? entry.name.slice(0,6) : entry.name}</div>;
+                    return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap",maxWidth:"100%"}}>{entry.name}</div>;
                   })}
                   {names.length > 3 && <div style={{fontSize:11,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
                 </div>
