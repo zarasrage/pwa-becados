@@ -3,6 +3,7 @@ import { API_TOKEN } from "../constants/api.js";
 import { todayISO, offsetDate, getWeekDates, t2m } from "../utils/dates.js";
 import { prefetch, prefetchWeek } from "../utils/api.js";
 import { groupItems, resolveItems } from "../utils/schedule.js";
+import { isFeriado } from "../constants/feriados.js";
 import { rot } from "../constants/rotations.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
@@ -69,6 +70,12 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
             </div>
           )}/>
         <DateNav date={date} today={today} onPrev={()=>setDate(d=>offsetDate(d,-1))} onNext={()=>setDate(d=>offsetDate(d,1))} onToday={()=>setDate(today)} T={T}/>
+        {isFeriado(date) && (
+          <div style={{display:"inline-flex",alignItems:"center",gap:5,background:"#F59E0B18",border:"1px solid #F59E0B40",borderRadius:99,padding:"4px 10px",marginTop:8}}>
+            <span style={{fontSize:14}}>🎉</span>
+            <span style={{fontSize:12,fontWeight:700,color:"#F59E0B",letterSpacing:"0.04em"}}>Feriado</span>
+          </div>
+        )}
       </div>
 
       <div style={{position:"relative",zIndex:1}}>{quickLinks}</div>

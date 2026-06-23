@@ -3,6 +3,7 @@ import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
 import { TURNO } from "../constants/turnos.js";
 import { todayISO, getMonthDates, monthLabel } from "../utils/dates.js";
+import { isFeriado } from "../constants/feriados.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -107,6 +108,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               if (artroCode === "A") badges.push({ label:"A", color:"#72FF00" });
               if (nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
               const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
+              const esFeriado = isFeriado(iso);
               const hasContent = badges.length > 0 || rotC;
 
               return (
@@ -114,16 +116,16 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
                   className={hasContent ? "press" : ""}
                   onClick={() => hasContent && setSelectedDay(isSelected ? null : iso)}
                   style={{
-                    background: isSelected ? `${T.accent}20` : isToday ? T.surface2 : "transparent",
-                    borderTop:    rotC ? `2px solid ${rotC}` : `1px solid ${isSelected ? T.accent+"60" : isToday ? "#348FFF60" : T.border}`,
-                    borderRight:  `1px solid ${isSelected ? T.accent+"60" : isToday ? "#348FFF60" : T.border}`,
-                    borderBottom: `1px solid ${isSelected ? T.accent+"60" : isToday ? "#348FFF60" : T.border}`,
-                    borderLeft:   `1px solid ${isSelected ? T.accent+"60" : isToday ? "#348FFF60" : T.border}`,
+                    background: isSelected ? `${T.accent}20` : esFeriado ? "#F59E0B0A" : isToday ? T.surface2 : "transparent",
+                    borderTop:    rotC ? `2px solid ${rotC}` : `1px solid ${isSelected ? T.accent+"60" : esFeriado ? "#F59E0B50" : isToday ? "#348FFF60" : T.border}`,
+                    borderRight:  `1px solid ${isSelected ? T.accent+"60" : esFeriado ? "#F59E0B50" : isToday ? "#348FFF60" : T.border}`,
+                    borderBottom: `1px solid ${isSelected ? T.accent+"60" : esFeriado ? "#F59E0B50" : isToday ? "#348FFF60" : T.border}`,
+                    borderLeft:   `1px solid ${isSelected ? T.accent+"60" : esFeriado ? "#F59E0B50" : isToday ? "#348FFF60" : T.border}`,
                     borderRadius:6, padding:"3px 2px", minHeight:48,
                     display:"flex", flexDirection:"column", gap:2,
                     cursor: hasContent ? "pointer" : "default",
                   }}>
-                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":"transparent",color:isToday?"#fff":T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?"#348FFF":esFeriado?"#F59E0B":"transparent",color:isToday||esFeriado?"#fff":T.muted,borderRadius:(isToday||esFeriado)?99:0,width:(isToday||esFeriado)?16:"auto",height:(isToday||esFeriado)?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:(isToday||esFeriado)?"center":"flex-start",paddingLeft:(isToday||esFeriado)?0:1}}>{dayNum}</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:1}}>
                     {badges.map((b,bi)=>(
                       <div key={bi} style={{fontSize:13,fontWeight:700,color:b.color,background:`${b.color}${b.glow?"40":"25"}`,borderRadius:3,padding:"1px 3px",lineHeight:1.3,boxShadow:b.glow?`0 0 6px ${b.color}90`:"none"}}>{b.label}</div>

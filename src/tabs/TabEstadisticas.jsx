@@ -4,16 +4,7 @@ import { todayISO, offsetDate, getWeekDates, weekRangeLabel } from "../utils/dat
 import { apiSWR } from "../utils/api.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
-
-// Feriados chilenos 2025–2026
-const FERIADOS = new Set([
-  "2025-01-01","2025-04-18","2025-04-19","2025-05-01","2025-05-21",
-  "2025-06-20","2025-06-29","2025-07-16","2025-08-15","2025-09-18",
-  "2025-09-19","2025-10-12","2025-10-31","2025-11-01","2025-12-08","2025-12-25",
-  "2026-01-01","2026-04-03","2026-04-04","2026-05-01","2026-05-21",
-  "2026-06-29","2026-07-16","2026-08-15","2026-09-18","2026-09-19",
-  "2026-10-12","2026-10-31","2026-11-01","2026-12-08","2026-12-25",
-]);
+import { FERIADOS } from "../constants/feriados.js";
 
 const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00", S:"#E879F9" };
 

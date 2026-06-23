@@ -3,6 +3,7 @@ import { API_TOKEN } from "../constants/api.js";
 import { TURNO } from "../constants/turnos.js";
 import { rot } from "../constants/rotations.js";
 import { todayISO, offsetDate, getWeekDates, weekRangeLabel, weekLabel } from "../utils/dates.js";
+import { isFeriado } from "../constants/feriados.js";
 import { apiGet } from "../utils/api.js";
 import { cacheGet, cacheSet } from "../utils/cache.js";
 import { groupItems } from "../utils/schedule.js";
@@ -135,6 +136,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
                         {weekLabel(day.date)}
                       </span>
                       {isToday && <span style={{fontSize:13,fontWeight:700,background:c.accent,color:"#fff",borderRadius:99,padding:"1px 6px",letterSpacing:"0.05em"}}>HOY</span>}
+                      {isFeriado(day.date) && <span style={{fontSize:11,fontWeight:700,color:"#F59E0B",background:"#F59E0B18",border:"1px solid #F59E0B40",borderRadius:99,padding:"1px 6px"}}>🎉 Feriado</span>}
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
                       {day.rotationCode ? (
