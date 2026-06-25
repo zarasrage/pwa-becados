@@ -4,6 +4,7 @@ import { ROT } from "../constants/rotations.js";
 import { TURNO } from "../constants/turnos.js";
 import { todayISO, getMonthDates, monthLabel } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
+import { CURSO_CPQ_BY_DATE, UNAB_BECADOS } from "../data/cursoCPQ.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -109,7 +110,9 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               if (nocheCode === "N") badges.push({ label:"N", color:"#4F6EFF" });
               const rotC = day.rotationCode ? (ROT[day.rotationCode]?.accent || "#64748B") : null;
               const esFeriado = isFeriado(iso);
-              const hasContent = badges.length > 0 || rotC;
+              const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[iso] || null) : null;
+              if (claseCPQ) badges.push({ label:"C", color:"#D2A679", glow: false });
+              const hasContent = badges.length > 0 || rotC || !!claseCPQ;
 
               return (
                 <div key={iso}
@@ -145,6 +148,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               const turnoCodes = [diaCode, artroCode, nocheCode].filter(Boolean);
               const firstTurnoColor = turnoCodes.length > 0 ? (TURNO[turnoCodes[0]]?.accent || null) : null;
               const popupColor = rotInfo?.accent || firstTurnoColor || T.accent;
+              const popupCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[selectedDay] || null) : null;
 
               return (
                 <div className="anim" style={{marginTop:12,background:T.surface,border:`1px solid ${popupColor}30`,borderLeft:`3px solid ${popupColor}`,borderRadius:12,padding:"14px 16px",position:"relative"}}>
@@ -160,6 +164,17 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
                     )}
                   </div>
 
+                  {popupCPQ && (
+                    <div style={{background:"#D2A67914",border:"1px solid #D2A67940",borderLeft:"3px solid #D2A679",borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+                      <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",color:"#D2A679",textTransform:"uppercase",marginBottom:4}}>
+                        Curso CPQ — Clase {popupCPQ.numero}
+                        {popupCPQ.hora && <span style={{fontFamily:"'JetBrains Mono',monospace",fontWeight:400,marginLeft:6,opacity:0.7}}>{popupCPQ.hora}</span>}
+                        {popupCPQ.sala && <span style={{fontWeight:400,marginLeft:6,opacity:0.6}}>{popupCPQ.sala}</span>}
+                      </div>
+                      <div style={{fontSize:13,fontWeight:600,color:T.text,lineHeight:1.35,marginBottom:3}}>{popupCPQ.titulo}</div>
+                      <div style={{fontSize:12,color:T.sub}}>{popupCPQ.doctor}</div>
+                    </div>
+                  )}
                   {rotInfo && (
                     <div style={{display:"inline-flex",alignItems:"center",gap:6,background:rotInfo.light,border:`1px solid ${rotInfo.accent}30`,borderRadius:99,padding:"4px 10px",marginBottom:10}}>
                       <span style={{width:7,height:7,borderRadius:"50%",background:rotInfo.accent,flexShrink:0,boxShadow:`0 0 6px ${rotInfo.accent}`}}/>
