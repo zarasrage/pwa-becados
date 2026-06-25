@@ -4,6 +4,7 @@ import { todayISO, offsetDate, getWeekDates, t2m } from "../utils/dates.js";
 import { prefetch, prefetchWeek } from "../utils/api.js";
 import { groupItems, resolveItems } from "../utils/schedule.js";
 import { isFeriado } from "../constants/feriados.js";
+import { CURSO_CPQ_BY_DATE, UNAB_BECADOS } from "../data/cursoCPQ.js";
 import { rot } from "../constants/rotations.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
@@ -46,6 +47,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
 
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
   const grouped = daily ? groupItems(resolveItems(daily.rotationCode, daily.items, date)) : null;
+  const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[date] || null) : null;
 
   return (
     <div
@@ -106,6 +108,17 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
           let cardIdx = 0;
           return (
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {claseCPQ && (
+                <div className="anim" style={{background:"#D2A67914",border:"1px solid #D2A67940",borderLeft:"3px solid #D2A679",borderRadius:12,padding:"12px 14px",display:"flex",flexDirection:"column",gap:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                    <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",color:"#D2A679",textTransform:"uppercase"}}>Curso CPQ — Clase {claseCPQ.numero}</span>
+                    {claseCPQ.hora && <span style={{fontSize:11,color:"#D2A679",opacity:0.7,fontFamily:"'JetBrains Mono',monospace"}}>{claseCPQ.hora}</span>}
+                    {claseCPQ.sala && <span style={{fontSize:11,color:"#D2A679",opacity:0.6}}>{claseCPQ.sala}</span>}
+                  </div>
+                  <div style={{fontSize:13,fontWeight:600,color:T.text,lineHeight:1.35}}>{claseCPQ.titulo}</div>
+                  <div style={{fontSize:12,color:T.sub,marginTop:2}}>{claseCPQ.doctor}</div>
+                </div>
+              )}
               {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} time={sem.time} index={cardIdx++} T={T}/>}
               {(manana.length > 0 || isPoliAM) && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
