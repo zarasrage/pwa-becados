@@ -3,6 +3,7 @@ import { API_TOKEN } from "../constants/api.js";
 import { todayISO, formatDate, getMonthDates, monthLabel } from "../utils/dates.js";
 import { apiSWR } from "../utils/api.js";
 import { useApiData } from "../hooks/useApiData.js";
+import { isFeriado } from "../constants/feriados.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
@@ -172,14 +173,14 @@ export function TabTurnos({ onBack, T }) {
                     className="press"
                     onClick={() => sem && setSelectedSem(isSelected ? null : { date: iso, sem })}
                     style={{
-                      background: isSelected ? `${SEM_COLOR}25` : sem ? `${SEM_COLOR}12` : isToday ? T.surface2 : "transparent",
-                      border: `1px solid ${isSelected ? SEM_COLOR+"80" : sem ? SEM_COLOR+"35" : isToday ? SEM_COLOR+"40" : T.border}`,
+                      background: isSelected ? `${SEM_COLOR}25` : sem ? `${SEM_COLOR}12` : isToday ? T.surface2 : isFeriado(iso) ? "#EF44440A" : "transparent",
+                      border: `1px solid ${isSelected ? SEM_COLOR+"80" : sem ? SEM_COLOR+"35" : isToday ? SEM_COLOR+"40" : isFeriado(iso) ? "#EF444450" : T.border}`,
                       borderRadius: 6, padding: "3px 2px", minHeight: 44,
                       display: "flex", flexDirection: "column", gap: 1,
                       cursor: sem ? "pointer" : "default",
                       minWidth: 0, overflow: "hidden",
                     }}>
-                    <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?SEM_COLOR:"transparent",color:isToday?"#fff":sem?SEM_COLOR:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                    <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?SEM_COLOR:"transparent",color:isToday?"#fff":isFeriado(iso)?"#EF4444":sem?SEM_COLOR:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                     {sem && (
                       <div style={{fontSize:13,fontWeight:600,color:SEM_COLOR,background:`${SEM_COLOR}20`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,whiteSpace:"nowrap"}}>
                         {sem.presenter}
@@ -275,8 +276,8 @@ export function TabTurnos({ onBack, T }) {
               const names   = cell.names || [];
               const has     = names.length > 0;
               return (
-                <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1,minWidth:0,overflow:"hidden"}}>
-                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
+                <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:isFeriado(iso)?"#EF44440A":"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":isFeriado(iso)?"#EF444450":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1,minWidth:0,overflow:"hidden"}}>
+                  <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":isFeriado(iso)?"#EF4444":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
                   {names.slice(0,3).map((entry,ni) => {
                     const isAM = sub === "P" && entry.isAM;
                     return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap",maxWidth:"100%"}}>{entry.name}</div>;

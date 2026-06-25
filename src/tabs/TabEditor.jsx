@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
 import { bumpDataVersion } from "../lib/supabaseApi.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
+import { isFeriado } from "../constants/feriados.js";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 const ROTS_SOLO_NOCHE   = ["T","NHT"];
@@ -673,9 +674,10 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                       return (
                         <div key={date} style={{textAlign:"center",fontSize:13,fontWeight:800,
                           padding:"4px 2px 2px",
-                          color:isToday?"#fff":weekend?T.muted:T.text,
-                          background:isToday?"#E879F9":weekend?T.surface2:T.surface,
-                          borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif"}}>
+                          color:isToday?"#fff":isFeriado(date)?"#EF4444":weekend?T.muted:T.text,
+                          background:isToday?"#E879F9":isFeriado(date)?"#EF44440A":weekend?T.surface2:T.surface,
+                          borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif",
+                          border:isFeriado(date)?"1px solid #EF444430":"none"}}>
                           {dayNum}
                         </div>
                       );
