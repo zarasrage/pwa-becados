@@ -151,8 +151,13 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
                   <button className="press" onClick={() => setSelectedDay(null)}
                     style={{position:"absolute",top:10,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1,cursor:"pointer"}}>✕</button>
 
-                  <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.06em",textTransform:"capitalize",color:popupColor,marginBottom:10}}>
-                    {formatDayLabel(selectedDay)}
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+                    <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.06em",textTransform:"capitalize",color:popupColor}}>
+                      {formatDayLabel(selectedDay)}
+                    </div>
+                    {isFeriado(selectedDay) && (
+                      <span style={{fontSize:12,fontWeight:700,color:"#EF4444",background:"#EF44441A",border:"1px solid #EF444440",borderRadius:99,padding:"2px 8px"}}>🎉 Feriado</span>
+                    )}
                   </div>
 
                   {rotInfo && (
