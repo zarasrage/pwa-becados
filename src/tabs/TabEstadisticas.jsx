@@ -212,12 +212,12 @@ export function TabEstadisticas({ onBack, T }) {
         {/* Leyenda */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14,padding:"10px 12px",background:T.surface2,borderRadius:10,border:`1px solid ${T.border}`}}>
           {[
-            ["P","#06B6D4","Poli","4pts"],
-            ["D","#F59E0B","Día","6pts"],
-            ["N","#4F6EFF","Noche","12pts"],
-            ["N","#4F6EFF","finde/fer","24pts"],
-            ["A","#72FF00","Artro","1pt"],
-            ["S","#E879F9","Seminario","6pts"],
+            ["P","#06B6D4","Poli","4h"],
+            ["D","#F59E0B","Día","6h"],
+            ["N","#4F6EFF","Noche","12h"],
+            ["N","#4F6EFF","finde/fer","24h"],
+            ["A","#72FF00","Artro","1h"],
+            ["S","#E879F9","Seminario","6h"],
           ].map(([,color,label,pts],i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
               <div style={{width:8,height:8,borderRadius:2,background:color}}/>
@@ -284,7 +284,7 @@ export function TabEstadisticas({ onBack, T }) {
                     </div>
 
                     <div style={{textAlign:"right",flexShrink:0}}>
-                      <div style={{fontSize:20,fontWeight:800,color:accent,lineHeight:1}}>{s.peso}</div>
+                      <div style={{fontSize:20,fontWeight:800,color:accent,lineHeight:1}}>{s.peso}<span style={{fontSize:13,fontWeight:600,marginLeft:2}}>h</span></div>
                       <div style={{fontSize:13,color:T.muted,marginTop:1}}>{s.total} turnos</div>
                       {s.nFeriado > 0 && (
                         <div style={{fontSize:13,fontWeight:700,color:"#FF5500",marginTop:2,background:"#FF550015",borderRadius:99,padding:"1px 5px",display:"inline-block"}}>
