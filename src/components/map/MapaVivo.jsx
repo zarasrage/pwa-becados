@@ -53,6 +53,20 @@ function resolveBecadoBuilding(schedItems, turno, seminario, nowMin) {
   return act ? activityToBuilding(act.activity) : null;
 }
 
+// Limita la concurrencia de fetches para no saturar Supabase
+async function mapLimit(items, limit, fn) {
+  const results = [];
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++;
+      results[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 export function MapaVivo({ becados, T, onBack }) {
   const realToday = useMemo(() => todayISO(), []);
   const [date, setDate] = useState(realToday);
@@ -91,52 +105,64 @@ export function MapaVivo({ becados, T, onBack }) {
           summary = demoSummary(date);
           monthly = demoMonthly(date.slice(0,7));
         } else {
-          [summary, monthly] = await Promise.all([
-            apiSWR({ route:"summary", date, token:API_TOKEN }, ()=>{}, ()=>{}),
-            apiSWR({ route:"monthly", month:date.slice(0,7), token:API_TOKEN }, ()=>{}, ()=>{}),
-          ]);
+          summary = await apiSWR({ route:"summary", date, token:API_TOKEN }, ()=>{}, ()=>{});
+          monthly = { ok:false };
         }
 
         if (!summary.ok || !summary.groups) { setRawData(null); setLoading(false); return; }
 
-        const turnoLookup = {};
-        if (monthly.ok !== false) {
-          (monthly.entries || []).forEach(e => {
-            if (e.date !== date) return;
-            if (!turnoLookup[e.name]) turnoLookup[e.name] = {};
-            if (e.type === "P" || e.type === "p" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
-            if (e.type === "N") turnoLookup[e.name].nocheCode = "N";
-            if (e.type === "A") turnoLookup[e.name].artroCode = "A";
-          });
-        }
-
-        const scheduledRots = ["H","M","CyP","R","TyP","Col"];
-        const rotSchedules = {};
+        // Horario REAL de cada becado (no reutilizar el del líder del grupo)
+        const becadoData = {};
 
         if (demoMode) {
-          scheduledRots.forEach(r => {
-            if (!summary.groups[r]?.length) return;
-            const acts = DEMO_ACTIVITIES[r] || [];
-            const [dy,dm,dd] = date.split("-").map(Number);
-            const dow = new Date(dy,dm-1,dd).getDay();
-            const hasSem = [2,3,4].includes(dow);
-            rotSchedules[r] = {
-              items: acts.map(([time, activity]) => ({ time, activity })),
-              seminario: hasSem ? { presenter:summary.groups[r][0], title:"Presentación demo", tag:"Seminario", time:"07:30" } : null,
-            };
-          });
+          // Modo demo: usa actividades genéricas por rotación
+          const turnoLookup = {};
+          if (monthly.ok !== false) {
+            (monthly.entries || []).forEach(e => {
+              if (e.date !== date) return;
+              if (!turnoLookup[e.name]) turnoLookup[e.name] = {};
+              if (e.type === "P" || e.type === "p" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
+              if (e.type === "N") turnoLookup[e.name].nocheCode = "N";
+              if (e.type === "A") turnoLookup[e.name].artroCode = "A";
+            });
+          }
+          const [dy,dm,dd] = date.split("-").map(Number);
+          const dow = new Date(dy,dm-1,dd).getDay();
+          const hasSem = [2,3,4].includes(dow);
+          for (const [rotCode, names] of Object.entries(summary.groups)) {
+            const acts = DEMO_ACTIVITIES[rotCode] || [];
+            names.forEach((name, ni) => {
+              if (name === DEMO_BECADO) return;
+              becadoData[name] = {
+                items: acts.map(([time, activity]) => ({ time, activity })),
+                turno: turnoLookup[name] || {},
+                seminario: (hasSem && ni === 0) ? { presenter:name, title:"Presentación demo", tag:"Seminario", time:"07:30" } : null,
+                rotationCode: rotCode,
+              };
+            });
+          }
         } else {
-          await Promise.all(
-            scheduledRots.filter(r => summary.groups[r]?.length > 0).map(async r => {
-              try {
-                const daily = await apiGet({ route:"daily", becado:summary.groups[r][0], date, token:API_TOKEN });
-                if (daily.ok !== false) rotSchedules[r] = { items:daily.items||[], seminario:daily.seminario||null };
-              } catch {}
-            })
-          );
+          // Modo real: consulta getDaily por cada becado (concurrencia limitada)
+          const allNames = [];
+          for (const names of Object.values(summary.groups)) {
+            for (const n of names) if (n !== DEMO_BECADO && !allNames.includes(n)) allNames.push(n);
+          }
+          await mapLimit(allNames, 8, async (name) => {
+            try {
+              const daily = await apiGet({ route:"daily", becado:name, date, token:API_TOKEN });
+              if (daily.ok !== false) {
+                becadoData[name] = {
+                  items: daily.items || [],
+                  turno: daily.turno || {},
+                  seminario: daily.seminario || null,
+                  rotationCode: daily.rotationCode || "",
+                };
+              }
+            } catch {}
+          });
         }
 
-        setRawData({ summary, turnoLookup, rotSchedules });
+        setRawData({ summary, becadoData });
       } catch(e) {
         console.error("Map error:", e);
         setRawData(null);
@@ -152,11 +178,11 @@ export function MapaVivo({ becados, T, onBack }) {
     if (!rawData?.summary?.groups) return result;
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
-      const sched = rawData.rotSchedules[rotCode] || { items:[], seminario:null };
       for (const name of names) {
         if (name === DEMO_BECADO) continue;
-        const turno = rawData.turnoLookup[name] || {};
-        const building = resolveBecadoBuilding(sched.items, turno, sched.seminario, simMin);
+        const bd = rawData.becadoData[name];
+        if (!bd) continue;
+        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin);
         if (building && result[building]) {
           result[building].push({
             name,
