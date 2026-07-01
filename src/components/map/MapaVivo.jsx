@@ -187,7 +187,7 @@ export function MapaVivo({ becados, T, onBack }) {
           result[building].push({
             name,
             initial: name.charAt(0).toUpperCase(),
-            color: getBecadoColor(name, activeBecados),
+            color: ROT[rotCode]?.accent || getBecadoColor(name, activeBecados),
             rotation: rotCode,
             rotName: ROT[rotCode]?.name || rotCode,
           });
