@@ -38,7 +38,15 @@ import { useSplash } from "./hooks/useSplash.js";
 export default function App() {
   const showSplash = useSplash();
   const [previewSplash, setPreviewSplash] = useState(false);
-  const [theme, setTheme]             = useState(() => safeStorage.get("theme") || "light");
+  const [theme, setTheme]             = useState(() => {
+    // Reset único: forzar tema blanco una sola vez para todos los usuarios
+    if (!safeStorage.get("themeResetV1")) {
+      safeStorage.set("themeResetV1", "1");
+      safeStorage.set("theme", "light");
+      return "light";
+    }
+    return safeStorage.get("theme") || "light";
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [becado, setBecado]           = useState(() => safeStorage.get("selectedBecado") || "");
   const [becados, setBecados]         = useState([]);
