@@ -321,11 +321,11 @@ export function MapaVivo({ becados, T, onBack }) {
         </div>
       </div>
 
-      <div style={{padding:"0 16px",paddingBottom:40}}>
+      <div style={{padding:"0 6px",paddingBottom:40}}>
         {loading ? <Spinner color={T.accent||"#348FFF"}/> : (
           <>
             {/* Building cards — 2x2 grid */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:3}}>
               {MAP_BUILDINGS.map((b, i) => (
                 <BuildingCard
                   key={b.id}
