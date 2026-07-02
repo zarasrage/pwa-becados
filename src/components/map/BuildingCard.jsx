@@ -20,7 +20,8 @@ export function BuildingCard({ building, avatars, selected, onSelect, avatarLook
             imageRendering:"pixelated",
           }}/>
           {avatars.slice(0, floorSpots.length).map((av, i) => {
-            const spot = floorSpots[i];
+            const spot0 = floorSpots[i];
+            const spot = { x: spot0.x, y: spot0.y + 6 }; // bajar todos un poco
             const isSel = selected?.name === av.name;
             const sz = isSel ? 86 : 72;
             return (
