@@ -1,34 +1,24 @@
-// Recolor en tiempo real de los sprites de doctor (PNG pixel-art) vía canvas.
-// Hace "palette swap": mapea las rampas de piel/pelo originales a rampas nuevas,
-// conservando el sombreado. Los resultados se cachean como data URLs.
+// Recolor por REGIONES: cada parte del personaje (piel, pelo, ojos, labios,
+// traje, zapatos) tiene sus píxeles exactos definidos en spriteRegions.json.
+// Se recolorea cada zona preservando el sombreado (brillo relativo), sin que
+// se escape ningún pixel y sin tocar el contorno negro.
+import REGIONS from "./spriteRegions.json";
 
-// Rampas ORIGINALES del sprite (base, sombra, sombra2)
-const SRC_SKIN = [[250,193,177],[244,178,161],[191,135,106]];
-const SRC_HAIR = [[104,79,71],[73,54,48],[62,43,38]];
-
-// Paletas disponibles (cada una = rampa de 3 tonos)
-export const SKIN_RAMPS = {
-  claro:     [[250,193,177],[244,178,161],[191,135,106]], // = original
-  medio:     [[224,172,105],[198,150,88],[150,110,64]],
-  moreno:    [[198,134,66],[176,116,54],[140,88,40]],
-  oscuro:    [[141,85,36],[120,70,30],[92,52,22]],
-  muyOscuro: [[92,58,38],[74,46,30],[54,32,20]],
+export const PART_LABELS = {
+  piel: "Piel",
+  pelo: "Pelo",
+  ojos: "Ojos",
+  labios: "Labios",
+  traje: "Traje",
+  zapatos: "Zapatos",
 };
-export const HAIR_RAMPS = {
-  negro:      [[30,30,34],[18,18,20],[10,10,12]],
-  castanoOsc: [[104,79,71],[73,54,48],[62,43,38]], // = original
-  castano:    [[120,90,60],[96,70,46],[72,52,34]],
-  rubio:      [[212,184,150],[184,150,110],[150,118,80]],
-  pelirrojo:  [[160,82,45],[130,64,34],[100,48,24]],
-  canoso:     [[200,200,205],[170,170,176],[140,140,148]],
-};
-
-export const SKIN_DEFAULT = "claro";
-export const HAIR_DEFAULT = "castanoOsc";
+export const PART_ORDER = ["piel","pelo","ojos","labios","traje","zapatos"];
 
 const FRAME_COUNT = 4;
-let basesPromise = null;      // Promise<ImageData[]>
-const urlCache = new Map();   // key "skin|hair" -> [url0..3]
+const BASE_SRC = (i) => `/sprites/doctorv2/frame_${i}.png`;
+
+let basesPromise = null;   // Promise<ImageData[]>
+const urlCache = new Map(); // key -> [url0..3]
 
 function loadFrame(i) {
   return new Promise((resolve) => {
@@ -41,7 +31,7 @@ function loadFrame(i) {
       resolve(ctx.getImageData(0, 0, cv.width, cv.height));
     };
     img.onerror = () => resolve(null);
-    img.src = `/sprites/doctor/frame_00${i}.png`;
+    img.src = BASE_SRC(i);
   });
 }
 
@@ -52,38 +42,55 @@ export function ensureBases() {
   return basesPromise;
 }
 
-function keyStr([r,g,b]) { return r+","+g+","+b; }
+function hexToRgb(hex) {
+  const h = hex.replace("#", "");
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function lum(r,g,b) { return 0.299*r + 0.587*g + 0.114*b; }
 
-// Genera los 4 data URLs recoloreados para una combinación piel/pelo.
-export async function getRecoloredFrames(skinKey, hairKey) {
-  // Defaults == original: no recolorear, usar PNGs tal cual
-  if ((skinKey || SKIN_DEFAULT) === SKIN_DEFAULT && (hairKey || HAIR_DEFAULT) === HAIR_DEFAULT) {
-    return null;
-  }
-  const ck = `${skinKey}|${hairKey}`;
+// look: { piel?:"#rrggbb", pelo?:..., ... } — solo las partes cambiadas
+function lookKey(look) {
+  return PART_ORDER.map(p => look?.[p] || "").join("|");
+}
+
+export async function getRecoloredFrames(look) {
+  if (!look || PART_ORDER.every(p => !look[p])) return null; // sin cambios → base tal cual
+  const ck = lookKey(look);
   if (urlCache.has(ck)) return urlCache.get(ck);
 
   const bases = await ensureBases();
-  const skinRamp = SKIN_RAMPS[skinKey] || SKIN_RAMPS[SKIN_DEFAULT];
-  const hairRamp = HAIR_RAMPS[hairKey] || HAIR_RAMPS[HAIR_DEFAULT];
+  const { w, h, frames } = REGIONS;
 
-  const map = new Map();
-  SRC_SKIN.forEach((src, i) => map.set(keyStr(src), skinRamp[i]));
-  SRC_HAIR.forEach((src, i) => map.set(keyStr(src), hairRamp[i]));
-
-  const urls = bases.map((base) => {
+  const urls = bases.map((base, fi) => {
     if (!base) return null;
     const cv = document.createElement("canvas");
-    cv.width = base.width; cv.height = base.height;
+    cv.width = w; cv.height = h;
     const ctx = cv.getContext("2d");
-    const out = ctx.createImageData(base.width, base.height);
-    const s = base.data, d = out.data;
-    for (let p = 0; p < s.length; p += 4) {
-      const a = s[p+3];
-      if (a === 0) { d[p+3] = 0; continue; }
-      const repl = map.get(s[p]+","+s[p+1]+","+s[p+2]);
-      if (repl) { d[p]=repl[0]; d[p+1]=repl[1]; d[p+2]=repl[2]; d[p+3]=a; }
-      else { d[p]=s[p]; d[p+1]=s[p+1]; d[p+2]=s[p+2]; d[p+3]=a; }
+    const out = ctx.createImageData(w, h);
+    out.data.set(base.data); // copia del base
+    const d = out.data;
+    const parts = frames[fi];
+
+    for (const part of PART_ORDER) {
+      const hex = look[part];
+      if (!hex) continue;
+      const target = hexToRgb(hex);
+      const idxs = parts[part] || [];
+      if (!idxs.length) continue;
+      // tono base de la zona = píxel más claro (para mapear base→target)
+      let baseL = 1;
+      for (const idx of idxs) {
+        const p = idx*4;
+        const l = lum(base.data[p], base.data[p+1], base.data[p+2]);
+        if (l > baseL) baseL = l;
+      }
+      for (const idx of idxs) {
+        const p = idx*4;
+        const ratio = lum(base.data[p], base.data[p+1], base.data[p+2]) / baseL;
+        d[p]   = Math.min(255, Math.round(target[0]*ratio));
+        d[p+1] = Math.min(255, Math.round(target[1]*ratio));
+        d[p+2] = Math.min(255, Math.round(target[2]*ratio));
+      }
     }
     ctx.putImageData(out, 0, 0);
     return cv.toDataURL("image/png");

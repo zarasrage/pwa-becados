@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { getRecoloredFrames } from "./recolorSprites.js";
 
-// Devuelve los 4 data URLs recoloreados para una combo piel/pelo,
-// o null mientras carga / cuando se usan los PNGs originales.
-function useRecoloredFrames(skin, hair) {
+// Devuelve los 4 data URLs recoloreados para un `look` (colores por parte),
+// o null mientras carga / cuando se usa el base sin cambios.
+function useRecoloredFrames(look) {
   const [frames, setFrames] = useState(null);
+  const key = look ? JSON.stringify(look) : "";
   useEffect(() => {
     let alive = true;
     setFrames(null);
-    getRecoloredFrames(skin, hair)
+    getRecoloredFrames(look)
       .then((urls) => { if (alive) setFrames(urls); })
       .catch(() => { if (alive) setFrames(null); });
     return () => { alive = false; };
-  }, [skin, hair]);
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return frames;
 }
 
@@ -24,8 +25,8 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
     return () => clearInterval(interval);
   }, [i]);
 
-  const recolored = useRecoloredFrames(look?.skin, look?.hair);
-  const src = recolored?.[frame] || `/sprites/doctor/frame_00${frame}.png`;
+  const recolored = useRecoloredFrames(look);
+  const src = recolored?.[frame] || `/sprites/doctorv2/frame_${frame}.png`;
 
   return (
     <div className="press"
