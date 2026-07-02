@@ -1,6 +1,6 @@
 import { DoctorSprite } from "./DoctorSprite.jsx";
 
-export function BuildingCard({ building, avatars, selected, onSelect, T }) {
+export function BuildingCard({ building, avatars, selected, onSelect, avatarLooks = {}, T }) {
   const { id, label, accent, desc, sprite, floorSpots } = building;
   const count = avatars.length;
 
@@ -23,11 +23,9 @@ export function BuildingCard({ building, avatars, selected, onSelect, T }) {
             const spot = floorSpots[i];
             const isSel = selected?.name === av.name;
             const sz = isSel ? 72 : 60;
-            // Cycle through 4 frames with different speed per doctor
-            const frameIdx = Math.floor(Date.now() / (180 + i * 30)) % 4;
             return (
               <DoctorSprite key={av.name} av={av} spot={spot} isSel={isSel} sz={sz} i={i}
-                onSelect={onSelect} selected={selected}/>
+                onSelect={onSelect} selected={selected} look={avatarLooks[av.name]}/>
             );
           })}
           {avatars.length > floorSpots.length && (

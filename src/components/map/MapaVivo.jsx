@@ -7,8 +7,23 @@ import { apiGet, apiSWR } from "../../utils/api.js";
 import { DEMO_BECADO, DEMO_MAP_NAMES, DEMO_ACTIVITIES, demoSummary, demoMonthly } from "../../data/demo.js";
 import { DateNav } from "../ui/DateNav.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
-import { PixelAvatar } from "./PixelAvatar.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
+import { safeStorage } from "../../utils/storage.js";
+import { SKIN_RAMPS, HAIR_RAMPS, SKIN_DEFAULT, HAIR_DEFAULT, getRecoloredFrames } from "./recolorSprites.js";
+
+const rgb = (a) => `rgb(${a[0]},${a[1]},${a[2]})`;
+
+// Preview estático (frame 0) del muñeco con la combo de colores elegida
+function SpritePreview({ skin, hair, size = 44 }) {
+  const [src, setSrc] = useState(`/sprites/doctor/frame_000.png`);
+  useEffect(() => {
+    let alive = true;
+    getRecoloredFrames(skin, hair)
+      .then((urls) => { if (alive) setSrc(urls?.[0] || `/sprites/doctor/frame_000.png`); })
+      .catch(() => {});
+  }, [skin, hair]);
+  return <img src={src} width={size} height={size} alt="preview" style={{imageRendering:"pixelated",display:"block"}}/>;
+}
 
 function getBecadoColor(name, allBecados) {
   const idx = allBecados.indexOf(name);
@@ -78,6 +93,27 @@ export function MapaVivo({ becados, T, onBack }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [avatarLooks, setAvatarLooks] = useState(() => {
+    try { return JSON.parse(safeStorage.get("avatarLooks") || "{}"); } catch { return {}; }
+  });
+
+  const updateLook = (name, key, value) => {
+    setAvatarLooks(prev => {
+      const cur = prev[name] || { skin: SKIN_DEFAULT, hair: HAIR_DEFAULT };
+      const next = { ...prev, [name]: { ...cur, [key]: value } };
+      safeStorage.set("avatarLooks", JSON.stringify(next));
+      return next;
+    });
+  };
+  const resetLook = (name) => {
+    setAvatarLooks(prev => {
+      const next = { ...prev };
+      delete next[name];
+      safeStorage.set("avatarLooks", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const isLive = !demoMode && date === realToday && (() => {
     const now = new Date();
@@ -289,6 +325,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   avatars={buildingMap[b.id] || []}
                   selected={selected}
                   onSelect={setSelected}
+                  avatarLooks={avatarLooks}
                   T={T}
                 />
               ))}
@@ -307,18 +344,61 @@ export function MapaVivo({ becados, T, onBack }) {
               }}>
                 <button className="press" onClick={() => setSelected(null)}
                   style={{position:"absolute",top:8,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1}}>✕</button>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-                  <PixelAvatar color={selected.color} initial={selected.initial} name={selected.name.split(" ").slice(-1)[0]} size={32} selected={false} onClick={()=>{}}/>
-                  <div>
-                    <div style={{fontSize:15,fontWeight:700,color:T.text}}>{selected.name}</div>
-                    <div style={{fontSize:11,color:T.muted}}>{selected.rotName}</div>
-                  </div>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{width:6,height:6,borderRadius:"50%",background:selectedBuilding.accent,boxShadow:`0 0 6px ${selectedBuilding.accent}`}}/>
-                  <span style={{fontSize:12,fontWeight:600,color:selectedBuilding.accent}}>{selectedBuilding.label}</span>
-                  <span style={{fontSize:11,color:T.muted}}>· {selectedBuilding.desc}</span>
-                </div>
+                {(() => {
+                  const look = avatarLooks[selected.name] || { skin: SKIN_DEFAULT, hair: HAIR_DEFAULT };
+                  const hasCustom = !!avatarLooks[selected.name];
+                  return (
+                    <>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                        <SpritePreview skin={look.skin} hair={look.hair} size={40}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:15,fontWeight:700,color:T.text}}>{selected.name}</div>
+                          <div style={{fontSize:11,color:T.muted}}>{selected.rotName}</div>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:selectedBuilding.accent,boxShadow:`0 0 6px ${selectedBuilding.accent}`}}/>
+                        <span style={{fontSize:12,fontWeight:600,color:selectedBuilding.accent}}>{selectedBuilding.label}</span>
+                        <span style={{fontSize:11,color:T.muted}}>· {selectedBuilding.desc}</span>
+                      </div>
+
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:editMode?10:0}}>
+                        <button className="press" onClick={() => setEditMode(e => !e)}
+                          style={{fontSize:11,fontWeight:700,color:editMode?"#fff":T.accent||"#348FFF",background:editMode?(T.accent||"#348FFF"):(T.accent||"#348FFF")+"18",border:`1px solid ${(T.accent||"#348FFF")}50`,borderRadius:8,padding:"5px 12px"}}>
+                          {editMode ? "✓ Listo" : "🎨 Editar apariencia"}
+                        </button>
+                        {hasCustom && (
+                          <button className="press" onClick={() => resetLook(selected.name)}
+                            style={{fontSize:11,fontWeight:600,color:T.muted,background:"transparent",border:`1px solid ${T.border}`,borderRadius:8,padding:"5px 12px"}}>
+                            Restablecer
+                          </button>
+                        )}
+                      </div>
+
+                      {editMode && (
+                        <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
+                          {[
+                            { key:"skin", label:"Piel", ramps:SKIN_RAMPS },
+                            { key:"hair", label:"Pelo", ramps:HAIR_RAMPS },
+                          ].map(({key,label,ramps}) => (
+                            <div key={key}>
+                              <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>{label}</div>
+                              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                                {Object.entries(ramps).map(([rk, ramp]) => {
+                                  const active = look[key] === rk;
+                                  return (
+                                    <button key={rk} className="press" onClick={() => updateLook(selected.name, key, rk)}
+                                      style={{width:28,height:28,borderRadius:"50%",background:rgb(ramp[0]),border:active?`2.5px solid ${T.accent||"#348FFF"}`:`1px solid ${T.border}`,boxShadow:active?`0 0 0 2px ${(T.accent||"#348FFF")}30`:"none",cursor:"pointer",flexShrink:0}}/>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             )}
           </>
