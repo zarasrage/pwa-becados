@@ -22,7 +22,7 @@ export function BuildingCard({ building, avatars, selected, onSelect, avatarLook
           {avatars.slice(0, floorSpots.length).map((av, i) => {
             const spot = floorSpots[i];
             const isSel = selected?.name === av.name;
-            const sz = isSel ? 72 : 60;
+            const sz = isSel ? 86 : 72;
             return (
               <DoctorSprite key={av.name} av={av} spot={spot} isSel={isSel} sz={sz} i={i}
                 onSelect={onSelect} selected={selected} look={avatarLooks[av.name]}/>
