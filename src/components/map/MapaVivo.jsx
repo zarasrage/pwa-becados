@@ -13,11 +13,11 @@ import { PART_ORDER, PART_LABELS, getRecoloredFrames } from "./recolorSprites.js
 
 // Presets de color por parte (además del color picker libre)
 const PART_PRESETS = {
-  piel:    ["#FADCC3","#F1C27D","#E0AC69","#C68642","#8D5524","#5C3A21"],
+  piel:    ["#FFE0C4","#FADCC3","#F5CBA0","#F1C27D","#E8B27E","#E0AC69","#D19A6A","#C68642","#A9744F","#8D5524","#6F4423","#5C3A21"],
   pelo:    ["#0A0A0A","#3D2B1F","#6A4E42","#B87333","#D4B896","#C8C8CE"],
   ojos:    ["#3E2A1E","#5B8C51","#3B7CC4","#7A8B99","#111111"],
   labios:  ["#F66C8F","#E8556F","#C94A5A","#B36A5E","#8D5524"],
-  traje:   ["#2272C8","#0EA5A0","#16A34A","#7C3AED","#DB2777","#334155","#E2E8F0"],
+  traje:   ["#2272C8","#1E4FA0","#0EA5A0","#0E7490","#16A34A","#4D7C3A","#7C3AED","#DB2777","#E11D48","#EA580C","#CA8A04","#334155","#0F172A","#E2E8F0","#9CA3AF"],
   zapatos: ["#1A1A1A","#3D2B1F","#FFFFFF","#2272C8","#B00020"],
 };
 
