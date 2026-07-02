@@ -1,6 +1,6 @@
-import { PixelAvatar } from "./PixelAvatar.jsx";
+import { DoctorSprite } from "./DoctorSprite.jsx";
 
-export function BuildingCard({ building, avatars, selected, onSelect, avatarLooks = {}, T }) {
+export function BuildingCard({ building, avatars, selected, onSelect, T }) {
   const { id, label, accent, desc, sprite, floorSpots } = building;
   const count = avatars.length;
 
@@ -22,32 +22,12 @@ export function BuildingCard({ building, avatars, selected, onSelect, avatarLook
           {avatars.slice(0, floorSpots.length).map((av, i) => {
             const spot = floorSpots[i];
             const isSel = selected?.name === av.name;
-            const sz = isSel ? 34 : 28;
-            const look = avatarLooks[av.name] || {};
+            const sz = isSel ? 72 : 60;
+            // Cycle through 4 frames with different speed per doctor
+            const frameIdx = Math.floor(Date.now() / (180 + i * 30)) % 4;
             return (
-              <div key={av.name} className="press"
-                onClick={() => onSelect(isSel ? null : av)}
-                style={{
-                  position:"absolute",
-                  left:`${spot.x}%`, top:`${spot.y}%`,
-                  transform:"translate(-50%,-100%)",
-                  transition:"all 0.15s",
-                  zIndex: isSel ? 100 : Math.round(spot.y),
-                  filter: isSel ? `drop-shadow(0 0 4px ${av.color})` : "none",
-                }}>
-                <PixelAvatar
-                  color={av.color}
-                  initial={av.initial}
-                  name={av.name.split(" ").slice(-1)[0]}
-                  size={sz}
-                  selected={isSel}
-                  showName={isSel}
-                  skin={look.skin}
-                  hair={look.hair}
-                  coat={look.coat}
-                  onClick={() => onSelect(isSel ? null : av)}
-                />
-              </div>
+              <DoctorSprite key={av.name} av={av} spot={spot} isSel={isSel} sz={sz} i={i}
+                onSelect={onSelect} selected={selected}/>
             );
           })}
           {avatars.length > floorSpots.length && (
