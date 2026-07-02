@@ -77,6 +77,27 @@ export async function getRecoloredFrames(look) {
       const target = hexToRgb(hex);
       const idxs = parts[part] || [];
       if (!idxs.length) continue;
+
+      if (part === "ojos") {
+        // Ojos: el blanco (esclerótica) queda casi blanco tintado; el iris toma
+        // el color pleno. Se distingue por saturación/brillo del pixel base.
+        for (const idx of idxs) {
+          const p = idx*4;
+          const r = base.data[p], g = base.data[p+1], b = base.data[p+2];
+          const maxc = Math.max(r,g,b), minc = Math.min(r,g,b);
+          const isWhite = (maxc - minc) < 45 && lum(r,g,b) > 170;
+          if (isWhite) {
+            // mezcla 85% blanco + 15% color → casi blanco con el tinte elegido
+            d[p]   = Math.round(target[0]*0.15 + 255*0.85);
+            d[p+1] = Math.round(target[1]*0.15 + 255*0.85);
+            d[p+2] = Math.round(target[2]*0.15 + 255*0.85);
+          } else {
+            d[p]=target[0]; d[p+1]=target[1]; d[p+2]=target[2];
+          }
+        }
+        continue;
+      }
+
       // tono base de la zona = píxel más claro (para mapear base→target)
       let baseL = 1;
       for (const idx of idxs) {
