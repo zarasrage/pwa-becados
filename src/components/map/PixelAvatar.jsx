@@ -1,7 +1,20 @@
-export function PixelAvatar({ color, initial, size = 28, selected, onClick, name }) {
-  const skin = "#FFD5B0";
-  const hair = "#3D2B1F";
-  const coat = "#FFFFFF";
+// Avatar pixel-art SVG. Recoloreable pieza por pieza:
+// - color: acento (cuello/estetoscopio, botones, pantalones, nombre)
+// - skin: tono de piel (cara, manos)
+// - hair: color de pelo
+// - coat: color de la bata
+export function PixelAvatar({
+  color,
+  initial,
+  size = 28,
+  selected,
+  onClick,
+  name,
+  showName = true,
+  skin = "#FFD5B0",
+  hair = "#3D2B1F",
+  coat = "#FFFFFF",
+}) {
   const accent = color;
   return (
     <div className="press" onClick={onClick} style={{
@@ -45,21 +58,23 @@ export function PixelAvatar({ color, initial, size = 28, selected, onClick, name
         <rect x="7" y="16" width="3" height="2" fill="#1A1A1A"/>
       </svg>
       {/* Name label */}
-      <div style={{
-        fontSize: selected ? 8 : 7,
-        fontWeight: selected ? 800 : 600,
-        color: selected ? accent : color+"BB",
-        fontFamily:"'JetBrains Mono',monospace",
-        lineHeight:1,
-        whiteSpace:"nowrap",
-        maxWidth: size + 12,
-        overflow:"hidden",
-        textOverflow:"ellipsis",
-        textAlign:"center",
-        transition:"all 0.12s",
-      }}>
-        {name || initial}
-      </div>
+      {showName && (
+        <div style={{
+          fontSize: selected ? 8 : 7,
+          fontWeight: selected ? 800 : 600,
+          color: selected ? accent : color+"BB",
+          fontFamily:"'JetBrains Mono',monospace",
+          lineHeight:1,
+          whiteSpace:"nowrap",
+          maxWidth: size + 12,
+          overflow:"hidden",
+          textOverflow:"ellipsis",
+          textAlign:"center",
+          transition:"all 0.12s",
+        }}>
+          {name || initial}
+        </div>
+      )}
     </div>
   );
 }
