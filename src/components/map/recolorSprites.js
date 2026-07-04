@@ -16,6 +16,8 @@ export const PART_ORDER = ["piel","pelo","ropa","ojos","labios","zapatos"];
 export const SEXO_DEFAULT = "h";
 
 const FRAME_COUNT = 4;
+// Fuerza del sombreado al recolorear (1 = contraste original, más bajo = tonos más parejos)
+const SHADE_STRENGTH = 0.5;
 export const baseSrc = (sexo, i) => `/sprites/avatars/${sexo}_${i}.png`;
 
 const basesPromise = {};      // sexo -> Promise<ImageData[]>
@@ -113,7 +115,9 @@ export async function getRecoloredFrames(look) {
       }
       for (const idx of idxs) {
         const p = idx*4;
-        const ratio = lum(base.data[p], base.data[p+1], base.data[p+2]) / baseL;
+        const raw = lum(base.data[p], base.data[p+1], base.data[p+2]) / baseL;
+        // Comprime el sombreado: acerca los tonos entre sí (0=plano, 1=máximo contraste)
+        const ratio = 1 - (1 - raw) * SHADE_STRENGTH;
         d[p]   = Math.min(255, Math.round(target[0]*ratio));
         d[p+1] = Math.min(255, Math.round(target[1]*ratio));
         d[p+2] = Math.min(255, Math.round(target[2]*ratio));
