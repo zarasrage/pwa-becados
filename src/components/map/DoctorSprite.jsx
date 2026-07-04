@@ -30,20 +30,28 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
   const src = recolored?.[frame] || baseSrc(sexo, frame);
 
   return (
-    <div className="press"
-      onClick={() => onSelect(isSel ? null : av)}
+    <div
       style={{
         position:"absolute",
         left:`${spot.x}%`, top:`${spot.y}%`,
         transform:"translate(-50%,-100%)",
         transition:"all 0.15s",
+        width:sz, height:sz,
         zIndex: isSel ? 100 : Math.round(spot.y),
       }}>
       <img src={src} alt={av.name}
         width={sz} height={sz}
         style={{
-          imageRendering:"pixelated", display:"block",
+          imageRendering:"pixelated", display:"block", pointerEvents:"none",
           filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none",
+        }}/>
+      {/* Área clickeable angosta, solo sobre el cuerpo (evita robar clicks al de atrás) */}
+      <div className="press"
+        onClick={() => onSelect(isSel ? null : av)}
+        style={{
+          position:"absolute", top:0, bottom:0, left:"50%",
+          transform:"translateX(-50%)",
+          width:sz*0.42, cursor:"pointer",
         }}/>
       {isSel && (
         <div style={{
