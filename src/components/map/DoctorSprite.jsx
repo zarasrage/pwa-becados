@@ -37,6 +37,7 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
         transform:"translate(-50%,-100%)",
         transition:"all 0.15s",
         width:sz, height:sz,
+        pointerEvents:"none", // el contenedor deja pasar los clicks; solo la franja captura
         zIndex: isSel ? 100 : Math.round(spot.y),
       }}>
       <img src={src} alt={av.name}
@@ -51,7 +52,7 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
         style={{
           position:"absolute", top:0, bottom:0, left:"50%",
           transform:"translateX(-50%)",
-          width:sz*0.42, cursor:"pointer",
+          width:sz*0.5, cursor:"pointer", pointerEvents:"auto",
         }}/>
       {isSel && (
         <div style={{
