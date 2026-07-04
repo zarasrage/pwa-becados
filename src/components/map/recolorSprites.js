@@ -1,26 +1,27 @@
-// Recolor por REGIONES: cada parte del personaje (piel, pelo, ojos, labios,
-// traje, zapatos) tiene sus píxeles exactos definidos en spriteRegions.json.
-// Se recolorea cada zona preservando el sombreado (brillo relativo), sin que
+// Recolor por REGIONES con soporte de sexo (hombre/mujer).
+// Cada sexo tiene su base + máscaras de piel/pelo/ropa; ojos/labios/zapatos son
+// unisex (compartidos). Se recolorea cada zona preservando el sombreado, sin que
 // se escape ningún pixel y sin tocar el contorno negro.
 import REGIONS from "./spriteRegions.json";
 
 export const PART_LABELS = {
   piel: "Piel",
   pelo: "Pelo",
+  ropa: "Ropa",
   ojos: "Ojos",
   labios: "Labios",
-  traje: "Traje",
   zapatos: "Zapatos",
 };
-export const PART_ORDER = ["piel","pelo","ojos","labios","traje","zapatos"];
+export const PART_ORDER = ["piel","pelo","ropa","ojos","labios","zapatos"];
+export const SEXO_DEFAULT = "h";
 
 const FRAME_COUNT = 4;
-const BASE_SRC = (i) => `/sprites/doctorv2/frame_${i}.png`;
+export const baseSrc = (sexo, i) => `/sprites/avatars/${sexo}_${i}.png`;
 
-let basesPromise = null;   // Promise<ImageData[]>
-const urlCache = new Map(); // key -> [url0..3]
+const basesPromise = {};      // sexo -> Promise<ImageData[]>
+const urlCache = new Map();   // key -> [url0..3]
 
-function loadFrame(i) {
+function loadFrame(sexo, i) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -31,15 +32,15 @@ function loadFrame(i) {
       resolve(ctx.getImageData(0, 0, cv.width, cv.height));
     };
     img.onerror = () => resolve(null);
-    img.src = BASE_SRC(i);
+    img.src = baseSrc(sexo, i);
   });
 }
 
-export function ensureBases() {
-  if (!basesPromise) {
-    basesPromise = Promise.all(Array.from({ length: FRAME_COUNT }, (_, i) => loadFrame(i)));
+export function ensureBases(sexo) {
+  if (!basesPromise[sexo]) {
+    basesPromise[sexo] = Promise.all(Array.from({ length: FRAME_COUNT }, (_, i) => loadFrame(sexo, i)));
   }
-  return basesPromise;
+  return basesPromise[sexo];
 }
 
 function hexToRgb(hex) {
@@ -48,18 +49,25 @@ function hexToRgb(hex) {
 }
 function lum(r,g,b) { return 0.299*r + 0.587*g + 0.114*b; }
 
-// look: { piel?:"#rrggbb", pelo?:..., ... } — solo las partes cambiadas
 function lookKey(look) {
-  return PART_ORDER.map(p => look?.[p] || "").join("|");
+  const sexo = look?.sexo || SEXO_DEFAULT;
+  return sexo + ":" + PART_ORDER.map(p => look?.[p] || "").join("|");
+}
+function hasColors(look) {
+  return look && PART_ORDER.some(p => look[p]);
 }
 
+// look: { sexo?:"h"|"m", piel?:"#rrggbb", pelo?:..., ropa?:..., ojos?:..., ... }
+// Devuelve null si no hay colores personalizados (usar el base del sexo tal cual).
 export async function getRecoloredFrames(look) {
-  if (!look || PART_ORDER.every(p => !look[p])) return null; // sin cambios → base tal cual
+  if (!hasColors(look)) return null;
+  const sexo = look.sexo || SEXO_DEFAULT;
   const ck = lookKey(look);
   if (urlCache.has(ck)) return urlCache.get(ck);
 
-  const bases = await ensureBases();
-  const { w, h, frames } = REGIONS;
+  const bases = await ensureBases(sexo);
+  const region = REGIONS[sexo] || REGIONS[SEXO_DEFAULT];
+  const { w, h, frames } = region;
 
   const urls = bases.map((base, fi) => {
     if (!base) return null;
@@ -67,7 +75,7 @@ export async function getRecoloredFrames(look) {
     cv.width = w; cv.height = h;
     const ctx = cv.getContext("2d");
     const out = ctx.createImageData(w, h);
-    out.data.set(base.data); // copia del base
+    out.data.set(base.data);
     const d = out.data;
     const parts = frames[fi];
 
@@ -79,15 +87,13 @@ export async function getRecoloredFrames(look) {
       if (!idxs.length) continue;
 
       if (part === "ojos") {
-        // Ojos: el blanco (esclerótica) queda casi blanco tintado; el iris toma
-        // el color pleno. Se distingue por saturación/brillo del pixel base.
+        // Ojos: el blanco (esclerótica) queda casi blanco tintado; el iris pleno.
         for (const idx of idxs) {
           const p = idx*4;
           const r = base.data[p], g = base.data[p+1], b = base.data[p+2];
           const maxc = Math.max(r,g,b), minc = Math.min(r,g,b);
           const isWhite = (maxc - minc) < 45 && lum(r,g,b) > 170;
           if (isWhite) {
-            // mezcla 85% blanco + 15% color → casi blanco con el tinte elegido
             d[p]   = Math.round(target[0]*0.15 + 255*0.85);
             d[p+1] = Math.round(target[1]*0.15 + 255*0.85);
             d[p+2] = Math.round(target[2]*0.15 + 255*0.85);

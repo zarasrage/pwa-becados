@@ -9,26 +9,27 @@ import { DateNav } from "../ui/DateNav.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
 import { safeStorage } from "../../utils/storage.js";
-import { PART_ORDER, PART_LABELS, getRecoloredFrames } from "./recolorSprites.js";
+import { PART_ORDER, PART_LABELS, SEXO_DEFAULT, baseSrc, getRecoloredFrames } from "./recolorSprites.js";
 
 // Presets de color por parte (además del color picker libre)
 const PART_PRESETS = {
   piel:    ["#FFE0C4","#FADCC3","#F5CBA0","#F1C27D","#E8B27E","#E0AC69","#D19A6A","#C68642","#A9744F","#8D5524","#6F4423","#5C3A21"],
   pelo:    ["#0A0A0A","#3D2B1F","#6A4E42","#B87333","#D4B896","#C8C8CE"],
+  ropa:    ["#2272C8","#1E4FA0","#0EA5A0","#0E7490","#16A34A","#4D7C3A","#7C3AED","#DB2777","#E11D48","#EA580C","#CA8A04","#334155","#0F172A","#E2E8F0","#9CA3AF"],
   ojos:    ["#3E2A1E","#5B8C51","#3B7CC4","#7A8B99","#111111"],
   labios:  ["#F66C8F","#E8556F","#C94A5A","#B36A5E","#8D5524"],
-  traje:   ["#2272C8","#1E4FA0","#0EA5A0","#0E7490","#16A34A","#4D7C3A","#7C3AED","#DB2777","#E11D48","#EA580C","#CA8A04","#334155","#0F172A","#E2E8F0","#9CA3AF"],
   zapatos: ["#1A1A1A","#3D2B1F","#FFFFFF","#2272C8","#B00020"],
 };
 
 // Preview estático (frame 0) del muñeco con los colores elegidos
 function SpritePreview({ look, size = 44 }) {
-  const [src, setSrc] = useState(`/sprites/doctorv2/frame_0.png`);
+  const fallback = baseSrc(look?.sexo || SEXO_DEFAULT, 0);
+  const [src, setSrc] = useState(fallback);
   const key = look ? JSON.stringify(look) : "";
   useEffect(() => {
     let alive = true;
     getRecoloredFrames(look)
-      .then((urls) => { if (alive) setSrc(urls?.[0] || `/sprites/doctorv2/frame_0.png`); })
+      .then((urls) => { if (alive) setSrc(urls?.[0] || fallback); })
       .catch(() => {});
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
   return <img src={src} width={size} height={size} alt="preview" style={{imageRendering:"pixelated",display:"block"}}/>;
@@ -104,13 +105,13 @@ export function MapaVivo({ becados, T, onBack }) {
   const [demoMode, setDemoMode] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [avatarLooks, setAvatarLooks] = useState(() => {
-    try { return JSON.parse(safeStorage.get("avatarLooksV2") || "{}"); } catch { return {}; }
+    try { return JSON.parse(safeStorage.get("avatarLooksV3") || "{}"); } catch { return {}; }
   });
 
   const updateLook = (name, part, hex) => {
     setAvatarLooks(prev => {
       const next = { ...prev, [name]: { ...(prev[name] || {}), [part]: hex } };
-      safeStorage.set("avatarLooksV2", JSON.stringify(next));
+      safeStorage.set("avatarLooksV3", JSON.stringify(next));
       return next;
     });
   };
@@ -118,7 +119,7 @@ export function MapaVivo({ becados, T, onBack }) {
     setAvatarLooks(prev => {
       const next = { ...prev };
       delete next[name];
-      safeStorage.set("avatarLooksV2", JSON.stringify(next));
+      safeStorage.set("avatarLooksV3", JSON.stringify(next));
       return next;
     });
   };
@@ -385,6 +386,20 @@ export function MapaVivo({ becados, T, onBack }) {
 
                       {editMode && (
                         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>Sexo</div>
+                            <div style={{display:"flex",gap:6}}>
+                              {[["h","♂ Hombre"],["m","♀ Mujer"]].map(([sx,lbl]) => {
+                                const active = (look.sexo || SEXO_DEFAULT) === sx;
+                                return (
+                                  <button key={sx} className="press" onClick={() => updateLook(selected.name, "sexo", sx)}
+                                    style={{flex:1,height:32,borderRadius:8,border:active?`2px solid ${T.accent||"#348FFF"}`:`1px solid ${T.border}`,background:active?(T.accent||"#348FFF")+"18":T.surface2,fontSize:12,fontWeight:active?700:500,color:active?(T.accent||"#348FFF"):T.muted}}>
+                                    {lbl}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                           {PART_ORDER.map((part) => (
                             <div key={part}>
                               <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>{PART_LABELS[part]}</div>

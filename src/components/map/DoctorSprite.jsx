@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getRecoloredFrames } from "./recolorSprites.js";
+import { getRecoloredFrames, baseSrc, SEXO_DEFAULT } from "./recolorSprites.js";
 
 // Devuelve los 4 data URLs recoloreados para un `look` (colores por parte),
 // o null mientras carga / cuando se usa el base sin cambios.
@@ -26,7 +26,8 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
   }, [i]);
 
   const recolored = useRecoloredFrames(look);
-  const src = recolored?.[frame] || `/sprites/doctorv2/frame_${frame}.png`;
+  const sexo = look?.sexo || SEXO_DEFAULT;
+  const src = recolored?.[frame] || baseSrc(sexo, frame);
 
   return (
     <div className="press"
