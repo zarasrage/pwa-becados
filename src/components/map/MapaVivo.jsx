@@ -69,6 +69,11 @@ function activityToBuilding(text) {
   return "pabellones";
 }
 
+// Rotaciones que se consideran FUERA del hospital
+const OUTSIDE_ROTATIONS = new Set(["I","T","V"]); // Infantil, Tumores, Vacaciones
+// Edificio por defecto para rotaciones "dentro" sin horario/ubicación propia
+const DEFAULT_BUILDING = { A:"pabellones", rx:"pabellones", F:"policlinicos", CPQ:"pabellones" };
+
 function resolveBecadoBuilding(schedItems, turno, seminario, nowMin) {
   if (seminario && nowMin >= 450 && nowMin < 480) return "jofre";
   if (turno?.artroCode === "A" && nowMin >= 780 && nowMin < 840) return "jofre";
@@ -225,11 +230,14 @@ export function MapaVivo({ becados, T, onBack }) {
     if (!rawData?.summary?.groups) return result;
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
+      if (OUTSIDE_ROTATIONS.has(rotCode)) continue; // I/T/V van al piso "Fuera del hospital"
       for (const name of names) {
         if (name === DEMO_BECADO) continue;
         const bd = rawData.becadoData[name];
         if (!bd) continue;
-        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin);
+        // Ubicación por horario/turno; si no hay lugar, edificio por defecto de su rotación
+        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin)
+                      || DEFAULT_BUILDING[rotCode] || "pabellones";
         if (building && result[building]) {
           result[building].push({
             name,
@@ -244,24 +252,26 @@ export function MapaVivo({ becados, T, onBack }) {
     return result;
   }, [rawData, simMin, activeBecados]);
 
-  // Becados UNAB que NO están actualmente en ningún edificio → "Fuera del hospital"
+  // Becados UNAB con rotación fuera del hospital (I/T/V) → franja "Fuera del hospital"
   const outsideAvatars = useMemo(() => {
-    const placed = new Set(Object.values(buildingMap).flat().map(a => a.name));
+    const groups = rawData?.summary?.groups || {};
     const list = [];
-    for (const name of activeBecados) {
-      if (!UNAB_BECADOS.has(name)) continue;
-      if (placed.has(name)) continue;
-      const rotCode = rawData?.becadoData?.[name]?.rotationCode || "";
-      list.push({
-        name,
-        initial: name.charAt(0).toUpperCase(),
-        color: rotCode ? (ROT[rotCode]?.accent || "#94A3B8") : "#94A3B8",
-        rotation: rotCode,
-        rotName: rotCode ? (ROT[rotCode]?.name || rotCode) : "Fuera del hospital",
-      });
+    for (const [rotCode, names] of Object.entries(groups)) {
+      if (!OUTSIDE_ROTATIONS.has(rotCode)) continue;
+      for (const name of names) {
+        if (name === DEMO_BECADO) continue;
+        if (!UNAB_BECADOS.has(name)) continue;
+        list.push({
+          name,
+          initial: name.charAt(0).toUpperCase(),
+          color: ROT[rotCode]?.accent || "#94A3B8",
+          rotation: rotCode,
+          rotName: ROT[rotCode]?.name || rotCode,
+        });
+      }
     }
     return list;
-  }, [buildingMap, activeBecados, rawData]);
+  }, [rawData]);
 
   const totalVisible = Object.values(buildingMap).reduce((s, a) => s + a.length, 0);
   const selectedBuilding = selected
