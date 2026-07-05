@@ -8,6 +8,8 @@ import { DEMO_BECADO, DEMO_MAP_NAMES, DEMO_ACTIVITIES, demoSummary, demoMonthly 
 import { DateNav } from "../ui/DateNav.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
+import { FloorAvatar } from "./DoctorSprite.jsx";
+import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
 import { safeStorage } from "../../utils/storage.js";
 import { PART_ORDER, PART_LABELS, SEXO_DEFAULT, baseSrc, getRecoloredFrames } from "./recolorSprites.js";
 
@@ -242,10 +244,33 @@ export function MapaVivo({ becados, T, onBack }) {
     return result;
   }, [rawData, simMin, activeBecados]);
 
+  // Becados UNAB que NO están actualmente en ningún edificio → "Fuera del hospital"
+  const outsideAvatars = useMemo(() => {
+    const placed = new Set(Object.values(buildingMap).flat().map(a => a.name));
+    const list = [];
+    for (const name of activeBecados) {
+      if (!UNAB_BECADOS.has(name)) continue;
+      if (placed.has(name)) continue;
+      const rotCode = rawData?.becadoData?.[name]?.rotationCode || "";
+      list.push({
+        name,
+        initial: name.charAt(0).toUpperCase(),
+        color: rotCode ? (ROT[rotCode]?.accent || "#94A3B8") : "#94A3B8",
+        rotation: rotCode,
+        rotName: rotCode ? (ROT[rotCode]?.name || rotCode) : "Fuera del hospital",
+      });
+    }
+    return list;
+  }, [buildingMap, activeBecados, rawData]);
+
   const totalVisible = Object.values(buildingMap).reduce((s, a) => s + a.length, 0);
   const selectedBuilding = selected
     ? MAP_BUILDINGS.find(b => (buildingMap[b.id]||[]).some(a => a.name === selected.name))
     : null;
+  const selectedLoc = selectedBuilding
+    || (selected && outsideAvatars.some(a => a.name === selected.name)
+        ? { label:"Fuera del hospital", accent:"#94A3B8", desc:"No está rotando" }
+        : null);
 
   // Time presets
   const TIME_PRESETS = [
@@ -340,8 +365,30 @@ export function MapaVivo({ becados, T, onBack }) {
               ))}
             </div>
 
+            {/* Fuera del hospital — becados UNAB que no están rotando */}
+            {outsideAvatars.length > 0 && (
+              <div style={{marginTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:T.muted,marginBottom:4,paddingLeft:2}}>
+                  Fuera del hospital
+                </div>
+                <div style={{
+                  position:"relative",
+                  display:"flex", alignItems:"flex-end", gap:2,
+                  overflowX:"auto", overflowY:"hidden",
+                  paddingBottom:6,
+                  borderBottom:`3px solid ${T.border}`,
+                }}>
+                  {outsideAvatars.map((av, i) => (
+                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
+                      isSel={selected?.name===av.name} onSelect={setSelected}
+                      look={avatarLooks[av.name]}/>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Selected avatar detail */}
-            {selected && selectedBuilding && (
+            {selected && selectedLoc && (
               <div className="anim" style={{
                 marginTop:10,
                 background:T.surface,
@@ -366,9 +413,9 @@ export function MapaVivo({ becados, T, onBack }) {
                         </div>
                       </div>
                       <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-                        <span style={{width:6,height:6,borderRadius:"50%",background:selectedBuilding.accent,boxShadow:`0 0 6px ${selectedBuilding.accent}`}}/>
-                        <span style={{fontSize:12,fontWeight:600,color:selectedBuilding.accent}}>{selectedBuilding.label}</span>
-                        <span style={{fontSize:11,color:T.muted}}>· {selectedBuilding.desc}</span>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:selectedLoc.accent,boxShadow:`0 0 6px ${selectedLoc.accent}`}}/>
+                        <span style={{fontSize:12,fontWeight:600,color:selectedLoc.accent}}>{selectedLoc.label}</span>
+                        <span style={{fontSize:11,color:T.muted}}>· {selectedLoc.desc}</span>
                       </div>
 
                       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:editMode?10:0}}>

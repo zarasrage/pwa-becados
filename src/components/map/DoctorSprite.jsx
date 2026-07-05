@@ -17,6 +17,37 @@ function useRecoloredFrames(look) {
   return frames;
 }
 
+// Avatar "de piso" — inline, para la fila de "Fuera del hospital".
+export function FloorAvatar({ av, isSel, sz, i, onSelect, look }) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const speed = 200 + (i % 4) * 50;
+    const interval = setInterval(() => setFrame(f => (f + 1) % 4), speed);
+    return () => clearInterval(interval);
+  }, [i]);
+  const recolored = useRecoloredFrames(look);
+  const sexo = look?.sexo || SEXO_DEFAULT;
+  const src = recolored?.[frame] || baseSrc(sexo, frame);
+  return (
+    <div style={{ position:"relative", width:sz, height:sz, flexShrink:0 }}>
+      <img src={src} alt={av.name} width={sz} height={sz}
+        style={{ imageRendering:"pixelated", display:"block", pointerEvents:"none",
+          filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none" }}/>
+      <div className="press" onClick={() => onSelect(isSel ? null : av)}
+        style={{ position:"absolute", top:0, bottom:0, left:"50%", transform:"translateX(-50%)",
+          width:sz*0.5, cursor:"pointer" }}/>
+      {isSel && (
+        <div style={{ position:"absolute", top:-16, left:"50%", transform:"translateX(-50%)",
+          background:av.color, color:"#fff", fontSize:10, fontWeight:800, padding:"2px 8px",
+          borderRadius:4, whiteSpace:"nowrap", fontFamily:"'JetBrains Mono',monospace",
+          boxShadow:`0 2px 6px ${av.color}80` }}>
+          {av.name.split(" ").slice(-1)[0]}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look }) {
   const [frame, setFrame] = useState(0);
   useEffect(() => {
