@@ -74,8 +74,9 @@ const OUTSIDE_ROTATIONS = new Set(["I","T","V"]); // Infantil, Tumores, Vacacion
 // Edificio por defecto para rotaciones "dentro" sin horario/ubicación propia
 const DEFAULT_BUILDING = { A:"pabellones", rx:"pabellones", F:"policlinicos", CPQ:"pabellones" };
 
-function resolveBecadoBuilding(schedItems, turno, seminario, nowMin) {
-  if (seminario && nowMin >= 450 && nowMin < 480) return "jofre";
+function resolveBecadoBuilding(schedItems, turno, seminario, nowMin, isUnab) {
+  // Al seminario AM en Jofré solo van los UNAB
+  if (isUnab && seminario && nowMin >= 450 && nowMin < 480) return "jofre";
   if (turno?.artroCode === "A" && nowMin >= 780 && nowMin < 840) return "jofre";
   if (turno?.diaCode === "P" && nowMin >= 840 && nowMin < 1080) return "policlinicos";
   if (turno?.diaCode === "p" && nowMin >= 480 && nowMin < 660) return "policlinicos";
@@ -236,7 +237,7 @@ export function MapaVivo({ becados, T, onBack }) {
         const bd = rawData.becadoData[name];
         if (!bd) continue;
         // Ubicación por horario/turno; si no hay lugar, edificio por defecto de su rotación
-        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin)
+        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name))
                       || DEFAULT_BUILDING[rotCode] || "pabellones";
         if (building && result[building]) {
           result[building].push({
