@@ -31,7 +31,8 @@ export function TemasChecklist({ initialArea = "Hombro", editable = false, T }) 
   const persist = (next) => { setCatalogo(next); saveTemasCatalogo(next); };
   const patchArea = (fn) => persist({ ...catalogo, [area]: fn([...(catalogo[area]||[])]) });
 
-  const toggle = (i) => patchArea(l => { l[i] = { ...l[i], h: !l[i].h }; return l; });
+  // Solo el Editor (editable) escribe en Supabase; la vista mensual es de solo lectura
+  const toggle = (i) => { if (!editable) return; patchArea(l => { l[i] = { ...l[i], h: !l[i].h }; return l; }); };
   const rename = (i, t) => patchArea(l => { l[i] = { ...l[i], t }; return l; });
   const remove = (i) => patchArea(l => { l.splice(i, 1); return l; });
   const add = () => { const t = nuevo.trim(); if (!t) return; setNuevo(""); patchArea(l => [...l, { t, h:false }]); };
@@ -67,12 +68,12 @@ export function TemasChecklist({ initialArea = "Hombro", editable = false, T }) 
       <div style={{display:"flex",flexDirection:"column",gap:4}}>
         {lista.map((x,i) => (
           <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
-            <button className="press" onClick={()=>toggle(i)}
-              style={{width:22,height:22,flexShrink:0,borderRadius:6,cursor:"pointer",
+            <div className={editable?"press":""} onClick={()=>toggle(i)}
+              style={{width:22,height:22,flexShrink:0,borderRadius:6,cursor:editable?"pointer":"default",
                 border:`1.5px solid ${x.h?SEM_COLOR:T.border}`,background:x.h?SEM_COLOR:"transparent",
                 color:"#fff",fontSize:13,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>
               {x.h ? "✓" : ""}
-            </button>
+            </div>
             {edit ? (
               <>
                 <input value={x.t} onChange={e=>rename(i,e.target.value)}
@@ -83,7 +84,7 @@ export function TemasChecklist({ initialArea = "Hombro", editable = false, T }) 
                     background:"#EF444418",color:"#EF4444",fontSize:14,cursor:"pointer"}}>×</button>
               </>
             ) : (
-              <span onClick={()=>toggle(i)} style={{flex:1,fontSize:13,lineHeight:1.35,cursor:"pointer",
+              <span onClick={()=>toggle(i)} style={{flex:1,fontSize:13,lineHeight:1.35,cursor:editable?"pointer":"default",
                 color: x.h ? T.muted : T.text, textDecoration: x.h ? "line-through" : "none"}}>{x.t}</span>
             )}
           </div>
