@@ -40,6 +40,7 @@ export function TabTurnos({ onBack, T }) {
   const [sub, setSub]     = useState("P");
   const [selectedSem, setSelectedSem] = useState(null);
   const [semArea, setSemArea]       = useState(null);
+  const [showTemas, setShowTemas]   = useState(false);
   const [upcoming, setUpcoming]     = useState([]);
   const [upcomingMore, setUpcomingMore] = useState(false);
 
@@ -267,8 +268,14 @@ export function TabTurnos({ onBack, T }) {
                 </div>
               )}
 
-              {/* Catálogo de temas — checklist editable */}
-              <TemasChecklist initialArea={semArea || "Hombro"} T={T}/>
+              {/* Catálogo de temas — colapsable, solo lectura + marcar hecho */}
+              <button className="press" onClick={()=>setShowTemas(s=>!s)}
+                style={{width:"100%",marginTop:14,height:44,borderRadius:10,border:`1px solid ${SEM_COLOR}40`,
+                  background:showTemas?`${SEM_COLOR}18`:T.surface2,color:SEM_COLOR,fontSize:13,fontWeight:700,
+                  display:"flex",alignItems:"center",justifyContent:"center",gap:8,cursor:"pointer"}}>
+                <span>{showTemas ? "▾" : "▸"}</span> Catálogo de temas
+              </button>
+              {showTemas && <TemasChecklist initialArea={semArea || "Hombro"} editable={false} T={T}/>}
             </>
           )
         ) : (

@@ -4,6 +4,7 @@ import { bumpDataVersion, getTemasCatalogo } from "../lib/supabaseApi.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
+import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 const ROTS_SOLO_NOCHE   = ["T","NHT"];
@@ -764,6 +765,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                 </div>
               );
             })}
+            {/* Catálogo de temas — editable */}
+            <TemasChecklist editable={true} T={T}/>
           </>
         ) : (
           <>

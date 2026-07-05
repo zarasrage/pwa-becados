@@ -6,10 +6,11 @@ const SEM_COLOR = "#E879F9";
 
 // Checklist editable de temas por especialidad. Marcado manual (hecho/no hecho),
 // y edición de la lista (agregar / renombrar / borrar). Persistido en Supabase.
-export function TemasChecklist({ initialArea = "Hombro", T }) {
+export function TemasChecklist({ initialArea = "Hombro", editable = false, T }) {
   const [catalogo, setCatalogo] = useState(null);
   const [area, setArea] = useState(initialArea);
-  const [edit, setEdit] = useState(false);
+  const [editRaw, setEdit] = useState(false);
+  const edit = editable && editRaw;
   const [nuevo, setNuevo] = useState("");
 
   // Sincroniza con el tipo de seminario seleccionado afuera
@@ -41,11 +42,13 @@ export function TemasChecklist({ initialArea = "Hombro", T }) {
         <div style={{fontSize:13,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:SEM_COLOR}}>
           Catálogo de temas <span style={{color:T.muted,fontWeight:600}}>· {hechos}/{lista.length}</span>
         </div>
-        <button className="press" onClick={()=>setEdit(e=>!e)}
-          style={{fontSize:11,fontWeight:700,color:edit?"#fff":SEM_COLOR,background:edit?SEM_COLOR:`${SEM_COLOR}18`,
-            border:`1px solid ${SEM_COLOR}50`,borderRadius:8,padding:"5px 12px"}}>
-          {edit ? "✓ Listo" : "Editar"}
-        </button>
+        {editable && (
+          <button className="press" onClick={()=>setEdit(e=>!e)}
+            style={{fontSize:11,fontWeight:700,color:edit?"#fff":SEM_COLOR,background:edit?SEM_COLOR:`${SEM_COLOR}18`,
+              border:`1px solid ${SEM_COLOR}50`,borderRadius:8,padding:"5px 12px"}}>
+            {edit ? "✓ Listo" : "Editar"}
+          </button>
+        )}
       </div>
 
       {/* Selector de especialidad */}
