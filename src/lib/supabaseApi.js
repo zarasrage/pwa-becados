@@ -13,6 +13,21 @@ export async function bumpDataVersion() {
     .upsert({ key: "data_version", value: String(Date.now()) }, { onConflict: "key" });
 }
 
+// ── Catálogo de temas de seminarios (config.temas_catalogo, JSON) ───────────────
+export async function getTemasCatalogo() {
+  const { data } = await supabase
+    .from("config").select("value").eq("key", "temas_catalogo").single();
+  if (!data?.value) return null;
+  try { return JSON.parse(data.value); } catch { return null; }
+}
+
+export async function saveTemasCatalogo(catalogo) {
+  const { error } = await supabase
+    .from("config")
+    .upsert({ key: "temas_catalogo", value: JSON.stringify(catalogo) }, { onConflict: "key" });
+  return !error;
+}
+
 const SEMINARIO_DIA = {
   2: "Seminario Hombro",   // Martes
   3: "Seminario Rodilla",  // Miércoles

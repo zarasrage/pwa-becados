@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { bumpDataVersion } from "../lib/supabaseApi.js";
+import { bumpDataVersion, getTemasCatalogo } from "../lib/supabaseApi.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
+import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 const ROTS_SOLO_NOCHE   = ["T","NHT"];
@@ -202,6 +203,14 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
   const [presenter, setPresenter] = useState(existing?.presentador || "");
   const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
   const [hora,      setHora]      = useState(existing?.hora      || "07:30");
+  const [catalogo,  setCatalogo]  = useState(TEMAS_SEED);
+
+  useEffect(() => {
+    getTemasCatalogo().then(c => { if (c) setCatalogo(c); }).catch(()=>{});
+  }, []);
+
+  const area = TAG_TO_AREA[tag] || "Hombro";
+  const temasArea = (catalogo[area] || []).map(x => x.t);
 
   const canSave = presenter.trim() !== "";
 
@@ -244,9 +253,20 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, T }) 
               color:T.text,fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
         </div>
 
-        {/* Título */}
+        {/* Tema del catálogo */}
         <div style={{marginBottom:10}}>
-          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Título <span style={{fontWeight:400}}>(opcional)</span></div>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Tema <span style={{fontWeight:400}}>(del catálogo)</span></div>
+          <select value={temasArea.includes(titulo) ? titulo : ""} onChange={e=>{ if (e.target.value) setTitulo(e.target.value); }}
+            style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",borderRadius:10,
+              border:`1px solid ${T.border}`,background:T.surface2,color:T.text,fontSize:13,outline:"none"}}>
+            <option value="">— Elegir tema —</option>
+            {temasArea.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        {/* Título / Otro (texto libre) */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Título <span style={{fontWeight:400}}>(u otro, texto libre)</span></div>
           <input value={titulo} onChange={e=>setTitulo(e.target.value)}
             placeholder="Título del seminario"
             style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",

@@ -11,6 +11,7 @@ import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { CalendarGrid } from "../components/ui/CalendarGrid.jsx";
+import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 
 const SEM_AREAS = [
   { key:"Hombro",  tag:"Seminario Hombro",  color:"#E879F9", dia:"Martes" },
@@ -265,6 +266,9 @@ export function TabTurnos({ onBack, T }) {
                   )}
                 </div>
               )}
+
+              {/* Catálogo de temas — checklist editable */}
+              <TemasChecklist initialArea={semArea || "Hombro"} T={T}/>
             </>
           )
         ) : (
