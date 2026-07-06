@@ -20,15 +20,22 @@ const FRAME_COUNT = 4;
 const SHADE_STRENGTH = 0.5;
 export const baseSrc = (sexo, i) => `/sprites/avatars/${sexo}_${i}.png`;
 
-// Accesorios — overlay sin recolor (hombre y mujer). frame 0..3
-export const ACCESORIOS = [
-  { key: "aros_cortos",    label: "Aros cortos" },
-  { key: "aros_largos",    label: "Aros largos" },
-  { key: "gorro_elegante", label: "Gorro elegante" },
-  { key: "gorro_paja",     label: "Gorro de paja" },
-  { key: "therian",        label: "Therian" },
+// Accesorios — overlay sin recolor (hombre y mujer). 3 secciones independientes
+// que se pueden combinar. frame 0..3
+export const ACC_SECTIONS = [
+  { slot:"aros",     label:"Aros",     options:[{v:"",l:"No"},{v:"aros_cortos",l:"Cortos"},{v:"aros_largos",l:"Largos"}] },
+  { slot:"sombrero", label:"Sombrero", options:[{v:"",l:"No"},{v:"gorro_elegante",l:"Elegante"},{v:"gorro_paja",l:"Paja"}] },
+  { slot:"mascara",  label:"Máscara",  options:[{v:"",l:"No"},{v:"therian",l:"Zorro"}] },
 ];
 export const accSrc = (key, i) => `/sprites/accesorios/${key}_${i}.png`;
+
+// Capas de accesorios activas para un look, de ABAJO a ARRIBA:
+// aros (fondo) → máscara → sombrero (encima de todo).
+const ACC_Z_ORDER = ["aros", "mascara", "sombrero"];
+export function accLayers(look) {
+  if (!look) return [];
+  return ACC_Z_ORDER.map(slot => look[slot]).filter(Boolean);
+}
 
 const basesPromise = {};      // sexo -> Promise<ImageData[]>
 const urlCache = new Map();   // key -> [url0..3]
