@@ -20,6 +20,16 @@ const FRAME_COUNT = 4;
 const SHADE_STRENGTH = 0.5;
 export const baseSrc = (sexo, i) => `/sprites/avatars/${sexo}_${i}.png`;
 
+// Accesorios — overlay sin recolor (hombre y mujer). frame 0..3
+export const ACCESORIOS = [
+  { key: "aros_cortos",    label: "Aros cortos" },
+  { key: "aros_largos",    label: "Aros largos" },
+  { key: "gorro_elegante", label: "Gorro elegante" },
+  { key: "gorro_paja",     label: "Gorro de paja" },
+  { key: "therian",        label: "Therian" },
+];
+export const accSrc = (key, i) => `/sprites/accesorios/${key}_${i}.png`;
+
 const basesPromise = {};      // sexo -> Promise<ImageData[]>
 const urlCache = new Map();   // key -> [url0..3]
 

@@ -11,7 +11,7 @@ import { BuildingCard } from "./BuildingCard.jsx";
 import { FloorAvatar } from "./DoctorSprite.jsx";
 import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
 import { safeStorage } from "../../utils/storage.js";
-import { PART_ORDER, PART_LABELS, SEXO_DEFAULT, baseSrc, getRecoloredFrames } from "./recolorSprites.js";
+import { PART_ORDER, PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, ACCESORIOS, getRecoloredFrames } from "./recolorSprites.js";
 
 // Presets de color por parte (además del color picker libre)
 const PART_PRESETS = {
@@ -34,7 +34,12 @@ function SpritePreview({ look, size = 44 }) {
       .then((urls) => { if (alive) setSrc(urls?.[0] || fallback); })
       .catch(() => {});
   }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return <img src={src} width={size} height={size} alt="preview" style={{imageRendering:"pixelated",display:"block"}}/>;
+  return (
+    <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
+      <img src={src} width={size} height={size} alt="preview" style={{imageRendering:"pixelated",display:"block"}}/>
+      {look?.acc && <img src={accSrc(look.acc,0)} width={size} height={size} alt="" style={{position:"absolute",top:0,left:0,imageRendering:"pixelated"}}/>}
+    </div>
+  );
 }
 
 function getBecadoColor(name, allBecados) {
@@ -477,6 +482,26 @@ export function MapaVivo({ becados, T, onBack }) {
                               </div>
                             </div>
                           ))}
+
+                          {/* Accesorios (sin color, hombre y mujer) */}
+                          <div>
+                            <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>Accesorio</div>
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                              <button className="press" onClick={() => updateLook(selected.name, "acc", "")}
+                                style={{height:30,padding:"0 10px",borderRadius:8,border:`1px solid ${!look.acc?(T.accent||"#348FFF"):T.border}`,background:!look.acc?(T.accent||"#348FFF")+"18":T.surface2,fontSize:12,fontWeight:!look.acc?700:500,color:!look.acc?(T.accent||"#348FFF"):T.muted}}>
+                                Ninguno
+                              </button>
+                              {ACCESORIOS.map(a => {
+                                const active = look.acc === a.key;
+                                return (
+                                  <button key={a.key} className="press" onClick={() => updateLook(selected.name, "acc", active ? "" : a.key)}
+                                    style={{height:30,padding:"0 10px",borderRadius:8,border:active?`2px solid ${T.accent||"#348FFF"}`:`1px solid ${T.border}`,background:active?(T.accent||"#348FFF")+"18":T.surface2,fontSize:12,fontWeight:active?700:500,color:active?(T.accent||"#348FFF"):T.text}}>
+                                    {a.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         </div>
                       )}
                     </>

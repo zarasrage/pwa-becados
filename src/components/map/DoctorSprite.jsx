@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getRecoloredFrames, baseSrc, SEXO_DEFAULT } from "./recolorSprites.js";
+import { getRecoloredFrames, baseSrc, accSrc, SEXO_DEFAULT } from "./recolorSprites.js";
 
 // Devuelve los 4 data URLs recoloreados para un `look` (colores por parte),
 // o null mientras carga / cuando se usa el base sin cambios.
@@ -33,6 +33,10 @@ export function FloorAvatar({ av, isSel, sz, i, onSelect, look }) {
       <img src={src} alt={av.name} width={sz} height={sz}
         style={{ imageRendering:"pixelated", display:"block", pointerEvents:"none",
           filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none" }}/>
+      {look?.acc && (
+        <img src={accSrc(look.acc, frame)} alt="" width={sz} height={sz}
+          style={{ position:"absolute", top:0, left:0, imageRendering:"pixelated", pointerEvents:"none" }}/>
+      )}
       <div className="press" onClick={() => onSelect(isSel ? null : av)}
         style={{ position:"absolute", top:0, bottom:0, left:"50%", transform:"translateX(-50%)",
           width:sz*0.5, cursor:"pointer" }}/>
@@ -77,6 +81,11 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
           imageRendering:"pixelated", display:"block", pointerEvents:"none",
           filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none",
         }}/>
+      {look?.acc && (
+        <img src={accSrc(look.acc, frame)} alt="" width={sz} height={sz}
+          style={{ position:"absolute", top:0, left:0, imageRendering:"pixelated", pointerEvents:"none",
+            filter: isSel ? "brightness(1.1)" : "none" }}/>
+      )}
       {/* Área clickeable angosta, solo sobre el cuerpo (evita robar clicks al de atrás) */}
       <div className="press"
         onClick={() => onSelect(isSel ? null : av)}
