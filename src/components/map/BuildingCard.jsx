@@ -1,4 +1,5 @@
 import { DoctorSprite } from "./DoctorSprite.jsx";
+import { AVATAR_SCALE } from "../../constants/avatarIdentity.js";
 
 export function BuildingCard({ building, avatars, selected, onSelect, avatarLooks = {}, T }) {
   const { id, label, accent, desc, sprite, floorSpots } = building;
@@ -24,7 +25,7 @@ export function BuildingCard({ building, avatars, selected, onSelect, avatarLook
             const xShift = id === "urgencia" ? -5 : 0; // Urgencia un poco a la izquierda
             const spot = { x: spot0.x + xShift, y: spot0.y + 6 }; // bajar todos un poco
             const isSel = selected?.name === av.name;
-            const sz = isSel ? 90 : 76;
+            const sz = Math.round((isSel ? 90 : 76) * (AVATAR_SCALE[av.name] || 1));
             return (
               <DoctorSprite key={av.name} av={av} spot={spot} isSel={isSel} sz={sz} i={i}
                 onSelect={onSelect} selected={selected} look={avatarLooks[av.name]}/>

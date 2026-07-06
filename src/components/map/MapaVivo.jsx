@@ -9,7 +9,7 @@ import { Spinner } from "../ui/Spinner.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
 import { FloorAvatar } from "./DoctorSprite.jsx";
 import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
-import { AVATAR_IDENTITY, SHARED_COLOR_PARTS } from "../../constants/avatarIdentity.js";
+import { AVATAR_IDENTITY, AVATAR_SCALE, SHARED_COLOR_PARTS } from "../../constants/avatarIdentity.js";
 import { getAvatares, saveAvatares } from "../../lib/supabaseApi.js";
 import { PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, accLayers, ACC_SECTIONS, getRecoloredFrames } from "./recolorSprites.js";
 
@@ -330,7 +330,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   borderBottom:`3px solid #22C55E55`,
                 }}>
                   {insideAvatars.map((av, i) => (
-                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?86:73}
+                    <FloorAvatar key={av.name} av={av} i={i} sz={Math.round((selected?.name===av.name?86:73)*(AVATAR_SCALE[av.name]||1))}
                       isSel={selected?.name===av.name} onSelect={setSelected}
                       look={looksMap[av.name]}/>
                   ))}
@@ -352,7 +352,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   borderBottom:`3px solid ${T.border}`,
                 }}>
                   {outsideAvatars.map((av, i) => (
-                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?86:73}
+                    <FloorAvatar key={av.name} av={av} i={i} sz={Math.round((selected?.name===av.name?86:73)*(AVATAR_SCALE[av.name]||1))}
                       isSel={selected?.name===av.name} onSelect={setSelected}
                       look={looksMap[av.name]}/>
                   ))}

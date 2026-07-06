@@ -23,6 +23,13 @@ export const AVATAR_IDENTITY = {
   "Miranda":   { piel:"#D19A6A", pelo:"#0A0A0A", ojos:"#6a462f" },
 };
 
+// Escala de tamaño por becado (multiplicador sobre el tamaño base del avatar)
+export const AVATAR_SCALE = {
+  Teuber: 1.10, Larrain: 1.10, Gonzalez: 1.10,
+  Valencia: 1.05, Marre: 1.05, Albert: 1.05, "Miño": 1.05,
+  Navia: 0.95, Chahin: 0.95,
+};
+
 // Campos de identidad (fijos) vs personalizables (compartidos en Supabase)
 export const IDENTITY_COLOR_PARTS = ["piel", "pelo", "ojos", "labios"];
 export const SHARED_COLOR_PARTS   = ["ropa", "zapatos"];
