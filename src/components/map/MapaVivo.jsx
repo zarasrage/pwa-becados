@@ -76,8 +76,6 @@ function activityToBuilding(text) {
 
 // Rotaciones que se consideran FUERA del hospital
 const OUTSIDE_ROTATIONS = new Set(["I","T","V"]); // Infantil, Tumores, Vacaciones
-// Edificio por defecto para rotaciones "dentro" sin horario/ubicación propia
-const DEFAULT_BUILDING = { A:"pabellones", rx:"pabellones", F:"policlinicos", CPQ:"pabellones" };
 
 function resolveBecadoBuilding(schedItems, turno, seminario, nowMin, isUnab) {
   // Al seminario AM en Jofré solo van los UNAB
@@ -231,19 +229,20 @@ export function MapaVivo({ becados, T, onBack }) {
     })();
   }, [date, becados, demoMode]);
 
-  // Resolve buildings from time — instant, no API calls
-  const buildingMap = useMemo(() => {
-    const result = {};
-    MAP_BUILDINGS.forEach(b => { result[b.id] = []; });
-    if (!rawData?.summary?.groups) return result;
+  // Resolve buildings from time — instant, no API calls.
+  // Devuelve edificios + "unknown" (En el hospital: rotan pero sin lugar definido).
+  const placement = useMemo(() => {
+    const buildings = {};
+    MAP_BUILDINGS.forEach(b => { buildings[b.id] = []; });
+    const unknown = [];
+    if (!rawData?.summary?.groups) return { buildings, unknown };
 
-    // El edificio por defecto solo aplica en día de semana y en horario laboral
-    // (7:30–18:00). Fuera de eso, solo el turno ubica al becado.
+    // La gente llega ~7:00. Si a esa hora (o en un hueco) no tiene lugar definido,
+    // va a "En el hospital" por defecto, hasta las 14:00. Pasado eso, ya se fue.
     const [dy,dm,dd] = date.split("-").map(Number);
     const dow = new Date(dy, dm-1, dd).getDay();
     const isWeekend = dow === 0 || dow === 6;
-    const enHorarioLaboral = simMin >= 450 && simMin < 1080; // 7:30–18:00
-    const usarDefault = !isWeekend && enHorarioLaboral;
+    const enVentana = simMin >= 420 && simMin < 840; // 7:00–14:00
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
       if (OUTSIDE_ROTATIONS.has(rotCode)) continue; // I/T/V van al piso "Fuera del hospital"
@@ -251,24 +250,26 @@ export function MapaVivo({ becados, T, onBack }) {
         if (name === DEMO_BECADO) continue;
         const bd = rawData.becadoData[name];
         if (!bd) continue;
-        // Ubicación por horario/turno. Entre semana, si no hay lugar, edificio por
-        // defecto de su rotación. En fin de semana NO hay default: solo el turno ubica.
-        const resolved = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
-        const building = resolved || (usarDefault ? (DEFAULT_BUILDING[rotCode] || "pabellones") : null);
-        if (!building) continue;
-        if (building && result[building]) {
-          result[building].push({
-            name,
-            initial: name.charAt(0).toUpperCase(),
-            color: ROT[rotCode]?.accent || getBecadoColor(name, activeBecados),
-            rotation: rotCode,
-            rotName: ROT[rotCode]?.name || rotCode,
-          });
+        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
+        const av = {
+          name,
+          initial: name.charAt(0).toUpperCase(),
+          color: ROT[rotCode]?.accent || getBecadoColor(name, activeBecados),
+          rotation: rotCode,
+          rotName: ROT[rotCode]?.name || rotCode,
+        };
+        if (building && buildings[building]) {
+          buildings[building].push(av);            // lugar conocido
+        } else if (!building && !isWeekend && enVentana) {
+          unknown.push(av);                        // en el hospital, lugar desconocido
         }
+        // fuera de ventana / finde sin lugar → no se muestra (no llegó o ya se fue)
       }
     }
-    return result;
+    return { buildings, unknown };
   }, [rawData, simMin, activeBecados, date]);
+  const buildingMap = placement.buildings;
+  const insideAvatars = placement.unknown; // "En el hospital"
 
   // Becados UNAB con rotación fuera del hospital (I/T/V) → franja "Fuera del hospital"
   const outsideAvatars = useMemo(() => {
@@ -296,6 +297,9 @@ export function MapaVivo({ becados, T, onBack }) {
     ? MAP_BUILDINGS.find(b => (buildingMap[b.id]||[]).some(a => a.name === selected.name))
     : null;
   const selectedLoc = selectedBuilding
+    || (selected && insideAvatars.some(a => a.name === selected.name)
+        ? { label:"En el hospital", accent:"#22C55E", desc:"Lugar no definido" }
+        : null)
     || (selected && outsideAvatars.some(a => a.name === selected.name)
         ? { label:"Fuera del hospital", accent:"#94A3B8", desc:"No está rotando" }
         : null);
@@ -392,6 +396,28 @@ export function MapaVivo({ becados, T, onBack }) {
                 />
               ))}
             </div>
+
+            {/* En el hospital — rotan pero sin lugar definido a esta hora */}
+            {insideAvatars.length > 0 && (
+              <div style={{marginTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.04em",color:"#22C55E",marginBottom:4,paddingLeft:2}}>
+                  En el hospital
+                </div>
+                <div style={{
+                  position:"relative",
+                  display:"flex", alignItems:"flex-end", gap:2,
+                  overflowX:"auto", overflowY:"hidden",
+                  paddingBottom:6,
+                  borderBottom:`3px solid #22C55E55`,
+                }}>
+                  {insideAvatars.map((av, i) => (
+                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
+                      isSel={selected?.name===av.name} onSelect={setSelected}
+                      look={avatarLooks[av.name]}/>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Fuera del hospital — becados UNAB que no están rotando */}
             {outsideAvatars.length > 0 && (
