@@ -19,7 +19,7 @@ export const AVATAR_IDENTITY = {
   "Baeza":     { piel:"#F5CBA0", pelo:"#0A0A0A", ojos:"#111111" },
   "Larrain":   { piel:"#F5CBA0", pelo:"#9f6c3c", ojos:"#3B7CC4" },
   "Uribe":     { piel:"#F5CBA0", pelo:"#cca928", ojos:"#3E2A1E" },
-  "Rojas":     { piel:"#F5CBA0", pelo:"#cea883", ojos:"#3E2A1E" },
+  "Rojas":     { piel:"#F5CBA0", pelo:"#C8C8CE", ojos:"#3E2A1E" },
   "Miranda":   { piel:"#D19A6A", pelo:"#0A0A0A", ojos:"#6a462f" },
 };
 
