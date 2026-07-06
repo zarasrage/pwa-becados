@@ -9,16 +9,13 @@ import { Spinner } from "../ui/Spinner.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
 import { FloorAvatar } from "./DoctorSprite.jsx";
 import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
-import { safeStorage } from "../../utils/storage.js";
-import { PART_ORDER, PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, accLayers, ACC_SECTIONS, getRecoloredFrames } from "./recolorSprites.js";
+import { AVATAR_IDENTITY, SHARED_COLOR_PARTS } from "../../constants/avatarIdentity.js";
+import { getAvatares, saveAvatares } from "../../lib/supabaseApi.js";
+import { PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, accLayers, ACC_SECTIONS, getRecoloredFrames } from "./recolorSprites.js";
 
 // Presets de color por parte (además del color picker libre)
 const PART_PRESETS = {
-  piel:    ["#FFE0C4","#F5CBA0","#F1C27D","#E0AC69","#D19A6A","#C68642","#A9744F","#8D5524","#6F4423","#5C3A21"],
-  pelo:    ["#0A0A0A","#3D2B1F","#6A4E42","#B87333","#D4B896","#C8C8CE"],
   ropa:    ["#2272C8","#0EA5A0","#16A34A","#7C3AED","#DB2777","#E11D48","#EA580C","#CA8A04","#0F172A","#E2E8F0"],
-  ojos:    ["#3E2A1E","#5B8C51","#3B7CC4","#7A8B99","#111111"],
-  labios:  ["#F66C8F","#E8556F","#C94A5A","#B36A5E","#8D5524"],
   zapatos: ["#1A1A1A","#3D2B1F","#FFFFFF","#2272C8","#B00020"],
 };
 
@@ -115,26 +112,34 @@ export function MapaVivo({ becados, T, onBack }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
-  const [exportText, setExportText] = useState(null); // JSON de identidades para exportar
-  const [avatarLooks, setAvatarLooks] = useState(() => {
-    try { return JSON.parse(safeStorage.get("avatarLooksV3") || "{}"); } catch { return {}; }
-  });
 
-  const updateLook = (name, part, hex) => {
-    setAvatarLooks(prev => {
-      const next = { ...prev, [name]: { ...(prev[name] || {}), [part]: hex } };
-      safeStorage.set("avatarLooksV3", JSON.stringify(next));
+  // Partes personalizables (ropa/zapatos/accesorios) — compartidas en Supabase
+  const [sharedAvatares, setSharedAvatares] = useState({});
+  useEffect(() => { getAvatares().then(setSharedAvatares).catch(()=>{}); }, []);
+
+  const updateLook = (name, part, val) => {
+    setSharedAvatares(prev => {
+      const next = { ...prev, [name]: { ...(prev[name] || {}), [part]: val } };
+      saveAvatares(next);
       return next;
     });
   };
   const resetLook = (name) => {
-    setAvatarLooks(prev => {
+    setSharedAvatares(prev => {
       const next = { ...prev };
       delete next[name];
-      safeStorage.set("avatarLooksV3", JSON.stringify(next));
+      saveAvatares(next);
       return next;
     });
   };
+
+  // Look final por becado: identidad hardcodeada + personalizable compartida
+  const looksMap = useMemo(() => {
+    const names = new Set([...Object.keys(AVATAR_IDENTITY), ...Object.keys(sharedAvatares)]);
+    const m = {};
+    for (const n of names) m[n] = { ...AVATAR_IDENTITY[n], ...sharedAvatares[n] };
+    return m;
+  }, [sharedAvatares]);
 
   const isLive = date === realToday && (() => {
     const now = new Date();
@@ -294,20 +299,6 @@ export function MapaVivo({ becados, T, onBack }) {
       </div>
 
       <div style={{padding:"0 3px",paddingBottom:40}}>
-        {/* Acceso admin temporal: exportar identidades para hardcodear */}
-        <button className="press" onClick={() => {
-          const ID = ["sexo","piel","pelo","ojos","labios"];
-          const out = {};
-          for (const [name, look] of Object.entries(avatarLooks)) {
-            const id = {};
-            for (const k of ID) if (look?.[k]) id[k] = look[k];
-            if (Object.keys(id).length) out[name] = id;
-          }
-          setExportText(JSON.stringify(out, null, 2));
-        }} style={{width:"100%",margin:"0 0 8px",height:34,borderRadius:8,border:`1px dashed ${T.border}`,background:T.surface2,color:T.muted,fontSize:11,fontWeight:600}}>
-          ⬆ Exportar identidades (admin)
-        </button>
-
         {loading ? <Spinner color={T.accent||"#348FFF"}/> : (
           <>
             {/* Building cards — 2x2 grid */}
@@ -319,7 +310,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   avatars={buildingMap[b.id] || []}
                   selected={selected}
                   onSelect={setSelected}
-                  avatarLooks={avatarLooks}
+                  avatarLooks={looksMap}
                   T={T}
                 />
               ))}
@@ -341,7 +332,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   {insideAvatars.map((av, i) => (
                     <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
                       isSel={selected?.name===av.name} onSelect={setSelected}
-                      look={avatarLooks[av.name]}/>
+                      look={looksMap[av.name]}/>
                   ))}
                 </div>
               </div>
@@ -363,7 +354,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   {outsideAvatars.map((av, i) => (
                     <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
                       isSel={selected?.name===av.name} onSelect={setSelected}
-                      look={avatarLooks[av.name]}/>
+                      look={looksMap[av.name]}/>
                   ))}
                 </div>
               </div>
@@ -383,8 +374,8 @@ export function MapaVivo({ becados, T, onBack }) {
                 <button className="press" onClick={() => setSelected(null)}
                   style={{position:"absolute",top:8,right:12,background:"none",border:"none",fontSize:16,color:T.muted,lineHeight:1}}>✕</button>
                 {(() => {
-                  const look = avatarLooks[selected.name] || {};
-                  const hasCustom = !!avatarLooks[selected.name] && Object.keys(look).length > 0;
+                  const look = looksMap[selected.name] || {};
+                  const hasCustom = !!sharedAvatares[selected.name] && Object.keys(sharedAvatares[selected.name]).length > 0;
                   return (
                     <>
                       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
@@ -415,21 +406,7 @@ export function MapaVivo({ becados, T, onBack }) {
 
                       {editMode && (
                         <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:4}}>
-                          <div>
-                            <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>Sexo</div>
-                            <div style={{display:"flex",gap:6}}>
-                              {[["h","♂ Hombre"],["m","♀ Mujer"]].map(([sx,lbl]) => {
-                                const active = (look.sexo || SEXO_DEFAULT) === sx;
-                                return (
-                                  <button key={sx} className="press" onClick={() => updateLook(selected.name, "sexo", sx)}
-                                    style={{flex:1,height:32,borderRadius:8,border:active?`2px solid ${T.accent||"#348FFF"}`:`1px solid ${T.border}`,background:active?(T.accent||"#348FFF")+"18":T.surface2,fontSize:12,fontWeight:active?700:500,color:active?(T.accent||"#348FFF"):T.muted}}>
-                                    {lbl}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          {PART_ORDER.map((part) => (
+                          {SHARED_COLOR_PARTS.map((part) => (
                             <div key={part}>
                               <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",color:T.muted,marginBottom:5}}>{PART_LABELS[part]}</div>
                               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
@@ -479,23 +456,6 @@ export function MapaVivo({ becados, T, onBack }) {
           </>
         )}
       </div>
-
-      {/* Overlay export de identidades */}
-      {exportText !== null && (
-        <div onClick={() => setExportText(null)} style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.6)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:T.surface,borderRadius:"16px 16px 0 0",padding:"18px 16px calc(var(--sab)+20px)"}}>
-            <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:8}}>Identidades — cópialo y mándamelo</div>
-            <textarea readOnly value={exportText} onFocus={e=>e.target.select()}
-              style={{width:"100%",boxSizing:"border-box",height:220,padding:"10px 12px",borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,color:T.text,fontSize:12,fontFamily:"'JetBrains Mono',monospace",outline:"none"}}/>
-            <div style={{display:"flex",gap:8,marginTop:10}}>
-              <button className="press" onClick={() => { try { navigator.clipboard.writeText(exportText); } catch {} }}
-                style={{flex:1,height:44,borderRadius:11,border:"none",background:T.accent||"#348FFF",color:"#fff",fontSize:13,fontWeight:700}}>Copiar</button>
-              <button className="press" onClick={() => setExportText(null)}
-                style={{flex:1,height:44,borderRadius:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,fontSize:13,fontWeight:600}}>Cerrar</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
