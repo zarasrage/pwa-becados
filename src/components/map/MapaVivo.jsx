@@ -330,7 +330,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   borderBottom:`3px solid #22C55E55`,
                 }}>
                   {insideAvatars.map((av, i) => (
-                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
+                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?86:73}
                       isSel={selected?.name===av.name} onSelect={setSelected}
                       look={looksMap[av.name]}/>
                   ))}
@@ -352,7 +352,7 @@ export function MapaVivo({ becados, T, onBack }) {
                   borderBottom:`3px solid ${T.border}`,
                 }}>
                   {outsideAvatars.map((av, i) => (
-                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?66:56}
+                    <FloorAvatar key={av.name} av={av} i={i} sz={selected?.name===av.name?86:73}
                       isSel={selected?.name===av.name} onSelect={setSelected}
                       look={looksMap[av.name]}/>
                   ))}
