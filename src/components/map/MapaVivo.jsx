@@ -235,10 +235,13 @@ export function MapaVivo({ becados, T, onBack }) {
     MAP_BUILDINGS.forEach(b => { result[b.id] = []; });
     if (!rawData?.summary?.groups) return result;
 
-    // Fin de semana: no hay horario de rotación → solo cuentan los turnos (D/N/P/A)
+    // El edificio por defecto solo aplica en día de semana y en horario laboral
+    // (7:30–18:00). Fuera de eso, solo el turno ubica al becado.
     const [dy,dm,dd] = date.split("-").map(Number);
     const dow = new Date(dy, dm-1, dd).getDay();
     const isWeekend = dow === 0 || dow === 6;
+    const enHorarioLaboral = simMin >= 450 && simMin < 1080; // 7:30–18:00
+    const usarDefault = !isWeekend && enHorarioLaboral;
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
       if (OUTSIDE_ROTATIONS.has(rotCode)) continue; // I/T/V van al piso "Fuera del hospital"
@@ -249,7 +252,7 @@ export function MapaVivo({ becados, T, onBack }) {
         // Ubicación por horario/turno. Entre semana, si no hay lugar, edificio por
         // defecto de su rotación. En fin de semana NO hay default: solo el turno ubica.
         const resolved = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
-        const building = resolved || (isWeekend ? null : (DEFAULT_BUILDING[rotCode] || "pabellones"));
+        const building = resolved || (usarDefault ? (DEFAULT_BUILDING[rotCode] || "pabellones") : null);
         if (!building) continue;
         if (building && result[building]) {
           result[building].push({
