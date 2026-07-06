@@ -136,7 +136,7 @@ export default function App() {
     if (id === "rotaciones")   setShowRotaciones(true);
     if (id === "turnos")       setShowTurnos(true);
     if (id === "equipos")      setShowEquipos(true);
-    if (id === "pabellones")   setShowPabellones(true);
+    if (id === "mapa")         setShowMapa(true);
     if (id === "fellows")      setShowFellows(true);
     if (id === "estadisticas") setShowEstadisticas(true);
   };

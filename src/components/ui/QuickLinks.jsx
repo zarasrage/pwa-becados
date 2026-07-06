@@ -2,8 +2,8 @@ const LINKS = [
   { id:"rotaciones",   icon:"⊞",  label:"Rotaciones"  },
   { id:"turnos",       icon:"◷",  label:"Mensual"     },
   { id:"equipos",      icon:"⬡",  label:"Por Equipo"  },
-  { id:"pabellones",   icon:"🔪", label:"Pabellones"  },
   { id:"fellows",      icon:"⭐", label:"Fellows"     },
+  { id:"mapa",         icon:"🗺", label:"Mapa"        },
   { id:"estadisticas", icon:"📊", label:"Stats"       },
 ];
 
