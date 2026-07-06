@@ -235,15 +235,22 @@ export function MapaVivo({ becados, T, onBack }) {
     MAP_BUILDINGS.forEach(b => { result[b.id] = []; });
     if (!rawData?.summary?.groups) return result;
 
+    // Fin de semana: no hay horario de rotación → solo cuentan los turnos (D/N/P/A)
+    const [dy,dm,dd] = date.split("-").map(Number);
+    const dow = new Date(dy, dm-1, dd).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
       if (OUTSIDE_ROTATIONS.has(rotCode)) continue; // I/T/V van al piso "Fuera del hospital"
       for (const name of names) {
         if (name === DEMO_BECADO) continue;
         const bd = rawData.becadoData[name];
         if (!bd) continue;
-        // Ubicación por horario/turno; si no hay lugar, edificio por defecto de su rotación
-        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name))
-                      || DEFAULT_BUILDING[rotCode] || "pabellones";
+        // Ubicación por horario/turno. Entre semana, si no hay lugar, edificio por
+        // defecto de su rotación. En fin de semana NO hay default: solo el turno ubica.
+        const resolved = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
+        const building = resolved || (isWeekend ? null : (DEFAULT_BUILDING[rotCode] || "pabellones"));
+        if (!building) continue;
         if (building && result[building]) {
           result[building].push({
             name,
@@ -256,7 +263,7 @@ export function MapaVivo({ becados, T, onBack }) {
       }
     }
     return result;
-  }, [rawData, simMin, activeBecados]);
+  }, [rawData, simMin, activeBecados, date]);
 
   // Becados UNAB con rotación fuera del hospital (I/T/V) → franja "Fuera del hospital"
   const outsideAvatars = useMemo(() => {
