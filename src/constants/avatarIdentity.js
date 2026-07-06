@@ -12,7 +12,7 @@ export const AVATAR_IDENTITY = {
   "Valencia":  { piel:"#E0AC69", pelo:"#caa92f", ojos:"#1774de" },
   "Beulieau":  { piel:"#A9744F", pelo:"#3D2B1F", ojos:"#3E2A1E" },
   "Carcamo":   { piel:"#F5CBA0", pelo:"#0A0A0A", ojos:"#3E2A1E", labios:"#C94A5A" },
-  "Albert":    { sexo:"m", piel:"#F5CBA0", pelo:"#d2bb46" },
+  "Albert":    { sexo:"m", piel:"#F5CBA0", pelo:"#d2bb46", ojos:"#3B7CC4" },
   "Marre":     { sexo:"m", piel:"#E0AC69", pelo:"#B87333", ojos:"#784526" },
   "Fuentes":   { sexo:"m", piel:"#E0AC69", pelo:"#0A0A0A", ojos:"#111111" },
   "Teuber":    { piel:"#F5CBA0", pelo:"#b9853c", ojos:"#2f69ac" },
