@@ -38,6 +38,28 @@ function weekdayEs(date) {
   return ["Domingo","Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"][date.getDay()];
 }
 
+// Catálogo de horario (config.horario_catalogo, JSON) — cacheado en memoria por sesión.
+// Estructura: { rotCode: { "1".."7": [{ i:"08:00", f:"18:00", act:"...", lugar:"pabellones"|null }] } }
+let _horarioCatalogo = null;
+async function loadHorarioCatalogo() {
+  if (_horarioCatalogo) return _horarioCatalogo;
+  const { data } = await supabase.from("config").select("value").eq("key", "horario_catalogo").single();
+  try { _horarioCatalogo = data?.value ? JSON.parse(data.value) : {}; } catch { _horarioCatalogo = {}; }
+  return _horarioCatalogo;
+}
+// Expande bloques por rango a ítems por hora — mismo formato de antes {time, activity} (+ lugar)
+function expandHorario(blocks) {
+  const out = [];
+  for (const b of blocks || []) {
+    const hi = parseInt(String(b.i).slice(0, 2), 10);
+    const hf = parseInt(String(b.f).slice(0, 2), 10);
+    for (let h = hi; h <= hf; h++) {
+      out.push({ time: `${String(h).padStart(2, "0")}:00`, activity: b.act, lugar: b.lugar ?? null });
+    }
+  }
+  return out;
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase
@@ -103,16 +125,24 @@ export async function getDaily(becado, dateStr) {
     }
   }
 
-  // Horario del día (items de actividad)
+  // Horario del día (items de actividad) — desde el catálogo (rangos → bloques horarios)
   let items = [];
   if (rotationCode && !["V","I","A","rx","F","T","CPQ"].includes(rotationCode)) {
-    const { data: hData } = await supabase
-      .from("horario_items")
-      .select("hora, actividad")
-      .eq("rotacion_codigo", rotationCode)
-      .eq("dia_semana", weekday)
-      .order("hora");
-    items = (hData || []).map(h => ({ time: h.hora, activity: h.actividad }));
+    const dia = dow === 0 ? 7 : dow; // getDay: 0=Dom..6=Sáb → 1=Lun..7=Dom
+    const cat = await loadHorarioCatalogo();
+    const blocks = cat?.[rotationCode]?.[String(dia)];
+    if (blocks) {
+      items = expandHorario(blocks);
+    } else {
+      // Fallback defensivo a la tabla vieja (por si el catálogo no está)
+      const { data: hData } = await supabase
+        .from("horario_items")
+        .select("hora, actividad")
+        .eq("rotacion_codigo", rotationCode)
+        .eq("dia_semana", weekday)
+        .order("hora");
+      items = (hData || []).map(h => ({ time: h.hora, activity: h.actividad }));
+    }
   }
 
   const ROTATION_NAMES = {

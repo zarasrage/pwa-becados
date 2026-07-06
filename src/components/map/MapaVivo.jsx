@@ -88,7 +88,9 @@ function resolveBecadoBuilding(schedItems, turno, seminario, nowMin, isUnab) {
   if (turno?.diaCode === "D" && nowMin >= 840 && nowMin < 1200) return "urgencia";
   if (turno?.nocheCode === "N" && nowMin >= 1200) return "urgencia";
   const act = getCurrentActivity(schedItems, nowMin);
-  return act ? activityToBuilding(act.activity) : null;
+  if (!act) return null;
+  // Preferir el lugar explícito del catálogo; si no viene, inferir por texto (demo/legacy)
+  return act.lugar !== undefined ? act.lugar : activityToBuilding(act.activity);
 }
 
 // Limita la concurrencia de fetches para no saturar Supabase
