@@ -26,7 +26,7 @@ export const AVATAR_IDENTITY = {
 // Escala de tamaño por becado (multiplicador sobre el tamaño base del avatar)
 export const AVATAR_SCALE = {
   Teuber: 1.10, Larrain: 1.10, Gonzalez: 1.10,
-  Valencia: 1.05, Marre: 1.05, Albert: 1.05, "Miño": 1.05,
+  Valencia: 1.05, Marre: 1.05, Albert: 1.05, "Miño": 1.05, Beulieau: 1.05,
   Navia: 0.95, Chahin: 0.95,
 };
 
