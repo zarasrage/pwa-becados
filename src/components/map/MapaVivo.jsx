@@ -115,6 +115,7 @@ export function MapaVivo({ becados, T, onBack }) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [exportText, setExportText] = useState(null); // JSON de identidades para exportar
   const [avatarLooks, setAvatarLooks] = useState(() => {
     try { return JSON.parse(safeStorage.get("avatarLooksV3") || "{}"); } catch { return {}; }
   });
@@ -293,6 +294,20 @@ export function MapaVivo({ becados, T, onBack }) {
       </div>
 
       <div style={{padding:"0 3px",paddingBottom:40}}>
+        {/* Acceso admin temporal: exportar identidades para hardcodear */}
+        <button className="press" onClick={() => {
+          const ID = ["sexo","piel","pelo","ojos","labios"];
+          const out = {};
+          for (const [name, look] of Object.entries(avatarLooks)) {
+            const id = {};
+            for (const k of ID) if (look?.[k]) id[k] = look[k];
+            if (Object.keys(id).length) out[name] = id;
+          }
+          setExportText(JSON.stringify(out, null, 2));
+        }} style={{width:"100%",margin:"0 0 8px",height:34,borderRadius:8,border:`1px dashed ${T.border}`,background:T.surface2,color:T.muted,fontSize:11,fontWeight:600}}>
+          ⬆ Exportar identidades (admin)
+        </button>
+
         {loading ? <Spinner color={T.accent||"#348FFF"}/> : (
           <>
             {/* Building cards — 2x2 grid */}
@@ -464,6 +479,23 @@ export function MapaVivo({ becados, T, onBack }) {
           </>
         )}
       </div>
+
+      {/* Overlay export de identidades */}
+      {exportText !== null && (
+        <div onClick={() => setExportText(null)} style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.6)",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:T.surface,borderRadius:"16px 16px 0 0",padding:"18px 16px calc(var(--sab)+20px)"}}>
+            <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:8}}>Identidades — cópialo y mándamelo</div>
+            <textarea readOnly value={exportText} onFocus={e=>e.target.select()}
+              style={{width:"100%",boxSizing:"border-box",height:220,padding:"10px 12px",borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,color:T.text,fontSize:12,fontFamily:"'JetBrains Mono',monospace",outline:"none"}}/>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <button className="press" onClick={() => { try { navigator.clipboard.writeText(exportText); } catch {} }}
+                style={{flex:1,height:44,borderRadius:11,border:"none",background:T.accent||"#348FFF",color:"#fff",fontSize:13,fontWeight:700}}>Copiar</button>
+              <button className="press" onClick={() => setExportText(null)}
+                style={{flex:1,height:44,borderRadius:11,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,fontSize:13,fontWeight:600}}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

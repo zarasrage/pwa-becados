@@ -28,6 +28,22 @@ export async function saveTemasCatalogo(catalogo) {
   return !error;
 }
 
+// ── Avatares: partes personalizables compartidas (config.avatares, JSON) ────────
+// Estructura: { becado: { ropa, zapatos, aros, sombrero, mascara } }
+export async function getAvatares() {
+  const { data } = await supabase
+    .from("config").select("value").eq("key", "avatares").single();
+  if (!data?.value) return {};
+  try { return JSON.parse(data.value); } catch { return {}; }
+}
+
+export async function saveAvatares(avatares) {
+  const { error } = await supabase
+    .from("config")
+    .upsert({ key: "avatares", value: JSON.stringify(avatares) }, { onConflict: "key" });
+  return !error;
+}
+
 const SEMINARIO_DIA = {
   2: "Seminario Hombro",   // Martes
   3: "Seminario Rodilla",  // Miércoles
