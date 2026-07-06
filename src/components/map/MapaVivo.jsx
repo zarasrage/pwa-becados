@@ -4,7 +4,6 @@ import { MAP_BUILDINGS } from "../../constants/map.js";
 import { ROT } from "../../constants/rotations.js";
 import { todayISO, offsetDate, m2t, t2m } from "../../utils/dates.js";
 import { apiGet, apiSWR } from "../../utils/api.js";
-import { DEMO_BECADO, DEMO_MAP_NAMES, DEMO_ACTIVITIES, demoSummary, demoMonthly } from "../../data/demo.js";
 import { DateNav } from "../ui/DateNav.jsx";
 import { Spinner } from "../ui/Spinner.jsx";
 import { BuildingCard } from "./BuildingCard.jsx";
@@ -115,7 +114,6 @@ export function MapaVivo({ becados, T, onBack }) {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [demoMode, setDemoMode] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [avatarLooks, setAvatarLooks] = useState(() => {
     try { return JSON.parse(safeStorage.get("avatarLooksV3") || "{}"); } catch { return {}; }
@@ -137,7 +135,7 @@ export function MapaVivo({ becados, T, onBack }) {
     });
   };
 
-  const isLive = !demoMode && date === realToday && (() => {
+  const isLive = date === realToday && (() => {
     const now = new Date();
     return Math.abs(simMin - (now.getHours()*60+now.getMinutes())) < 5;
   })();
@@ -148,77 +146,36 @@ export function MapaVivo({ becados, T, onBack }) {
     setSimMin(now.getHours()*60+now.getMinutes());
   };
 
-  const activeBecados = demoMode ? DEMO_MAP_NAMES : becados;
+  const activeBecados = becados;
 
-  // Fetch data only when DATE or demoMode changes — not on time slider
+  // Fetch data only when DATE changes — not on time slider
   useEffect(() => {
     setLoading(true);
     setSelected(null);
     (async () => {
       try {
-        let summary, monthly;
-
-        if (demoMode) {
-          await new Promise(r => setTimeout(r, 150));
-          summary = demoSummary(date);
-          monthly = demoMonthly(date.slice(0,7));
-        } else {
-          summary = await apiSWR({ route:"summary", date, token:API_TOKEN }, ()=>{}, ()=>{});
-          monthly = { ok:false };
-        }
-
+        const summary = await apiSWR({ route:"summary", date, token:API_TOKEN }, ()=>{}, ()=>{});
         if (!summary.ok || !summary.groups) { setRawData(null); setLoading(false); return; }
 
-        // Horario REAL de cada becado (no reutilizar el del líder del grupo)
+        // Horario REAL de cada becado (getDaily por becado, concurrencia limitada)
         const becadoData = {};
-
-        if (demoMode) {
-          // Modo demo: usa actividades genéricas por rotación
-          const turnoLookup = {};
-          if (monthly.ok !== false) {
-            (monthly.entries || []).forEach(e => {
-              if (e.date !== date) return;
-              if (!turnoLookup[e.name]) turnoLookup[e.name] = {};
-              if (e.type === "P" || e.type === "p" || e.type === "D") turnoLookup[e.name].diaCode = e.type;
-              if (e.type === "N") turnoLookup[e.name].nocheCode = "N";
-              if (e.type === "A") turnoLookup[e.name].artroCode = "A";
-            });
-          }
-          const [dy,dm,dd] = date.split("-").map(Number);
-          const dow = new Date(dy,dm-1,dd).getDay();
-          const hasSem = [2,3,4].includes(dow);
-          for (const [rotCode, names] of Object.entries(summary.groups)) {
-            const acts = DEMO_ACTIVITIES[rotCode] || [];
-            names.forEach((name, ni) => {
-              if (name === DEMO_BECADO) return;
-              becadoData[name] = {
-                items: acts.map(([time, activity]) => ({ time, activity })),
-                turno: turnoLookup[name] || {},
-                seminario: (hasSem && ni === 0) ? { presenter:name, title:"Presentación demo", tag:"Seminario", time:"07:30" } : null,
-                rotationCode: rotCode,
-              };
-            });
-          }
-        } else {
-          // Modo real: consulta getDaily por cada becado (concurrencia limitada)
-          const allNames = [];
-          for (const names of Object.values(summary.groups)) {
-            for (const n of names) if (n !== DEMO_BECADO && !allNames.includes(n)) allNames.push(n);
-          }
-          await mapLimit(allNames, 8, async (name) => {
-            try {
-              const daily = await apiGet({ route:"daily", becado:name, date, token:API_TOKEN });
-              if (daily.ok !== false) {
-                becadoData[name] = {
-                  items: daily.items || [],
-                  turno: daily.turno || {},
-                  seminario: daily.seminario || null,
-                  rotationCode: daily.rotationCode || "",
-                };
-              }
-            } catch {}
-          });
+        const allNames = [];
+        for (const names of Object.values(summary.groups)) {
+          for (const n of names) if (!allNames.includes(n)) allNames.push(n);
         }
+        await mapLimit(allNames, 8, async (name) => {
+          try {
+            const daily = await apiGet({ route:"daily", becado:name, date, token:API_TOKEN });
+            if (daily.ok !== false) {
+              becadoData[name] = {
+                items: daily.items || [],
+                turno: daily.turno || {},
+                seminario: daily.seminario || null,
+                rotationCode: daily.rotationCode || "",
+              };
+            }
+          } catch {}
+        });
 
         setRawData({ summary, becadoData });
       } catch(e) {
@@ -227,7 +184,7 @@ export function MapaVivo({ becados, T, onBack }) {
       }
       setLoading(false);
     })();
-  }, [date, becados, demoMode]);
+  }, [date, becados]);
 
   // Clasifica a CADA becado en exactamente una categoría:
   //  - buildings[edificio]  → lugar conocido (horario/turno)
@@ -247,7 +204,6 @@ export function MapaVivo({ becados, T, onBack }) {
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
       for (const name of names) {
-        if (name === DEMO_BECADO) continue;
         const bd = rawData.becadoData[name];
         if (!bd) continue;
         const av = {
@@ -321,12 +277,12 @@ export function MapaVivo({ becados, T, onBack }) {
               style={{flex:1,height:4,appearance:"none",WebkitAppearance:"none",background:`linear-gradient(to right, ${T.accent||"#348FFF"} ${((simMin-420)/(1380-420))*100}%, ${T.border} ${((simMin-420)/(1380-420))*100}%)`,borderRadius:99,outline:"none",cursor:"pointer",accentColor:T.accent||"#348FFF"}}
             />
           </div>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:3,flexWrap:"nowrap"}}>
             {TIME_PRESETS.map(tp => {
               const active = Math.abs(simMin - tp.min) < 15;
               return (
                 <button key={tp.label} className="press" onClick={() => setSimMin(tp.min)}
-                  style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${active ? (T.accent||"#348FFF")+"60" : T.border}`,background:active ? (T.accent||"#348FFF")+"18" : T.surface2,fontSize:10,fontWeight:active?700:400,fontFamily:"'JetBrains Mono',monospace",color:active ? (T.accent||"#348FFF") : T.muted,transition:"all 0.12s"}}>
+                  style={{flex:1,minWidth:0,padding:"3px 0",textAlign:"center",borderRadius:6,border:`1px solid ${active ? (T.accent||"#348FFF")+"60" : T.border}`,background:active ? (T.accent||"#348FFF")+"18" : T.surface2,fontSize:10,fontWeight:active?700:400,fontFamily:"'JetBrains Mono',monospace",color:active ? (T.accent||"#348FFF") : T.muted,transition:"all 0.12s"}}>
                   {tp.label}
                 </button>
               );
@@ -334,27 +290,6 @@ export function MapaVivo({ becados, T, onBack }) {
           </div>
         </div>
 
-        {/* Status bar */}
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-          {isLive ? (
-            <div style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:"#13C045",boxShadow:"0 0 8px #13C045",animation:"neonPulseA 2s ease-in-out infinite"}}/>
-              <span style={{fontSize:11,fontWeight:600,color:"#13C045"}}>En vivo</span>
-            </div>
-          ) : (
-            <div style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:T.accent||"#348FFF"}}/>
-              <span style={{fontSize:11,fontWeight:600,color:T.accent||"#348FFF"}}>{m2t(simMin)}</span>
-            </div>
-          )}
-          <span style={{fontSize:11,color:T.muted}}>·</span>
-          <span style={{fontSize:11,color:T.muted}}>{totalVisible} becado{totalVisible!==1?"s":""} en el hospital</span>
-          <span style={{fontSize:11,color:T.muted}}>·</span>
-          <button className="press" onClick={() => setDemoMode(d => !d)}
-            style={{fontSize:10,fontWeight:600,color:demoMode?T.accent||"#348FFF":T.muted,background:demoMode?(T.accent||"#348FFF")+"18":"transparent",border:`1px solid ${demoMode?(T.accent||"#348FFF")+"50":T.border}`,borderRadius:6,padding:"2px 8px"}}>
-            {demoMode ? "✦ Demo" : "Demo"}
-          </button>
-        </div>
       </div>
 
       <div style={{padding:"0 3px",paddingBottom:40}}>

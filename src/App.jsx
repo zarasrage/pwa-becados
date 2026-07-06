@@ -7,7 +7,6 @@ import { safeStorage } from "./utils/storage.js";
 import { purgeCacheStorage } from "./utils/storage.js";
 import { checkDataVersion } from "./utils/api.js";
 import { CSS } from "./styles/globalCSS.js";
-import { DEMO_BECADO } from "./data/demo.js";
 import {
   SakuraPetals, OceanBubbles, AuroraEffect, ForestFireflies,
   SunsetEmbers, NeonGrid, SynthwaveEffect, CryoEffect, CosmosEffect, StormEffect,
@@ -115,8 +114,8 @@ export default function App() {
     const params = {route:"becados",token:API_TOKEN};
     apiSWR(
       params,
-      (data) => { if (data.ok && data.becados) { setBecados([...data.becados, DEMO_BECADO]); setLoadingInit(false); } },
-      (data) => { if (data.ok && data.becados) { setBecados([...data.becados, DEMO_BECADO]); setLoadingInit(false); } }
+      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } },
+      (data) => { if (data.ok && data.becados) { setBecados(data.becados); setLoadingInit(false); } }
     ).catch(e => { setInitError(String(e.message||e)); setLoadingInit(false); });
   }, []);
 

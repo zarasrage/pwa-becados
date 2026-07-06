@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
-import { DEMO_BECADO } from "../data/demo.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
 export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
@@ -54,7 +53,7 @@ export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
                 {grpCfg.label}
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                {group.filter(name => name !== DEMO_BECADO).map(name => (
+                {group.map(name => (
                   <button key={name} className="press"
                     style={{display:"flex",alignItems:"center",gap:9,background:T.surface,border:`1px solid ${T.border}`,borderRadius:11,padding:"8px 10px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden"}}
                     onClick={() => onSelect(name)}
@@ -75,16 +74,7 @@ export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
             <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:T.muted}}/>
             Extras
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-            <button className="press"
-              style={{display:"flex",alignItems:"center",gap:9,background:T.surface,border:`1px dashed ${T.border}`,borderRadius:11,padding:"8px 10px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden"}}
-              onClick={() => onSelect(DEMO_BECADO)}
-            >
-              <span style={{width:30,height:30,borderRadius:8,background:`${T.muted}18`,color:T.muted,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                ✦
-              </span>
-              <span style={{fontSize:13.5,fontWeight:500,color:T.sub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{DEMO_BECADO}</span>
-            </button>
+          <div style={{display:"grid",gridTemplateColumns:"1fr",gap:6}}>
             <button className="press"
               style={{display:"flex",alignItems:"center",gap:9,background:T.surface,border:`1px dashed ${T.border}`,borderRadius:11,padding:"8px 10px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden"}}
               onClick={onShowMapa}

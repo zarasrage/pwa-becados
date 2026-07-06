@@ -1,5 +1,4 @@
 import { API_URL, API_TOKEN, USE_SUPABASE } from "../constants/api.js";
-import { DEMO_BECADO, demoDaily, demoPersonalMonth } from "../data/demo.js";
 import { getWeekDates } from "./dates.js";
 import { cacheGet, cacheSet, cacheAge, cacheKey, _revalidatedThisSession, SWR_REVALIDATE_AFTER } from "./cache.js";
 import { safeStorage } from "./storage.js";
@@ -17,13 +16,6 @@ async function supabaseGet(params) {
 }
 
 export async function apiGet(params) {
-  if (params.becado === DEMO_BECADO) {
-    await new Promise(r => setTimeout(r, 180));
-    const route = (params.route || "").toLowerCase();
-    if (route === "daily")          return demoDaily(params.date);
-    if (route === "personal-month") return demoPersonalMonth(params.month);
-    return { ok:false, error:"Demo: ruta no disponible" };
-  }
   if (USE_SUPABASE) return supabaseGet(params);
   const url = new URL(API_URL);
   Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
