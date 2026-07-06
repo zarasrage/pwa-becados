@@ -229,28 +229,27 @@ export function MapaVivo({ becados, T, onBack }) {
     })();
   }, [date, becados, demoMode]);
 
-  // Resolve buildings from time — instant, no API calls.
-  // Devuelve edificios + "unknown" (En el hospital: rotan pero sin lugar definido).
+  // Clasifica a CADA becado en exactamente una categoría:
+  //  - buildings[edificio]  → lugar conocido (horario/turno)
+  //  - unknown (En el hospital) → rota, en el hospital, sin lugar definido (7:00–14:00)
+  //  - outside (Fuera del hospital) → I/T/V, o ya se fue / aún no llega
   const placement = useMemo(() => {
     const buildings = {};
     MAP_BUILDINGS.forEach(b => { buildings[b.id] = []; });
-    const unknown = [];
-    if (!rawData?.summary?.groups) return { buildings, unknown };
+    const unknown = [], outside = [];
+    if (!rawData?.summary?.groups) return { buildings, unknown, outside };
 
-    // La gente llega ~7:00. Si a esa hora (o en un hueco) no tiene lugar definido,
-    // va a "En el hospital" por defecto, hasta las 14:00. Pasado eso, ya se fue.
+    // La gente llega ~7:00. Sin lugar definido → "En el hospital" hasta las 14:00.
     const [dy,dm,dd] = date.split("-").map(Number);
     const dow = new Date(dy, dm-1, dd).getDay();
     const isWeekend = dow === 0 || dow === 6;
     const enVentana = simMin >= 420 && simMin < 840; // 7:00–14:00
 
     for (const [rotCode, names] of Object.entries(rawData.summary.groups)) {
-      if (OUTSIDE_ROTATIONS.has(rotCode)) continue; // I/T/V van al piso "Fuera del hospital"
       for (const name of names) {
         if (name === DEMO_BECADO) continue;
         const bd = rawData.becadoData[name];
         if (!bd) continue;
-        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
         const av = {
           name,
           initial: name.charAt(0).toUpperCase(),
@@ -258,39 +257,18 @@ export function MapaVivo({ becados, T, onBack }) {
           rotation: rotCode,
           rotName: ROT[rotCode]?.name || rotCode,
         };
-        if (building && buildings[building]) {
-          buildings[building].push(av);            // lugar conocido
-        } else if (!building && !isWeekend && enVentana) {
-          unknown.push(av);                        // en el hospital, lugar desconocido
-        }
-        // fuera de ventana / finde sin lugar → no se muestra (no llegó o ya se fue)
+        if (OUTSIDE_ROTATIONS.has(rotCode)) { outside.push(av); continue; } // I/T/V
+        const building = resolveBecadoBuilding(bd.items, bd.turno, bd.seminario, simMin, UNAB_BECADOS.has(name));
+        if (building && buildings[building]) buildings[building].push(av); // lugar conocido
+        else if (!isWeekend && enVentana)   unknown.push(av);              // en el hospital
+        else                                outside.push(av);             // se fue / no llegó
       }
     }
-    return { buildings, unknown };
+    return { buildings, unknown, outside };
   }, [rawData, simMin, activeBecados, date]);
   const buildingMap = placement.buildings;
-  const insideAvatars = placement.unknown; // "En el hospital"
-
-  // Becados UNAB con rotación fuera del hospital (I/T/V) → franja "Fuera del hospital"
-  const outsideAvatars = useMemo(() => {
-    const groups = rawData?.summary?.groups || {};
-    const list = [];
-    for (const [rotCode, names] of Object.entries(groups)) {
-      if (!OUTSIDE_ROTATIONS.has(rotCode)) continue;
-      for (const name of names) {
-        if (name === DEMO_BECADO) continue;
-        if (!UNAB_BECADOS.has(name)) continue;
-        list.push({
-          name,
-          initial: name.charAt(0).toUpperCase(),
-          color: ROT[rotCode]?.accent || "#94A3B8",
-          rotation: rotCode,
-          rotName: ROT[rotCode]?.name || rotCode,
-        });
-      }
-    }
-    return list;
-  }, [rawData]);
+  const insideAvatars = placement.unknown;  // "En el hospital"
+  const outsideAvatars = placement.outside; // "Fuera del hospital"
 
   const totalVisible = Object.values(buildingMap).reduce((s, a) => s + a.length, 0);
   const selectedBuilding = selected
