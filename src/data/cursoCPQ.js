@@ -24,12 +24,12 @@ export const CURSO_CPQ = [
     sala: null,
   },
   {
-    fecha: "2026-07-15",
+    fecha: "2026-07-20",
     hora: "07:30",
     numero: 4,
     titulo: "Colgajos Cutáneos Locales y Regionales para Extremidades Inferiores",
     doctor: "Dra. Vanessa Oñate",
-    sala: null,
+    sala: "Sala Reuniones Enfermería 3er piso",
   },
   {
     fecha: "2026-07-21",
