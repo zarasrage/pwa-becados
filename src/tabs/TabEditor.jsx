@@ -113,11 +113,12 @@ function colorPorDiasNoche(dias) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, turnoEstaSemana, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
     if (turnoType==="D" && poliHoy.includes(n)) return "Poli hoy";
+    if (turnoType==="D" && turnoEstaSemana.includes(n)) return "Turno esta semana";
     if (turnoType==="N" && diaOPoliManana.includes(n)) return "Día/Poli mañana";
     if (turnoType==="N" && nocheReciente.includes(n)) return "Noche <6d";
     return null;
@@ -425,6 +426,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [nocheMap, setNocheMap] = useState({});
   const [poliMap, setPoliMap] = useState({}); // { fecha: [nombre,...] } — para chequeo Poli mismo día (tab Día)
   const [diaPoliSigMap, setDiaPoliSigMap] = useState({}); // { fecha: [nombre,...] } — Día o Poli ese día, usado para chequeo "día siguiente" desde Noche
+  const [semanaMap, setSemanaMap] = useState({}); // { fecha: [nombre,...] } — cualquier tipo de turno, para chequeo "ya tuvo turno esta semana" (tab Día)
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
   const [refreshSem, setRefreshSem] = useState(0);
@@ -507,8 +509,34 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       });
   }, [monday]);
 
+  // Cualquier turno (P/p/D/N/A) del rango, para chequeo "ya tuvo turno esta semana" en tab Día
+  useEffect(() => {
+    supabase.from("turnos").select("fecha,becados(nombre)")
+      .gte("fecha", start).lte("fecha", end)
+      .then(({ data }) => {
+        const map = {};
+        for (const t of data || []) {
+          const n = t.becados?.nombre; if (!n) continue;
+          if (!map[t.fecha]) map[t.fecha] = [];
+          if (!map[t.fecha].includes(n)) map[t.fecha].push(n);
+        }
+        setSemanaMap(map);
+      });
+  }, [monday]);
+
   function poliMismoDia(date) { return poliMap[date] || []; }
   function diaOPoliSiguiente(date) { return diaPoliSigMap[offsetDate(date,1)] || []; }
+  // Nombres con cualquier turno (P/p/D/N/A) en otro día de la misma semana (lun-dom) que `date`
+  function turnoEstaSemana(date) {
+    const mon = getMondayOfWeek(date);
+    const set = new Set();
+    for (let i = 0; i < 7; i++) {
+      const d = offsetDate(mon, i);
+      if (d === date) continue;
+      for (const n of semanaMap[d] || []) set.add(n);
+    }
+    return [...set];
+  }
 
   function elegiblesParaDia(date, tipoTurno) {
     return becados.filter(b => {
@@ -598,11 +626,17 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         return { ...prev, [date]: [...arr, nombre] };
       });
     }
+    setSemanaMap(prev => {
+      const arr = prev[date] || [];
+      if (arr.includes(nombre)) return prev;
+      return { ...prev, [date]: [...arr, nombre] };
+    });
   }
   function removeFromCrossCheckMaps(date, nombre, t) {
     if (t === "N") setNocheMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
     if (t === "P" || t === "p") setPoliMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
     if (t === "P" || t === "p" || t === "D") setDiaPoliSigMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
+    setSemanaMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
   }
 
   async function handleRemove(date, nombre, tipoEfectivo) {
@@ -1076,6 +1110,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           poliHoy={poliMismoDia(picker.date)}
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
           nocheReciente={nocheMenosDe6Dias(picker.date)}
+          turnoEstaSemana={turnoEstaSemana(picker.date)}
           diasDesdeUltimaNoche={(n)=>diasDesdeUltimaNoche(n, picker.date)}
           diasDesdeUltimoFindeNoche={(n)=>diasDesdeUltimoFindeNoche(n, picker.date)}
           turnoType={tipo}
