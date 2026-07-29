@@ -75,9 +75,15 @@ function getDow(iso) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
-  const hasConflict = n => (turnoType==="P"||turnoType==="D") && nocheAyer.includes(n);
+  function conflictLabel(n) {
+    if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
+    if (turnoType==="D" && poliHoy.includes(n)) return "Poli hoy";
+    if (turnoType==="N" && diaOPoliManana.includes(n)) return "Día/Poli mañana";
+    return null;
+  }
+  const hasConflict = n => conflictLabel(n) !== null;
 
   // Si es Poli y no eligió AM/PM, mostrar selector primero
   if (turnoType === "P" && poliSub === null) {
@@ -133,7 +139,7 @@ function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T })
           <div style={{padding:"20px 16px",fontSize:13,color:T.muted}}>No hay becados disponibles</div>
         )}
         {elegibles.map(nombre => {
-          const conflicto = hasConflict(nombre);
+          const conflicto = conflictLabel(nombre);
           return (
             <button key={nombre} className="press"
               onClick={() => !conflicto && onSelect(nombre, efectivoTipo)}
@@ -144,7 +150,7 @@ function BecadoPicker({ elegibles, nocheAyer, turnoType, onSelect, onClose, T })
               {conflicto && (
                 <span style={{fontSize:12,fontWeight:700,color:"#EF4444",
                   background:"#EF444418",border:"1px solid #EF444440",
-                  borderRadius:99,padding:"2px 8px"}}>Noche ayer</span>
+                  borderRadius:99,padding:"2px 8px"}}>{conflicto}</span>
               )}
             </button>
           );
@@ -342,6 +348,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [rotMap, setRotMap]   = useState({});
   const [turnos, setTurnos]   = useState({});
   const [nocheMap, setNocheMap] = useState({});
+  const [poliMap, setPoliMap] = useState({}); // { fecha: [nombre,...] } — para chequeo Poli mismo día (tab Día)
+  const [diaPoliSigMap, setDiaPoliSigMap] = useState({}); // { fecha: [nombre,...] } — Día o Poli ese día, usado para chequeo "día siguiente" desde Noche
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
   const [refreshSem, setRefreshSem] = useState(0);
@@ -398,6 +406,32 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       setNocheMap(nMap);
     });
   }, [tipo, monday]);
+
+  // Poli/Día del rango (+1 día extra) para chequeos cruzados independientes de la pestaña activa:
+  // - tab Día: evitar seleccionar a quien ya tiene Poli ese mismo día
+  // - tab Noche: evitar seleccionar a quien tiene Día o Poli al día siguiente
+  const endPlus1 = offsetDate(end, 1);
+  useEffect(() => {
+    supabase.from("turnos").select("fecha,tipo,becados(nombre)")
+      .in("tipo", ["P","p","D"]).gte("fecha", start).lte("fecha", endPlus1)
+      .then(({ data }) => {
+        const poli = {}, diaOPoli = {};
+        for (const t of data || []) {
+          const n = t.becados?.nombre; if (!n) continue;
+          if (t.tipo === "P" || t.tipo === "p") {
+            if (!poli[t.fecha]) poli[t.fecha] = [];
+            if (!poli[t.fecha].includes(n)) poli[t.fecha].push(n);
+          }
+          if (!diaOPoli[t.fecha]) diaOPoli[t.fecha] = [];
+          if (!diaOPoli[t.fecha].includes(n)) diaOPoli[t.fecha].push(n);
+        }
+        setPoliMap(poli);
+        setDiaPoliSigMap(diaOPoli);
+      });
+  }, [monday]);
+
+  function poliMismoDia(date) { return poliMap[date] || []; }
+  function diaOPoliSiguiente(date) { return diaPoliSigMap[offsetDate(date,1)] || []; }
 
   function elegiblesParaDia(date, tipoTurno) {
     return becados.filter(b => {
@@ -896,6 +930,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         <BecadoPicker
           elegibles={elegiblesParaDia(picker.date, tipo).filter(n=>!nombresAsignados(picker.date).includes(n))}
           nocheAyer={nocheAyer(picker.date)}
+          poliHoy={poliMismoDia(picker.date)}
+          diaOPoliManana={diaOPoliSiguiente(picker.date)}
           turnoType={tipo}
           onSelect={(n,t)=>handleAdd(picker.date,n,t)}
           onClose={()=>setPicker(null)}
