@@ -6,9 +6,10 @@ import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 
-const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ","TMT"];
+const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 // NHT (Nochero) siempre solo Noche. Tumores (T) depende de la universidad:
 // UANDES hace día y noche; UNAB e IST (y cualquier otra) solo noche.
+// TMT General: solo Día y Noche (nunca Poli ni Artro).
 function puedeTurno(rotCode, universidad, tipoTurno) {
   if (ROTS_TODOS_TURNOS.includes(rotCode)) return true;
   if (rotCode === "NHT") return tipoTurno === "N";
@@ -16,6 +17,7 @@ function puedeTurno(rotCode, universidad, tipoTurno) {
     if (universidad === "UANDES") return true;
     return tipoTurno === "N";
   }
+  if (rotCode === "TMT") return tipoTurno === "D" || tipoTurno === "N";
   return false; // I, V, y cualquier código no listado
 }
 
