@@ -426,7 +426,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [nocheMap, setNocheMap] = useState({});
   const [poliMap, setPoliMap] = useState({}); // { fecha: [nombre,...] } — para chequeo Poli mismo día (tab Día)
   const [diaPoliSigMap, setDiaPoliSigMap] = useState({}); // { fecha: [nombre,...] } — Día o Poli ese día, usado para chequeo "día siguiente" desde Noche
-  const [semanaMap, setSemanaMap] = useState({}); // { fecha: [nombre,...] } — cualquier tipo de turno, para chequeo "ya tuvo turno esta semana" (tab Día)
+  const [semanaMap, setSemanaMap] = useState({}); // { fecha: [nombre,...] } — solo tipo Día, para chequeo "ya tuvo turno Día esta semana" (tab Día)
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
   const [refreshSem, setRefreshSem] = useState(0);
@@ -509,10 +509,10 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       });
   }, [monday]);
 
-  // Cualquier turno (P/p/D/N/A) del rango, para chequeo "ya tuvo turno esta semana" en tab Día
+  // Solo turnos tipo Día del rango, para chequeo "ya tuvo turno Día esta semana" en tab Día
   useEffect(() => {
     supabase.from("turnos").select("fecha,becados(nombre)")
-      .gte("fecha", start).lte("fecha", end)
+      .eq("tipo","D").gte("fecha", start).lte("fecha", end)
       .then(({ data }) => {
         const map = {};
         for (const t of data || []) {
@@ -526,7 +526,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
   function poliMismoDia(date) { return poliMap[date] || []; }
   function diaOPoliSiguiente(date) { return diaPoliSigMap[offsetDate(date,1)] || []; }
-  // Nombres con cualquier turno (P/p/D/N/A) en otro día de la misma semana (lun-dom) que `date`
+  // Nombres con otro turno Día en la misma semana (lun-dom) que `date`
   function turnoEstaSemana(date) {
     const mon = getMondayOfWeek(date);
     const set = new Set();
@@ -626,17 +626,19 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         return { ...prev, [date]: [...arr, nombre] };
       });
     }
-    setSemanaMap(prev => {
-      const arr = prev[date] || [];
-      if (arr.includes(nombre)) return prev;
-      return { ...prev, [date]: [...arr, nombre] };
-    });
+    if (t === "D") {
+      setSemanaMap(prev => {
+        const arr = prev[date] || [];
+        if (arr.includes(nombre)) return prev;
+        return { ...prev, [date]: [...arr, nombre] };
+      });
+    }
   }
   function removeFromCrossCheckMaps(date, nombre, t) {
     if (t === "N") setNocheMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
     if (t === "P" || t === "p") setPoliMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
     if (t === "P" || t === "p" || t === "D") setDiaPoliSigMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
-    setSemanaMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
+    if (t === "D") setSemanaMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
   }
 
   async function handleRemove(date, nombre, tipoEfectivo) {
