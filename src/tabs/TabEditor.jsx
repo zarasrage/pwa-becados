@@ -7,7 +7,17 @@ import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
-const ROTS_SOLO_NOCHE   = ["T","NHT"];
+// NHT (Nochero) siempre solo Noche. Tumores (T) depende de la universidad:
+// UANDES hace día y noche; UNAB e IST (y cualquier otra) solo noche.
+function puedeTurno(rotCode, universidad, tipoTurno) {
+  if (ROTS_TODOS_TURNOS.includes(rotCode)) return true;
+  if (rotCode === "NHT") return tipoTurno === "N";
+  if (rotCode === "T") {
+    if (universidad === "UANDES") return true;
+    return tipoTurno === "N";
+  }
+  return false; // I, V, y cualquier código no listado
+}
 
 const TURNO_TABS = [
   { id:"N", label:"Noche",      color:"#4F6EFF" },
@@ -344,7 +354,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      supabase.from("becados").select("id,nombre").order("id"),
+      supabase.from("becados").select("id,nombre,universidad").order("id"),
       supabase.from("rotaciones")
         .select("becado_id,fecha_inicio,fecha_fin,codigo,becados(nombre)")
         .lte("fecha_inicio", end).gte("fecha_fin", start),
@@ -388,13 +398,10 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }, [tipo, monday]);
 
   function elegiblesParaDia(date, tipoTurno) {
-    const allowed = tipoTurno === "N"
-      ? [...ROTS_TODOS_TURNOS, ...ROTS_SOLO_NOCHE]
-      : ROTS_TODOS_TURNOS;
     return becados.filter(b => {
       const rangos = rotMap[b.nombre] || [];
       return rangos.some(r =>
-        allowed.includes(r.codigo) &&
+        puedeTurno(r.codigo, b.universidad, tipoTurno) &&
         r.fecha_inicio <= date && r.fecha_fin >= date
       );
     }).map(b => b.nombre);

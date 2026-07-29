@@ -51,6 +51,9 @@ export const CURSO_CPQ = [
 
 export const CURSO_CPQ_BY_DATE = Object.fromEntries(CURSO_CPQ.map(c => [c.fecha, c]));
 
+// Fuente de verdad real: columna becados.universidad en Supabase. Esta lista es
+// una copia hardcodeada (para uso síncrono en render) — debe coincidir con
+// becados donde universidad='UNAB'. Verificado sincronizado en jul/2026.
 export const UNAB_BECADOS = new Set([
   "Gonzalez","Beulieau","Valencia","Albert","Miño","Diaz",
   "Uribe","Teuber","Rojas","Miranda","Chahin","Navia","Carcamo","Alvarez","Marre",
