@@ -567,10 +567,42 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         if (!next[date].find(x=>x.nombre===nombre)) next[date] = [...next[date], { nombre, tipo:t }];
         return next;
       });
+      addToCrossCheckMaps(date, nombre, t);
       pushHistorial({ accion:"remove", date, nombre, tipo:t, becado_id:b.id });
       await bumpDataVersion();
     }
     setSaving(false);
+  }
+
+  // Mantiene sincronizados nocheMap/poliMap/diaPoliSigMap en memoria al agregar/quitar,
+  // para que los chequeos cruzados (Poli hoy, Día/Poli mañana, Noche <6d) vean el cambio al instante.
+  function addToCrossCheckMaps(date, nombre, t) {
+    if (t === "N") {
+      setNocheMap(prev => {
+        const arr = prev[date] || [];
+        if (arr.includes(nombre)) return prev;
+        return { ...prev, [date]: [...arr, nombre] };
+      });
+    }
+    if (t === "P" || t === "p") {
+      setPoliMap(prev => {
+        const arr = prev[date] || [];
+        if (arr.includes(nombre)) return prev;
+        return { ...prev, [date]: [...arr, nombre] };
+      });
+    }
+    if (t === "P" || t === "p" || t === "D") {
+      setDiaPoliSigMap(prev => {
+        const arr = prev[date] || [];
+        if (arr.includes(nombre)) return prev;
+        return { ...prev, [date]: [...arr, nombre] };
+      });
+    }
+  }
+  function removeFromCrossCheckMaps(date, nombre, t) {
+    if (t === "N") setNocheMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
+    if (t === "P" || t === "p") setPoliMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
+    if (t === "P" || t === "p" || t === "D") setDiaPoliSigMap(prev => ({ ...prev, [date]: (prev[date]||[]).filter(n=>n!==nombre) }));
   }
 
   async function handleRemove(date, nombre, tipoEfectivo) {
@@ -586,6 +618,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         next[date] = (next[date]||[]).filter(x=>x.nombre!==nombre);
         return next;
       });
+      removeFromCrossCheckMaps(date, nombre, t);
       pushHistorial({ accion:"add", date, nombre, tipo:t, becado_id:b.id });
       await bumpDataVersion();
     }
@@ -605,6 +638,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
         next[last.date] = (next[last.date]||[]).filter(x=>x.nombre!==last.nombre);
         return next;
       });
+      removeFromCrossCheckMaps(last.date, last.nombre, last.tipo);
     } else {
       // Deshacer un remove → re-agregar
       await supabase.from("turnos")
@@ -616,6 +650,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           next[last.date] = [...next[last.date], { nombre:last.nombre, tipo:last.tipo }];
         return next;
       });
+      addToCrossCheckMaps(last.date, last.nombre, last.tipo);
     }
     setHistorial(rest);
     await bumpDataVersion();
