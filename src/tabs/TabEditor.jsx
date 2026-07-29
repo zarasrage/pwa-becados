@@ -818,7 +818,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               return (
                 <div key={wi} style={{marginBottom:4}}>
                   {/* Fila de números de día */}
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:1,marginBottom:1}}>
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
                       const weekend = isWeekend(date);
