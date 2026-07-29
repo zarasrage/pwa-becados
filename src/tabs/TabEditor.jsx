@@ -432,6 +432,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const dates = useMemo(() => get4Weeks(monday), [monday]);
   const start = dates[0];
   const end   = dates[dates.length-1];
+  const endPlus5 = offsetDate(end, 5); // para chequeo "Noche <6d" hacia adelante
 
   // Un día extra antes para detectar noche del día anterior al período
   const startMinus1 = offsetDate(start, -1);
@@ -463,7 +464,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       supabase.from("turnos").select("fecha,tipo,becados(nombre)")
         .in("tipo", tipo === "P" ? ["P","p"] : [tipo]).gte("fecha", start).lte("fecha", end),
       supabase.from("turnos").select("fecha,becados(nombre)")
-        .eq("tipo","N").gte("fecha", startMinus60).lte("fecha", end),
+        .eq("tipo","N").gte("fecha", startMinus60).lte("fecha", endPlus5),
     ]).then(([tRes, nRes]) => {
       // Guardar { nombre, tipo } para distinguir P/p en Poli
       const tMap = {};
@@ -520,11 +521,12 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }
 
   function nocheAyer(date) { return nocheMap[offsetDate(date,-1)] || []; }
-  // Nombres con Noche en los últimos 5 días (gap < 6 días, mismo criterio que gapWarning)
+  // Nombres con Noche en los 5 días previos O 5 días siguientes (gap < 6 días en cualquier dirección)
   function nocheMenosDe6Dias(date) {
     const set = new Set();
     for (let i = 1; i <= 5; i++) {
       for (const n of nocheMap[offsetDate(date, -i)] || []) set.add(n);
+      for (const n of nocheMap[offsetDate(date, i)] || []) set.add(n);
     }
     return [...set];
   }
