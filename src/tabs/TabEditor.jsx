@@ -75,12 +75,13 @@ function getDow(iso) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
     if (turnoType==="D" && poliHoy.includes(n)) return "Poli hoy";
     if (turnoType==="N" && diaOPoliManana.includes(n)) return "Día/Poli mañana";
+    if (turnoType==="N" && nocheReciente.includes(n)) return "Noche <6d";
     return null;
   }
   const hasConflict = n => conflictLabel(n) !== null;
@@ -360,6 +361,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
   // Un día extra antes para detectar noche del día anterior al período
   const startMinus1 = offsetDate(start, -1);
+  const startMinus6 = offsetDate(start, -6);
 
   useEffect(() => {
     setLoading(true);
@@ -387,7 +389,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       supabase.from("turnos").select("fecha,tipo,becados(nombre)")
         .in("tipo", tipo === "P" ? ["P","p"] : [tipo]).gte("fecha", start).lte("fecha", end),
       supabase.from("turnos").select("fecha,becados(nombre)")
-        .eq("tipo","N").gte("fecha", startMinus1).lte("fecha", end),
+        .eq("tipo","N").gte("fecha", startMinus6).lte("fecha", end),
     ]).then(([tRes, nRes]) => {
       // Guardar { nombre, tipo } para distinguir P/p en Poli
       const tMap = {};
@@ -444,6 +446,14 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }
 
   function nocheAyer(date) { return nocheMap[offsetDate(date,-1)] || []; }
+  // Nombres con Noche en los últimos 5 días (gap < 6 días, mismo criterio que gapWarning)
+  function nocheMenosDe6Dias(date) {
+    const set = new Set();
+    for (let i = 1; i <= 5; i++) {
+      for (const n of nocheMap[offsetDate(date, -i)] || []) set.add(n);
+    }
+    return [...set];
+  }
   function yaAsignados(date) { return turnos[date] || []; } // [{ nombre, tipo }]
   function nombresAsignados(date) { return yaAsignados(date).map(x=>x.nombre); }
 
@@ -932,6 +942,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           nocheAyer={nocheAyer(picker.date)}
           poliHoy={poliMismoDia(picker.date)}
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
+          nocheReciente={nocheMenosDe6Dias(picker.date)}
           turnoType={tipo}
           onSelect={(n,t)=>handleAdd(picker.date,n,t)}
           onClose={()=>setPicker(null)}
