@@ -6,7 +6,7 @@ import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 
-const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
+const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ","TMT"];
 // NHT (Nochero) siempre solo Noche. Tumores (T) depende de la universidad:
 // UANDES hace día y noche; UNAB e IST (y cualquier otra) solo noche.
 function puedeTurno(rotCode, universidad, tipoTurno) {

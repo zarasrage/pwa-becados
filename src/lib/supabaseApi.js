@@ -143,7 +143,7 @@ export async function getDaily(becado, dateStr) {
 
   // Horario del día (items de actividad) — desde el catálogo (rangos → bloques horarios)
   let items = [];
-  if (rotationCode && !["V","I","A","rx","F","T","CPQ"].includes(rotationCode)) {
+  if (rotationCode && !["V","I","A","rx","F","T","CPQ","TMT"].includes(rotationCode)) {
     const dia = dow === 0 ? 7 : dow; // getDay: 0=Dom..6=Sáb → 1=Lun..7=Dom
     const cat = await loadHorarioCatalogo();
     const blocks = cat?.[rotationCode]?.[String(dia)];
@@ -166,6 +166,7 @@ export async function getDaily(becado, dateStr) {
     TyP:"Tobillo y Pie", Col:"Columna", I:"Infantil",
     A:"Anestesia", rx:"Radiología", F:"Fisiatría",
     V:"Vacaciones", T:"Tumores", CPQ:"Cirugía Plástica",
+    TMT:"TMT General",
   };
 
   return {

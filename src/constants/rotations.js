@@ -13,9 +13,10 @@ export const ROT = {
   T:   { accent:"#BE123C", glow:"#BE123C28", light:"#BE123C12", dark:"#BE123C22", name:"Tumores" },
   NHT: { accent:"#0D9488", glow:"#0D948828", light:"#0D948812", dark:"#0D948822", name:"Nochero HT" },
  CPQ:  { accent:"#D2A679", glow:"#D2A67933", light:"#D2A6791A", dark:"#D2A67926", name:"Cirugía Plástica" },
+  TMT: { accent:"#EAB308", glow:"#EAB30828", light:"#EAB30812", dark:"#EAB30822", name:"TMT General" },
   "":  { accent:"#64748B", glow:"#64748B28", light:"#64748B12", dark:"#64748B22", name:"Sin rotación" },
 };
-export const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I","A","rx","F","V","T","NHT","CPQ",""];
+export const ROT_ORDER = ["H","M","CyP","R","TyP","Col","I","A","rx","F","V","T","NHT","CPQ","TMT",""];
 
 export const YEAR_COLORS = ["#8B73FF","#13C045","#348FFF"];
 export const YEAR_LABELS = ["3er año","2do año","1er año"];
