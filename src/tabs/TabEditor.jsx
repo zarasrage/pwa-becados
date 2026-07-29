@@ -74,8 +74,19 @@ function getDow(iso) {
   return new Date(y,m-1,d).getDay();
 }
 
+// Gradiente rojo (recién tuvo Noche) → verde (hace mucho / nunca), saturando a los 20 días
+function colorPorDiasNoche(dias) {
+  const capped = dias == null ? 20 : Math.min(Math.max(dias, 0), 20);
+  const hue = (capped / 20) * 120; // 0=rojo, 120=verde
+  return {
+    solid: `hsl(${hue}, 70%, 45%)`,
+    bg: `hsla(${hue}, 70%, 45%, 0.12)`,
+    border: `hsla(${hue}, 70%, 45%, 0.35)`,
+  };
+}
+
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
@@ -148,11 +159,19 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
                 width:"100%",padding:"12px 16px",border:"none",background:"none",
                 textAlign:"left",cursor:conflicto?"not-allowed":"pointer",opacity:conflicto?0.6:1}}>
               <span style={{fontSize:14,fontWeight:500,color:conflicto?"#EF4444":T.text}}>{nombre}</span>
-              {conflicto && (
+              {conflicto ? (
                 <span style={{fontSize:12,fontWeight:700,color:"#EF4444",
                   background:"#EF444418",border:"1px solid #EF444440",
                   borderRadius:99,padding:"2px 8px"}}>{conflicto}</span>
-              )}
+              ) : turnoType==="N" && (() => {
+                const dias = diasDesdeUltimaNoche(nombre);
+                const c = colorPorDiasNoche(dias);
+                return (
+                  <span style={{fontSize:12,fontWeight:700,color:c.solid,
+                    background:c.bg,border:`1px solid ${c.border}`,
+                    borderRadius:99,padding:"2px 8px"}}>{dias==null?"20+d":`${dias}d`}</span>
+                );
+              })()}
             </button>
           );
         })}
@@ -361,7 +380,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
   // Un día extra antes para detectar noche del día anterior al período
   const startMinus1 = offsetDate(start, -1);
-  const startMinus6 = offsetDate(start, -6);
+  const startMinus60 = offsetDate(start, -60); // para gradiente "días desde última noche"
 
   useEffect(() => {
     setLoading(true);
@@ -389,7 +408,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       supabase.from("turnos").select("fecha,tipo,becados(nombre)")
         .in("tipo", tipo === "P" ? ["P","p"] : [tipo]).gte("fecha", start).lte("fecha", end),
       supabase.from("turnos").select("fecha,becados(nombre)")
-        .eq("tipo","N").gte("fecha", startMinus6).lte("fecha", end),
+        .eq("tipo","N").gte("fecha", startMinus60).lte("fecha", end),
     ]).then(([tRes, nRes]) => {
       // Guardar { nombre, tipo } para distinguir P/p en Poli
       const tMap = {};
@@ -453,6 +472,13 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       for (const n of nocheMap[offsetDate(date, -i)] || []) set.add(n);
     }
     return [...set];
+  }
+  // Días desde la última Noche antes de `date` (busca hasta 60 días atrás). null = ninguna en ese rango.
+  function diasDesdeUltimaNoche(nombre, date) {
+    for (let i = 1; i <= 60; i++) {
+      if ((nocheMap[offsetDate(date, -i)] || []).includes(nombre)) return i;
+    }
+    return null;
   }
   function yaAsignados(date) { return turnos[date] || []; } // [{ nombre, tipo }]
   function nombresAsignados(date) { return yaAsignados(date).map(x=>x.nombre); }
@@ -943,6 +969,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           poliHoy={poliMismoDia(picker.date)}
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
           nocheReciente={nocheMenosDe6Dias(picker.date)}
+          diasDesdeUltimaNoche={(n)=>diasDesdeUltimaNoche(n, picker.date)}
           turnoType={tipo}
           onSelect={(n,t)=>handleAdd(picker.date,n,t)}
           onClose={()=>setPicker(null)}
