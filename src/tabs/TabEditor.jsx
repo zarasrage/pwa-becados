@@ -86,7 +86,7 @@ function colorPorDiasNoche(dias) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
@@ -167,10 +167,23 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
               ) : turnoType==="N" && (() => {
                 const dias = diasDesdeUltimaNoche(nombre);
                 const c = colorPorDiasNoche(dias);
+                const diasFinde = diasDesdeUltimoFindeNoche(nombre);
+                const cFinde = colorPorDiasNoche(diasFinde);
                 return (
-                  <span style={{fontSize:12,fontWeight:700,color:c.solid,
-                    background:c.bg,border:`1px solid ${c.border}`,
-                    borderRadius:99,padding:"2px 8px"}}>{dias==null?"20+d":`${dias}d`}</span>
+                  <span style={{display:"flex",alignItems:"center",gap:5,flexShrink:0}}>
+                    <span style={{fontSize:12,fontWeight:700,color:c.solid,
+                      background:c.bg,border:`1px solid ${c.border}`,
+                      borderRadius:99,padding:"2px 8px"}}>{dias==null?"20+d":`${dias}d`}</span>
+                    {diasFinde==null ? (
+                      <span style={{fontSize:12,fontWeight:700,color:T.muted,
+                        background:T.surface2,border:`1px solid ${T.border}`,
+                        borderRadius:99,padding:"2px 8px"}}>—</span>
+                    ) : (
+                      <span style={{fontSize:12,fontWeight:700,color:cFinde.solid,
+                        background:cFinde.bg,border:`1px solid ${cFinde.border}`,
+                        borderRadius:99,padding:"2px 8px"}}>{diasFinde}d</span>
+                    )}
+                  </span>
                 );
               })()}
             </button>
@@ -478,6 +491,15 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   function diasDesdeUltimaNoche(nombre, date) {
     for (let i = 1; i <= 60; i++) {
       if ((nocheMap[offsetDate(date, -i)] || []).includes(nombre)) return i;
+    }
+    return null;
+  }
+  // Días desde el último Vie/Sáb/Dom con Noche antes de `date` (busca hasta 60 días / ~2 meses). null = ninguno.
+  function diasDesdeUltimoFindeNoche(nombre, date) {
+    for (let i = 1; i <= 60; i++) {
+      const d = offsetDate(date, -i);
+      const dow = getDow(d);
+      if ((dow === 5 || dow === 6 || dow === 0) && (nocheMap[d] || []).includes(nombre)) return i;
     }
     return null;
   }
@@ -971,6 +993,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
           nocheReciente={nocheMenosDe6Dias(picker.date)}
           diasDesdeUltimaNoche={(n)=>diasDesdeUltimaNoche(n, picker.date)}
+          diasDesdeUltimoFindeNoche={(n)=>diasDesdeUltimoFindeNoche(n, picker.date)}
           turnoType={tipo}
           onSelect={(n,t)=>handleAdd(picker.date,n,t)}
           onClose={()=>setPicker(null)}
