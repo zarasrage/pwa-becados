@@ -104,7 +104,7 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
         justifyContent:"flex-end",background:"rgba(0,0,0,0.55)"}} onClick={onClose}>
         <div onClick={e=>e.stopPropagation()} style={{background:T.surface,
           borderRadius:"16px 16px 0 0",padding:"20px 16px calc(var(--sab)+24px)",
-          boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
+          boxShadow:"0 -4px 40px rgba(0,0,0,0.4)",maxWidth:480,width:"100%",margin:"0 auto"}}>
           <div style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
             textTransform:"uppercase",marginBottom:16}}>
             Tipo de Poli
@@ -133,7 +133,8 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
       justifyContent:"flex-end",background:"rgba(0,0,0,0.55)"}} onClick={onClose}>
       <div onClick={e=>e.stopPropagation()} style={{background:T.surface,
         borderRadius:"16px 16px 0 0",maxHeight:"65vh",overflowY:"auto",
-        paddingBottom:"calc(var(--sab)+16px)",boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
+        paddingBottom:"calc(var(--sab)+16px)",boxShadow:"0 -4px 40px rgba(0,0,0,0.4)",
+        maxWidth:480,width:"100%",margin:"0 auto"}}>
         <div style={{padding:"14px 16px 10px",borderBottom:`1px solid ${T.border}`,
           display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <span style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",textTransform:"uppercase"}}>
