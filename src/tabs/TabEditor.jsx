@@ -5,6 +5,7 @@ import { todayISO, offsetDate } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
+import { UNIVERSIDADES } from "../constants/universities.js";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 // NHT (Nochero) siempre solo Noche. Tumores (T) depende de la universidad:
@@ -74,6 +75,32 @@ function getDow(iso) {
   return new Date(y,m-1,d).getDay();
 }
 
+// Prioridad de orden para el picker de becados: 1er año primero, luego 2do, luego 3ero;
+// dentro de cada año, UNAB antes que UANDES. IST (sin año) va al final.
+// Reutiliza el mismo esquema posicional de universities.js (orden por id).
+function buildNombrePriority(becadosOrdenados) {
+  const nombres = becadosOrdenados.map(b => b.nombre);
+  const priority = {};
+  const YEAR_TIER_POR_GRUPO = [2, 1, 0]; // grupo0=3er->tier2, grupo1=2do->tier1, grupo2=1er->tier0
+  // Rangos "en crudo" por año (mismos índices que universities.js, sin el .filter de vacíos)
+  const RANGOS = {
+    UNAB:   [[0,5],[5,10],[10,15]],
+    UANDES: [[15,21],[21,27],[27,33]],
+  };
+  [["UNAB", 0], ["UANDES", 1]].forEach(([univ, univRank]) => {
+    RANGOS[univ].forEach(([ini, fin], groupIdx) => {
+      const tier = YEAR_TIER_POR_GRUPO[groupIdx];
+      nombres.slice(ini, fin).forEach(nombre => {
+        priority[nombre] = { tier, univRank, label: `${UNIVERSIDADES[univ].groups[groupIdx].label} · ${univ}` };
+      });
+    });
+  });
+  nombres.slice(33, 36).forEach(nombre => {
+    priority[nombre] = { tier: 3, univRank: 2, label: "IST" };
+  });
+  return priority;
+}
+
 // Gradiente rojo (recién tuvo Noche) → verde (hace mucho / nunca), saturando a los 20 días
 function colorPorDiasNoche(dias) {
   const capped = dias == null ? 20 : Math.min(Math.max(dias, 0), 20);
@@ -86,7 +113,7 @@ function colorPorDiasNoche(dias) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
@@ -151,10 +178,22 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
         {elegibles.length === 0 && (
           <div style={{padding:"20px 16px",fontSize:13,color:T.muted}}>No hay becados disponibles</div>
         )}
-        {elegibles.map(nombre => {
+        {elegibles.map((nombre, idx) => {
           const conflicto = conflictLabel(nombre);
+          const grupo = nombrePriority?.[nombre];
+          const grupoPrev = idx > 0 ? nombrePriority?.[elegibles[idx-1]] : null;
+          const nuevoGrupo = idx > 0 && grupo && grupoPrev &&
+            (grupo.tier !== grupoPrev.tier || grupo.univRank !== grupoPrev.univRank);
           return (
-            <button key={nombre} className="press"
+            <div key={nombre}>
+              {nuevoGrupo && (
+                <div style={{padding:"8px 16px 4px",fontSize:11,fontWeight:700,color:T.muted,
+                  letterSpacing:"0.06em",textTransform:"uppercase",
+                  borderTop:`2px solid ${T.border}`,marginTop:2}}>
+                  {grupo.label}
+                </div>
+              )}
+              <button className="press"
               onClick={() => !conflicto && onSelect(nombre, efectivoTipo)}
               style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                 width:"100%",padding:"12px 16px",border:"none",background:"none",
@@ -187,6 +226,7 @@ function BecadoPicker({ elegibles, nocheAyer, poliHoy, diaOPoliManana, nocheReci
                 );
               })()}
             </button>
+            </div>
           );
         })}
       </div>
@@ -379,6 +419,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [seminarios, setSeminarios] = useState({}); // { date: [{ id, tag, titulo, hora, presentador }] }
   const [saving, setSaving]   = useState(false);
   const [becados, setBecados] = useState([]);
+  const nombrePriority = useMemo(() => buildNombrePriority(becados), [becados]);
   const [rotMap, setRotMap]   = useState({});
   const [turnos, setTurnos]   = useState({});
   const [nocheMap, setNocheMap] = useState({});
@@ -987,7 +1028,13 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       )}
       {picker && (
         <BecadoPicker
-          elegibles={elegiblesParaDia(picker.date, tipo).filter(n=>!nombresAsignados(picker.date).includes(n))}
+          elegibles={elegiblesParaDia(picker.date, tipo).filter(n=>!nombresAsignados(picker.date).includes(n))
+            .sort((a,b) => {
+              const pa = nombrePriority[a] || {tier:9,univRank:9};
+              const pb = nombrePriority[b] || {tier:9,univRank:9};
+              return (pa.tier - pb.tier) || (pa.univRank - pb.univRank) || a.localeCompare(b);
+            })}
+          nombrePriority={nombrePriority}
           nocheAyer={nocheAyer(picker.date)}
           poliHoy={poliMismoDia(picker.date)}
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
