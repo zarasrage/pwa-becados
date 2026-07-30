@@ -217,11 +217,11 @@ function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliM
                     {diasFinde==null ? (
                       <span style={{fontSize:12,fontWeight:700,color:T.muted,
                         background:T.surface2,border:`1px solid ${T.border}`,
-                        borderRadius:99,padding:"2px 8px"}}>—</span>
+                        borderRadius:99,padding:"2px 8px"}}>FDS hace: —</span>
                     ) : (
                       <span style={{fontSize:12,fontWeight:700,color:cFinde.solid,
                         background:cFinde.bg,border:`1px solid ${cFinde.border}`,
-                        borderRadius:99,padding:"2px 8px"}}>{diasFinde}d</span>
+                        borderRadius:99,padding:"2px 8px"}}>FDS hace: {diasFinde}d</span>
                     )}
                   </span>
                 );
