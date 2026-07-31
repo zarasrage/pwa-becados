@@ -47,6 +47,22 @@ export const CURSO_CPQ = [
     doctor: "Dr. Leonardo Parada",
     sala: "Sala 2 Jofré",
   },
+  {
+    fecha: "2026-07-30",
+    hora: "07:30",
+    numero: 7,
+    titulo: "Terapia Física Post Reconstrucción de Extremidades Inferiores",
+    doctor: "Klga. Lilian Freddy",
+    sala: "Auditorio 3 Jofré",
+  },
+  {
+    fecha: "2026-07-31",
+    hora: "17:00",
+    numero: 8,
+    titulo: "Seminario de Integración: Enfrentamiento Ortoplástico del Paciente con Traumatismo de Extremidades",
+    doctor: "Dr. Diego Valiente / Dr. Leonardo Parada",
+    sala: "Sala 2 Jofré",
+  },
 ];
 
 export const CURSO_CPQ_BY_DATE = Object.fromEntries(CURSO_CPQ.map(c => [c.fecha, c]));
