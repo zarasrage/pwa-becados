@@ -205,7 +205,7 @@ export default function App() {
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
       : !becado ? (
-          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} error={initError} T={T}/>
+          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} error={initError} T={T}/>
       ) : (
         <>
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>

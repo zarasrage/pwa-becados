@@ -2,7 +2,7 @@ import { useState } from "react";
 import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 
-export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, error, T }) {
   const [univ, setUniv] = useState("UNAB");
   const univCfg  = UNIVERSIDADES[univ];
   const groups   = univCfg.getGroups(becados);
@@ -83,6 +83,15 @@ export function SelectScreen({ becados, onSelect, onShowMapa, error, T }) {
                 🗺
               </span>
               <span style={{fontSize:13.5,fontWeight:500,color:T.sub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Mapa</span>
+            </button>
+            <button className="press"
+              style={{display:"flex",alignItems:"center",gap:9,background:T.surface,border:`1px dashed ${T.border}`,borderRadius:11,padding:"8px 10px",cursor:"pointer",textAlign:"left",width:"100%",fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden"}}
+              onClick={onShowPabellones}
+            >
+              <span style={{width:30,height:30,borderRadius:8,background:`${T.muted}18`,color:T.muted,fontWeight:700,fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                🏥
+              </span>
+              <span style={{fontSize:13.5,fontWeight:500,color:T.sub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Pabellones</span>
             </button>
           </div>
         </div>
