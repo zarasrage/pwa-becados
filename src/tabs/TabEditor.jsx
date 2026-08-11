@@ -298,8 +298,24 @@ function diasEntre(desde, hasta) {
   return Math.round((new Date(y2,m2-1,d2) - new Date(y1,m1-1,d1)) / 86400000);
 }
 
+// Ordena becados por hace cuánto expusieron su último seminario (nunca = primero)
+function ordenarPorEspera(becadosNombres, ultimoPorNombre, today) {
+  return (becadosNombres || [])
+    .map(nombre => {
+      const ultima = ultimoPorNombre?.[nombre];
+      const dias = ultima ? diasEntre(ultima, today) : null;
+      return { nombre, dias };
+    })
+    .sort((a,b) => {
+      if (a.dias === null && b.dias === null) return a.nombre.localeCompare(b.nombre);
+      if (a.dias === null) return -1;
+      if (b.dias === null) return 1;
+      return b.dias - a.dias;
+    });
+}
+
 // ── SeminarioPicker ───────────────────────────────────────────────────────────
-function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becadosNombres, ultimoSemPorBecado, today, T }) {
+function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becadosNombres, ultimoSemPorBecado, ultimoSemPorBecadoYTag, today, T }) {
   const [tag,       setTag]       = useState(existing?.tag       || "Seminario Hombro");
   const [presenter, setPresenter] = useState(existing?.presentador || "");
   const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
@@ -315,21 +331,15 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becad
 
   const canSave = presenter.trim() !== "";
 
-  // Sugerencia: a quién le toca según hace cuánto no expone un seminario (nunca = primero)
-  const sugerencias = useMemo(() => {
-    return (becadosNombres || [])
-      .map(nombre => {
-        const ultima = ultimoSemPorBecado?.[nombre];
-        const dias = ultima ? diasEntre(ultima, today) : null;
-        return { nombre, dias };
-      })
-      .sort((a,b) => {
-        if (a.dias === null && b.dias === null) return a.nombre.localeCompare(b.nombre);
-        if (a.dias === null) return -1;
-        if (b.dias === null) return 1;
-        return b.dias - a.dias;
-      });
-  }, [becadosNombres, ultimoSemPorBecado, today]);
+  // Sugerencia según el tipo de seminario elegido (tag) — a quién le toca esa rotación
+  const sugerenciasTag = useMemo(() =>
+    ordenarPorEspera(becadosNombres, ultimoSemPorBecadoYTag?.[tag], today),
+    [becadosNombres, ultimoSemPorBecadoYTag, tag, today]);
+
+  // Sugerencia general — a quién le toca considerando seminarios de cualquier tipo
+  const sugerenciasGeneral = useMemo(() =>
+    ordenarPorEspera(becadosNombres, ultimoSemPorBecado, today),
+    [becadosNombres, ultimoSemPorBecado, today]);
 
   return (
     <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",
@@ -360,20 +370,41 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becad
           </div>
         </div>
 
-        {/* Sugerencia: a quién le toca */}
-        {sugerencias.length > 0 && (
+        {/* Sugerencia según el tipo de seminario elegido */}
+        {sugerenciasTag.length > 0 && (
           <div style={{marginBottom:10}}>
             <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>
-              Sugerencia <span style={{fontWeight:400}}>(hace más tiempo sin exponer)</span>
+              Sugerencia — {TAG_OPTS.find(t=>t.id===tag)?.label || tag} <span style={{fontWeight:400}}>(hace más tiempo sin exponer este tipo)</span>
             </div>
             <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
-              {sugerencias.slice(0,6).map(({nombre,dias}, idx) => (
+              {sugerenciasTag.slice(0,6).map(({nombre,dias}, idx) => (
                 <button key={nombre} className="press" onClick={()=>setPresenter(nombre)}
                   style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
                     padding:"6px 10px",borderRadius:10,cursor:"pointer",
                     border:`1.5px solid ${idx===0?"#E879F9":T.border}`,
                     background:idx===0?"#E879F918":T.surface2}}>
                   <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#E879F9":T.text}}>{nombre}</span>
+                  <span style={{fontSize:11,color:T.muted}}>{dias==null?"nunca":`hace ${dias}d`}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sugerencia general — considerando seminarios de cualquier tipo */}
+        {sugerenciasGeneral.length > 0 && (
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>
+              Sugerencia general <span style={{fontWeight:400}}>(todos los tipos de seminario)</span>
+            </div>
+            <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:2}}>
+              {sugerenciasGeneral.slice(0,6).map(({nombre,dias}, idx) => (
+                <button key={nombre} className="press" onClick={()=>setPresenter(nombre)}
+                  style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+                    padding:"6px 10px",borderRadius:10,cursor:"pointer",
+                    border:`1.5px solid ${idx===0?"#4F6EFF":T.border}`,
+                    background:idx===0?"#4F6EFF18":T.surface2}}>
+                  <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#4F6EFF":T.text}}>{nombre}</span>
                   <span style={{fontSize:11,color:T.muted}}>{dias==null?"nunca":`hace ${dias}d`}</span>
                 </button>
               ))}
@@ -474,7 +505,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
   const [refreshSem, setRefreshSem] = useState(0);
-  const [ultimoSemPorBecado, setUltimoSemPorBecado] = useState({}); // { nombre: fecha del último seminario expuesto }
+  const [ultimoSemPorBecado, setUltimoSemPorBecado] = useState({}); // { nombre: fecha del último seminario expuesto (cualquier tipo) }
+  const [ultimoSemPorBecadoYTag, setUltimoSemPorBecadoYTag] = useState({}); // { tag: { nombre: fecha } }
 
   const dates = useMemo(() => get4Weeks(monday), [monday]);
   const start = dates[0];
@@ -738,21 +770,27 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setSaving(false);
   }
 
-  // Última fecha en que cada becado expuso un seminario (histórico completo, cualquier área),
-  // para sugerir a quién le toca en el picker de seminarios.
+  // Última fecha en que cada becado expuso un seminario (histórico completo), tanto en general
+  // como por tipo (tag), para sugerir a quién le toca en el picker de seminarios.
   useEffect(() => {
     supabase.from("seminarios")
-      .select("fecha, presentador_nombre, becados(nombre)")
+      .select("fecha, tag, presentador_nombre, becados(nombre)")
       .lte("fecha", today)
       .order("fecha", { ascending: false })
       .then(({ data }) => {
-        const map = {};
+        const general = {}, porTag = {};
         for (const s of data || []) {
           const n = s.presentador_nombre || s.becados?.nombre;
-          if (!n || map[n]) continue; // orden desc: la primera aparición es la más reciente
-          map[n] = s.fecha;
+          if (!n) continue;
+          // orden desc: la primera aparición de cada nombre es la más reciente
+          if (!general[n]) general[n] = s.fecha;
+          if (s.tag) {
+            if (!porTag[s.tag]) porTag[s.tag] = {};
+            if (!porTag[s.tag][n]) porTag[s.tag][n] = s.fecha;
+          }
         }
-        setUltimoSemPorBecado(map);
+        setUltimoSemPorBecado(general);
+        setUltimoSemPorBecadoYTag(porTag);
       });
   }, []);
 
@@ -1161,6 +1199,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           onClose={() => setSemPicker(null)}
           becadosNombres={becados.map(b=>b.nombre)}
           ultimoSemPorBecado={ultimoSemPorBecado}
+          ultimoSemPorBecadoYTag={ultimoSemPorBecadoYTag}
           today={today}
           T={T}
         />
