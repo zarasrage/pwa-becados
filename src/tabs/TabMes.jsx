@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_TOKEN } from "../constants/api.js";
 import { ROT } from "../constants/rotations.js";
 import { TURNO } from "../constants/turnos.js";
 import { todayISO, getMonthDates, monthLabel } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
 import { CURSO_CPQ_BY_DATE, UNAB_BECADOS } from "../data/cursoCPQ.js";
+import { getActividadesRango } from "../lib/supabaseApi.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { Spinner } from "../components/ui/Spinner.jsx";
@@ -45,6 +46,15 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
   const nextMonth = () => month === 11 ? (setYear(y=>y+1), setMonth(0)) : setMonth(m=>m+1);
 
   const slots = useMemo(() => getMonthDates(year, month), [year, month]);
+
+  const [actividadesMap, setActividadesMap] = useState({}); // { fecha: [{id,hora,titulo,color}] }
+  useEffect(() => {
+    const dias = slots.filter(Boolean);
+    if (!dias.length) return;
+    let alive = true;
+    getActividadesRango(becado, dias[0], dias[dias.length-1]).then(m => { if (alive) setActividadesMap(m); });
+    return () => { alive = false; };
+  }, [becado, slots]);
 
   const isOnline = useOnline();
   const scrollRef = useRef(null);
@@ -112,7 +122,9 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               const esFeriado = isFeriado(iso);
               const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[iso] || null) : null;
               if (claseCPQ) badges.push({ label:"C", color:"#D2A679", glow: false });
-              const hasContent = badges.length > 0 || rotC || !!claseCPQ;
+              const actividadesDia = actividadesMap[iso] || [];
+              if (actividadesDia.length) badges.push({ label:"AC", color:actividadesDia[0].color, glow:false });
+              const hasContent = badges.length > 0 || rotC || !!claseCPQ || actividadesDia.length > 0;
 
               return (
                 <div key={iso}
@@ -149,6 +161,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               const firstTurnoColor = turnoCodes.length > 0 ? (TURNO[turnoCodes[0]]?.accent || null) : null;
               const popupColor = rotInfo?.accent || firstTurnoColor || T.accent;
               const popupCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[selectedDay] || null) : null;
+              const popupActividades = actividadesMap[selectedDay] || [];
 
               return (
                 <div className="anim" style={{marginTop:12,background:T.surface,border:`1px solid ${popupColor}30`,borderLeft:`3px solid ${popupColor}`,borderRadius:12,padding:"14px 16px",position:"relative"}}>
@@ -175,6 +188,15 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
                       <div style={{fontSize:12,color:T.sub}}>{popupCPQ.doctor}</div>
                     </div>
                   )}
+                  {popupActividades.map(a => (
+                    <div key={a.id} style={{background:`${a.color}14`,border:`1px solid ${a.color}40`,borderLeft:`3px solid ${a.color}`,borderRadius:8,padding:"10px 12px",marginBottom:10}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                        <span style={{fontSize:11,fontWeight:700,letterSpacing:"0.07em",color:a.color,textTransform:"uppercase"}}>Actividad</span>
+                        {a.hora && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:a.color,opacity:0.7}}>{a.hora}</span>}
+                      </div>
+                      <div style={{fontSize:13,fontWeight:600,color:T.text,lineHeight:1.35}}>{a.titulo}</div>
+                    </div>
+                  ))}
                   {rotInfo && (
                     <div style={{display:"inline-flex",alignItems:"center",gap:6,background:rotInfo.light,border:`1px solid ${rotInfo.accent}30`,borderRadius:99,padding:"4px 10px",marginBottom:10}}>
                       <span style={{width:7,height:7,borderRadius:"50%",background:rotInfo.accent,flexShrink:0,boxShadow:`0 0 6px ${rotInfo.accent}`}}/>

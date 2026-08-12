@@ -23,11 +23,18 @@ function puedeTurno(rotCode, universidad, tipoTurno) {
 }
 
 const TURNO_TABS = [
-  { id:"N", label:"Noche",      color:"#4F6EFF" },
-  { id:"D", label:"Día",        color:"#F59E0B" },
-  { id:"P", label:"Poli",       color:"#06B6D4" },
-  { id:"A", label:"Artro",      color:"#72FF00" },
-  { id:"S", label:"Seminarios", color:"#E879F9" },
+  { id:"N",  label:"Noche",       color:"#4F6EFF" },
+  { id:"D",  label:"Día",         color:"#F59E0B" },
+  { id:"P",  label:"Poli",        color:"#06B6D4" },
+  { id:"A",  label:"Artro",       color:"#72FF00" },
+  { id:"S",  label:"Seminarios",  color:"#E879F9" },
+  { id:"AC", label:"Actividades", color:"#8B73FF" },
+];
+
+// Paleta de colores para actividades especiales
+const ACTIVIDAD_COLORS = [
+  "#8B73FF", "#F87171", "#FB923C", "#FACC15", "#4ADE80",
+  "#06B6D4", "#60A5FA", "#E879F9", "#D2A679", "#94A3B8",
 ];
 
 const TAG_OPTS = [
@@ -484,6 +491,156 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becad
   );
 }
 
+// ── ActividadPicker ──────────────────────────────────────────────────────────
+// Actividades especiales (algo separado de turnos/rotaciones/seminarios, como
+// el curso de CPQ pero editable): título, hora opcional, color y público
+// (a qué becados les debe aparecer en su día).
+function ActividadPicker({ existing, becados, nombrePriority, onSave, onDelete, onClose, T }) {
+  const [titulo, setTitulo] = useState(existing?.titulo || "");
+  const [hora,   setHora]   = useState(existing?.hora   || "");
+  const [color,  setColor]  = useState(existing?.color  || ACTIVIDAD_COLORS[0]);
+  const [publico, setPublico] = useState(() => new Set(existing?.becados || []));
+
+  const nombresOrdenados = useMemo(() => {
+    return [...becados].sort((a,b) => {
+      const pa = nombrePriority[a] || {tier:9,univRank:9};
+      const pb = nombrePriority[b] || {tier:9,univRank:9};
+      return (pa.tier - pb.tier) || (pa.univRank - pb.univRank) || a.localeCompare(b);
+    });
+  }, [becados, nombrePriority]);
+
+  function toggle(nombre) {
+    setPublico(prev => {
+      const next = new Set(prev);
+      if (next.has(nombre)) next.delete(nombre); else next.add(nombre);
+      return next;
+    });
+  }
+
+  const canSave = titulo.trim() !== "" && publico.size > 0;
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:200,display:"flex",flexDirection:"column",
+      justifyContent:"flex-end",background:"rgba(0,0,0,0.55)"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:T.surface,
+        borderRadius:"16px 16px 0 0",maxHeight:"85vh",overflowY:"auto",
+        padding:"20px 16px calc(var(--sab)+24px)",
+        boxShadow:"0 -4px 40px rgba(0,0,0,0.4)"}}>
+
+        <div style={{fontSize:13,fontWeight:700,color:T.muted,letterSpacing:"0.08em",
+          textTransform:"uppercase",marginBottom:14}}>
+          {existing ? "Editar actividad" : "Nueva actividad"}
+        </div>
+
+        {/* Título */}
+        <div style={{marginBottom:10}}>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Título</div>
+          <input value={titulo} onChange={e=>setTitulo(e.target.value)}
+            placeholder="Nombre de la actividad"
+            style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",
+              borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,
+              color:T.text,fontSize:13,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
+        </div>
+
+        {/* Hora (opcional) */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Hora <span style={{fontWeight:400}}>(opcional)</span></div>
+          <input value={hora} onChange={e=>setHora(e.target.value)}
+            placeholder="07:30"
+            style={{width:110,padding:"10px 12px",borderRadius:10,
+              border:`1px solid ${T.border}`,background:T.surface2,
+              color:T.text,fontSize:13,outline:"none",
+              fontFamily:"'JetBrains Mono',monospace"}}/>
+        </div>
+
+        {/* Color */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:600,color:T.muted,marginBottom:6}}>Color</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {ACTIVIDAD_COLORS.map(c => (
+              <button key={c} className="press" onClick={()=>setColor(c)}
+                style={{width:30,height:30,borderRadius:99,background:c,cursor:"pointer",
+                  border: color===c ? `3px solid ${T.text}` : "3px solid transparent",
+                  boxShadow: color===c ? `0 0 0 1px ${T.border}` : "none"}}/>
+            ))}
+          </div>
+        </div>
+
+        {/* Público */}
+        <div style={{marginBottom:18}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+            <div style={{fontSize:12,fontWeight:600,color:T.muted}}>
+              Público <span style={{fontWeight:400}}>({publico.size} seleccionados)</span>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <button className="press" onClick={()=>setPublico(new Set(nombresOrdenados))}
+                style={{fontSize:11,fontWeight:600,color:T.accent,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>
+                Todos
+              </button>
+              <button className="press" onClick={()=>setPublico(new Set())}
+                style={{fontSize:11,fontWeight:600,color:T.muted,background:"none",border:"none",cursor:"pointer",padding:"2px 4px"}}>
+                Ninguno
+              </button>
+            </div>
+          </div>
+          <div style={{maxHeight:220,overflowY:"auto",border:`1px solid ${T.border}`,borderRadius:10}}>
+            {nombresOrdenados.map((nombre, idx) => {
+              const grupo = nombrePriority?.[nombre];
+              const grupoPrev = idx > 0 ? nombrePriority?.[nombresOrdenados[idx-1]] : null;
+              const nuevoGrupo = idx > 0 && grupo && grupoPrev &&
+                (grupo.tier !== grupoPrev.tier || grupo.univRank !== grupoPrev.univRank);
+              const checked = publico.has(nombre);
+              return (
+                <div key={nombre}>
+                  {nuevoGrupo && (
+                    <div style={{padding:"6px 12px 3px",fontSize:10,fontWeight:700,color:T.muted,
+                      letterSpacing:"0.06em",textTransform:"uppercase",
+                      borderTop:`1px solid ${T.border}`}}>
+                      {grupo.label}
+                    </div>
+                  )}
+                  <button className="press" onClick={()=>toggle(nombre)}
+                    style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 12px",
+                      border:"none",background:"none",textAlign:"left",cursor:"pointer"}}>
+                    <span style={{width:18,height:18,borderRadius:5,flexShrink:0,
+                      border:`1.5px solid ${checked?color:T.border}`,
+                      background:checked?color:"transparent",
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:12,color:"#fff",fontWeight:700}}>
+                      {checked && "✓"}
+                    </span>
+                    <span style={{fontSize:13.5,fontWeight:500,color:T.text}}>{nombre}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {existing && (
+            <button className="press" onClick={()=>onDelete(existing.id)}
+              style={{flex:1,height:44,borderRadius:11,border:`1px solid #EF444440`,
+                background:"#EF444418",fontSize:13,fontWeight:600,color:"#EF4444",cursor:"pointer"}}>
+              Eliminar
+            </button>
+          )}
+          <button className="press"
+            onClick={()=>canSave && onSave({ titulo:titulo.trim(), hora:hora.trim()||null, color, becados:[...publico] })}
+            disabled={!canSave}
+            style={{flexBasis: existing ? "auto" : "100%", flex: existing ? 2 : "unset",
+              height:44,borderRadius:11,border:"none",
+              background:canSave?color:`${color}40`,
+              fontSize:13,fontWeight:700,color:"#fff",
+              cursor:canSave?"pointer":"default"}}>
+            {existing ? "Guardar cambios" : "Agregar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── TabEditor ─────────────────────────────────────────────────────────────────
 export function TabEditor({ onBack, allowedTipos, T }) {
   const today  = useMemo(() => todayISO(), []);
@@ -493,6 +650,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [picker, setPicker]     = useState(null); // { date }
   const [semPicker, setSemPicker] = useState(null); // { date, existing }
   const [seminarios, setSeminarios] = useState({}); // { date: [{ id, tag, titulo, hora, presentador }] }
+  const [actPicker, setActPicker] = useState(null); // { date, existing }
+  const [actividades, setActividades] = useState({}); // { date: [{ id, titulo, hora, color, becados }] }
   const [saving, setSaving]   = useState(false);
   const [becados, setBecados] = useState([]);
   const nombrePriority = useMemo(() => buildNombrePriority(becados), [becados]);
@@ -538,7 +697,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }, [monday]);
 
   useEffect(() => {
-    if (tipo === "S") return;
+    if (tipo === "S" || tipo === "AC") return;
     Promise.all([
       supabase.from("turnos").select("fecha,tipo,becados(nombre)")
         .in("tipo", tipo === "P" ? ["P","p"] : [tipo]).gte("fecha", start).lte("fecha", end),
@@ -879,8 +1038,74 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setRefreshSem(r => r + 1);
   }
 
+  // Actividades especiales load
+  useEffect(() => {
+    if (tipo !== "AC") return;
+    supabase.from("actividades")
+      .select("id, fecha, titulo, hora, color, becados")
+      .gte("fecha", start).lte("fecha", end)
+      .then(({ data }) => {
+        const map = {};
+        for (const a of data || []) {
+          if (!map[a.fecha]) map[a.fecha] = [];
+          map[a.fecha].push({
+            id: a.id, titulo: a.titulo, hora: a.hora || "",
+            color: a.color || ACTIVIDAD_COLORS[0], becados: a.becados || [],
+          });
+        }
+        setActividades(map);
+      });
+  }, [tipo, monday]);
+
+  async function handleSaveActividad(date, { titulo, hora, color, becados: publico }, existingId) {
+    setActPicker(null); setSaving(true);
+    if (existingId) {
+      const { error } = await supabase.from("actividades")
+        .update({ titulo, hora, color, becados: publico })
+        .eq("id", existingId);
+      if (!error) {
+        setActividades(prev => {
+          const next = {...prev};
+          next[date] = (next[date]||[]).map(a =>
+            a.id===existingId ? { ...a, titulo, hora, color, becados: publico } : a
+          );
+          return next;
+        });
+        await bumpDataVersion();
+      }
+    } else {
+      const { data, error } = await supabase.from("actividades")
+        .insert({ fecha: date, titulo, hora, color, becados: publico })
+        .select("id").single();
+      if (!error && data) {
+        setActividades(prev => {
+          const next = {...prev};
+          if (!next[date]) next[date] = [];
+          next[date] = [...next[date], { id: data.id, titulo, hora, color, becados: publico }];
+          return next;
+        });
+        await bumpDataVersion();
+      }
+    }
+    setSaving(false);
+  }
+
+  async function handleDeleteActividad(id, date) {
+    setActPicker(null); setSaving(true);
+    const { error } = await supabase.from("actividades").delete().eq("id", id);
+    if (!error) {
+      setActividades(prev => {
+        const next = {...prev};
+        next[date] = (next[date]||[]).filter(a => a.id !== id);
+        return next;
+      });
+      await bumpDataVersion();
+    }
+    setSaving(false);
+  }
+
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
-  const weekdayOnly = tipo !== "N";
+  const weekdayOnly = tipo !== "N" && tipo !== "AC";
   const COL_LABELS = weekdayOnly ? COL_LABELS_5 : COL_LABELS_7;
   const gridCols   = weekdayOnly ? "repeat(5,1fr)" : "repeat(7,1fr)";
 
@@ -1085,6 +1310,86 @@ export function TabEditor({ onBack, allowedTipos, T }) {
             {/* Catálogo de temas — editable */}
             <TemasChecklist editable={true} T={T}/>
           </>
+        ) : tipo === "AC" ? (
+          // ── Actividades grid ──
+          <>
+            {weeks.map((week, wi) => {
+              const maxAct = Math.max(1, ...week.map(date => (actividades[date]||[]).length));
+              return (
+                <div key={wi} style={{marginBottom:4}}>
+                  {/* Fila de números */}
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
+                    {week.map(date => {
+                      const dayNum = Number(date.split("-")[2]);
+                      const weekend = isWeekend(date);
+                      const isToday = date === today;
+                      return (
+                        <div key={date} style={{textAlign:"center",fontSize:13,fontWeight:800,
+                          padding:"4px 2px 2px",
+                          color:isToday?"#fff":isFeriado(date)?"#EF4444":weekend?T.muted:T.text,
+                          background:isToday?"#8B73FF":isFeriado(date)?"#EF44440A":weekend?T.surface2:T.surface,
+                          borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif",
+                          border:isFeriado(date)?"1px solid #EF444430":"none"}}>
+                          {dayNum}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Filas de actividades */}
+                  {Array.from({length: maxAct}).map((_, rowIdx) => (
+                    <div key={rowIdx} style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
+                      {week.map(date => {
+                        const acts = actividades[date] || [];
+                        const act = acts[rowIdx];
+                        return (
+                          <div key={date} style={{minHeight:36,background:T.surface,
+                            display:"flex",alignItems:"center",justifyContent:"center"}}>
+                            {act && (
+                              <button className="press"
+                                onClick={() => setActPicker({date, existing: act})}
+                                style={{width:"100%",height:"100%",minHeight:36,border:"none",
+                                  background:"none",padding:"3px 3px",cursor:"pointer",
+                                  display:"flex",flexDirection:"column",alignItems:"center",
+                                  justifyContent:"center",gap:1}}>
+                                <div style={{fontSize:12,fontWeight:700,
+                                  color:act.color,lineHeight:1.2,
+                                  background:`${act.color}18`,
+                                  borderRadius:3,padding:"1px 4px",
+                                  maxWidth:"100%",overflow:"hidden",
+                                  textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                                  {act.titulo}
+                                </div>
+                                <div style={{fontSize:11,color:T.sub,lineHeight:1.2}}>
+                                  {act.becados.length} becado{act.becados.length===1?"":"s"}
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {/* Fila de botones + */}
+                  <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:8}}>
+                    {week.map(date => (
+                      <div key={date} style={{background:isWeekend(date)?T.surface2:T.surface,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                        padding:"3px 0",borderRadius:"0 0 4px 4px"}}>
+                        <button className="press"
+                          onClick={() => setActPicker({date, existing:null})}
+                          style={{width:18,height:18,borderRadius:99,
+                            border:"1.5px dashed #8B73FF80",background:"transparent",
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            fontSize:13,color:"#8B73FF",cursor:"pointer",lineHeight:1}}>+</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </>
         ) : (
           <>
             {weeks.map((week, wi) => {
@@ -1201,6 +1506,17 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           ultimoSemPorBecado={ultimoSemPorBecado}
           ultimoSemPorBecadoYTag={ultimoSemPorBecadoYTag}
           today={today}
+          T={T}
+        />
+      )}
+      {actPicker && (
+        <ActividadPicker
+          existing={actPicker.existing}
+          becados={becados.map(b=>b.nombre)}
+          nombrePriority={nombrePriority}
+          onSave={vals => handleSaveActividad(actPicker.date, vals, actPicker.existing?.id)}
+          onDelete={id => handleDeleteActividad(id, actPicker.date)}
+          onClose={() => setActPicker(null)}
           T={T}
         />
       )}

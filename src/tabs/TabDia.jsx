@@ -5,6 +5,7 @@ import { prefetch, prefetchWeek } from "../utils/api.js";
 import { groupItems, resolveItems } from "../utils/schedule.js";
 import { isFeriado } from "../constants/feriados.js";
 import { CURSO_CPQ_BY_DATE, UNAB_BECADOS } from "../data/cursoCPQ.js";
+import { getActividadesDia } from "../lib/supabaseApi.js";
 import { rot } from "../constants/rotations.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
@@ -18,6 +19,7 @@ import { SectionDivider } from "../components/ui/SectionDivider.jsx";
 import { ActivityCard } from "../components/ui/ActivityCard.jsx";
 import { TurnoCard } from "../components/ui/TurnoCard.jsx";
 import { SemCard } from "../components/ui/SemCard.jsx";
+import { ActividadCard } from "../components/ui/ActividadCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
 export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
@@ -48,6 +50,13 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
   const c = daily?.rotationCode ? rot(daily.rotationCode) : rot("");
   const grouped = daily ? groupItems(resolveItems(daily.rotationCode, daily.items, date)) : null;
   const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[date] || null) : null;
+
+  const [actividades, setActividades] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    getActividadesDia(becado, date).then(a => { if (alive) setActividades(a); });
+    return () => { alive = false; };
+  }, [becado, date]);
 
   return (
     <div
@@ -97,7 +106,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
           const nocheCode= daily?.turno?.nocheCode || null;
           const artroCode= daily?.turno?.artroCode || null;
           const isPoliAM = diaCode === "p";
-          const hasAny   = manana.length || mediodia.length || tarde.length || diaCode || nocheCode || artroCode;
+          const hasAny   = manana.length || mediodia.length || tarde.length || diaCode || nocheCode || artroCode || actividades.length;
           if (!hasAny && !error) return (
             <div style={{textAlign:"center",padding:"60px 0"}}>
               <div style={{fontSize:38,marginBottom:10,opacity:0.2}}>📭</div>
@@ -119,6 +128,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
                   <div style={{fontSize:12,color:T.sub,marginTop:2}}>{claseCPQ.doctor}</div>
                 </div>
               )}
+              {actividades.map(a => <ActividadCard key={a.id} titulo={a.titulo} hora={a.hora} color={a.color} index={cardIdx++} T={T}/>)}
               {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} time={sem.time} index={cardIdx++} T={T}/>}
               {(manana.length > 0 || isPoliAM) && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}

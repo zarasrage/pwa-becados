@@ -76,6 +76,38 @@ function expandHorario(blocks) {
   return out;
 }
 
+// ── getActividadesDia ────────────────────────────────────────────────────────
+// Actividades especiales (agregadas en el editor, tipo "curso CPQ" genérico),
+// visibles solo para el público (lista de nombres) elegido al crearlas.
+export async function getActividadesDia(becado, dateStr) {
+  const { data, error } = await supabase
+    .from("actividades")
+    .select("id, hora, titulo, color")
+    .eq("fecha", dateStr)
+    .contains("becados", [becado])
+    .order("hora", { ascending: true, nullsFirst: false });
+  if (error) return [];
+  return data || [];
+}
+
+// Igual que getActividadesDia pero para un rango de fechas (semana/mes) — devuelve
+// { fecha: [{id,hora,titulo,color}, ...] }
+export async function getActividadesRango(becado, startDate, endDate) {
+  const { data, error } = await supabase
+    .from("actividades")
+    .select("id, fecha, hora, titulo, color")
+    .gte("fecha", startDate).lte("fecha", endDate)
+    .contains("becados", [becado])
+    .order("hora", { ascending: true, nullsFirst: false });
+  if (error) return {};
+  const map = {};
+  for (const a of data || []) {
+    if (!map[a.fecha]) map[a.fecha] = [];
+    map[a.fecha].push(a);
+  }
+  return map;
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase

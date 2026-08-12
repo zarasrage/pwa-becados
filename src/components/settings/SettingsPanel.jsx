@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SubirTabla } from "./SubirTabla.jsx";
 
 const EDITOR_PINS = {
-  "1429": ["N","D","P","A","S"],
+  "1429": ["N","D","P","A","S","AC"],
   "0001": ["N","D","P"],
   "2222": ["A"],
 };

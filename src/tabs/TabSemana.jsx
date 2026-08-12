@@ -5,6 +5,7 @@ import { rot } from "../constants/rotations.js";
 import { todayISO, offsetDate, getWeekDates, weekRangeLabel, weekLabel } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
 import { CURSO_CPQ_BY_DATE, UNAB_BECADOS } from "../data/cursoCPQ.js";
+import { getActividadesRango } from "../lib/supabaseApi.js";
 import { apiGet } from "../utils/api.js";
 import { cacheGet, cacheSet } from "../utils/cache.js";
 import { groupItems } from "../utils/schedule.js";
@@ -28,6 +29,13 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
   const scrollRef = useRef(null);
 
   const weekDates = useMemo(()=>getWeekDates(refDate),[refDate]);
+
+  const [actividadesMap, setActividadesMap] = useState({}); // { fecha: [{id,hora,titulo,color}] }
+  useEffect(() => {
+    let alive = true;
+    getActividadesRango(becado, weekDates[0], weekDates[6]).then(m => { if (alive) setActividadesMap(m); });
+    return () => { alive = false; };
+  }, [becado, weekDates]);
 
   // Carga la semana: muestra caché inmediatamente, luego fetch si faltan días
   const loadWeek = useCallback((dates, forceRefresh = false) => {
@@ -128,6 +136,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
               const c = rot(day.rotationCode);
               const grouped = groupItems(day.items);
               const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[day.date] || null) : null;
+              const actividadesDia = actividadesMap[day.date] || [];
               const isToday = day.date === today;
               return (
                 <div key={day.date} className="anim"
@@ -163,6 +172,12 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
                       </span>
                     </div>
                   )}
+                  {actividadesDia.map(a => (
+                    <div key={a.id} style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:a.color,opacity:0.9,flexShrink:0,minWidth:40}}>{a.hora||"—"}</span>
+                      <span style={{fontSize:12,color:a.color,lineHeight:1.3,fontWeight:600}}>{a.titulo}</span>
+                    </div>
+                  ))}
                   {day.seminario && (
                     <div style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
                       <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>{day.seminario.time||"07:30"}</span>
