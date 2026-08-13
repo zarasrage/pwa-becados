@@ -26,9 +26,9 @@ const SEMINAR_COLOR = "#E879F9";
 
 
 const TURNO_TABS = [
-  { id:"P", label:"Poli",      color:"#06B6D4" },
-  { id:"D", label:"Día",       color:"#F59E0B" },
   { id:"N", label:"Noche",     color:"#4F6EFF" },
+  { id:"D", label:"Día",       color:"#F59E0B" },
+  { id:"P", label:"Poli",      color:"#06B6D4" },
   { id:"A", label:"Artro",     color:"#72FF00" },
   { id:"S", label:"Seminarios",color:"#E879F9" },
 ];
@@ -37,7 +37,7 @@ export function TabTurnos({ onBack, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
-  const [sub, setSub]     = useState("P");
+  const [sub, setSub]     = useState("N");
   const [selectedSem, setSelectedSem] = useState(null);
   const [semArea, setSemArea]       = useState(null);
   const [showTemas, setShowTemas]   = useState(false);

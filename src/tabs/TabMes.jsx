@@ -123,7 +123,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
               const claseCPQ = UNAB_BECADOS.has(becado) ? (CURSO_CPQ_BY_DATE[iso] || null) : null;
               if (claseCPQ) badges.push({ label:"C", color:"#D2A679", glow: false });
               const actividadesDia = actividadesMap[iso] || [];
-              if (actividadesDia.length) badges.push({ label:"AC", color:actividadesDia[0].color, glow:false });
+              if (actividadesDia.length) badges.push({ label:"#", color:actividadesDia[0].color, glow:false });
               const hasContent = badges.length > 0 || rotC || !!claseCPQ || actividadesDia.length > 0;
 
               return (
