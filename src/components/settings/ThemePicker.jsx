@@ -10,6 +10,12 @@ export const THEME_OPTIONS = [
   { id:"pink",      name:"Sakura",     desc:"Pétalos de cerezo",           preview:["#FEE6F2","#FFF0F8","#E8186A"],  emoji:"🌸" },
   { id:"wabi",      name:"Shodo",      desc:"Pincelazos de tinta épicos",  preview:["#F7F2E8","#FDFAF4","#C8A010"],  emoji:"🖋️" },
   { id:"amanecer",  name:"Prisma",     desc:"Luz blanca fragmentada",      preview:["#FDFCFF","#F8F6FF","#A040FF"],  emoji:"💎" },
+  // ── Claros — coloridos simples ──────────────────
+  { id:"mint",      name:"Menta",      desc:"Fresco y liviano",            preview:["#EAFBF3","#FFFFFF","#10B981"],  emoji:"🌱" },
+  { id:"coral",     name:"Coral",      desc:"Cálido y vivo",               preview:["#FFF1EC","#FFFFFF","#FF6B35"],  emoji:"🪸" },
+  { id:"sky",       name:"Cielo",      desc:"Celeste despejado",           preview:["#EAF4FF","#FFFFFF","#2D8CFF"],  emoji:"🩵" },
+  { id:"lemon",     name:"Limón",      desc:"Amarillo brillante",          preview:["#FFFBEA","#FFFFFF","#F2C200"],  emoji:"🍋" },
+  { id:"grape",     name:"Uva",        desc:"Morado suave",                preview:["#F5EEFF","#FFFFFF","#9333EA"],  emoji:"🍇" },
   // ── Oscuros — profundos ─────────────────────────
   { id:"ocean",     name:"Abismo",     desc:"Profundidades del mar",       preview:["#04080F","#071424","#00C8FF"],  emoji:"🌊" },
   // ── Oscuros — eléctrico azul ────────────────────
@@ -31,12 +37,15 @@ export const ACCENT_MAP = {
   ocean:"#00C8FF", sunset:"#FF5500", forest:"#22D45A", aurora:"#8A5CF6", neon:"#CC00FF",
   synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
   wabi:"#C8A010", amanecer:"#A040FF",
+  mint:"#10B981", coral:"#FF6B35", sky:"#2D8CFF", lemon:"#F2C200", grape:"#9333EA",
 };
+
+const LIGHT_THEMES = ["light","pink","wabi","amanecer","mint","coral","sky","lemon","grape"];
 
 export function ThemePicker({ current, onSelect, onClose }) {
   const [hovered, setHovered] = useState(null);
   const accent = ACCENT_MAP[current] || "#348FFF";
-  const isDark = !["light","pink","wabi","amanecer"].includes(current);
+  const isDark = !LIGHT_THEMES.includes(current);
 
   return (
     <>

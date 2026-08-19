@@ -84,6 +84,31 @@ export const THEMES = {
     text:"#1A1428", sub:"#5A4870", muted:"#9080A8", tabBg:"rgba(238,232,245,0.96)",
     skeleton:"#E6DFF0", skeletonShine:"#F8F4FF", accent:"#E05030", glow:"#FF7850",
   },
+  mint: {
+    bg:"#EAFBF3", surface:"#FFFFFF", surface2:"#D9F5E8", border:"#A8E8C8",
+    text:"#08281A", sub:"#1F6B45", muted:"#7CC7A0", tabBg:"rgba(234,251,243,0.94)",
+    skeleton:"#D9F5E8", skeletonShine:"#FFFFFF", accent:"#10B981", glow:"#10B981",
+  },
+  coral: {
+    bg:"#FFF1EC", surface:"#FFFFFF", surface2:"#FFE0D3", border:"#FFBBA0",
+    text:"#3A0F02", sub:"#C24A20", muted:"#F0A080", tabBg:"rgba(255,241,236,0.94)",
+    skeleton:"#FFE0D3", skeletonShine:"#FFFFFF", accent:"#FF6B35", glow:"#FF6B35",
+  },
+  sky: {
+    bg:"#EAF4FF", surface:"#FFFFFF", surface2:"#D6EAFF", border:"#A8D4FF",
+    text:"#06213D", sub:"#1D5A96", muted:"#7FB0E0", tabBg:"rgba(234,244,255,0.94)",
+    skeleton:"#D6EAFF", skeletonShine:"#FFFFFF", accent:"#2D8CFF", glow:"#2D8CFF",
+  },
+  lemon: {
+    bg:"#FFFBEA", surface:"#FFFFFF", surface2:"#FFF3C4", border:"#FFE388",
+    text:"#3A2E00", sub:"#8A6D00", muted:"#D4B84A", tabBg:"rgba(255,251,234,0.94)",
+    skeleton:"#FFF3C4", skeletonShine:"#FFFFFF", accent:"#F2C200", glow:"#F2C200",
+  },
+  grape: {
+    bg:"#F5EEFF", surface:"#FFFFFF", surface2:"#E9DCFF", border:"#C9A8FF",
+    text:"#240742", sub:"#6B2FA0", muted:"#B594E0", tabBg:"rgba(245,238,255,0.94)",
+    skeleton:"#E9DCFF", skeletonShine:"#FFFFFF", accent:"#9333EA", glow:"#9333EA",
+  },
 };
 
 export const THEME_BG = {
@@ -91,4 +116,5 @@ export const THEME_BG = {
   ocean:"#04080F", sunset:"#0F0500", forest:"#020A04", aurora:"#020510", neon:"#03000A",
   synthwave:"#0A0015", cryo:"#020D1A", cosmos:"#020008", tormenta:"#04060E",
   wabi:"#F7F2E8", amanecer:"#EEE8F5",
+  mint:"#EAFBF3", coral:"#FFF1EC", sky:"#EAF4FF", lemon:"#FFFBEA", grape:"#F5EEFF",
 };

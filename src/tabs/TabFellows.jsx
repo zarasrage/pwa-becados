@@ -10,7 +10,7 @@ export function TabFellows({ onBack, T }) {
   const [subTab, setSubTab] = useState("fellows");
 
   return (
-    <div style={{ minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40 }}>
+    <div style={{ minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40,position:"relative",zIndex:1 }}>
 
       {/* Header */}
       <div style={{ position:"sticky",top:0,zIndex:10,background:T.bg,paddingTop:"calc(var(--sat) + 12px)",paddingBottom:0,borderBottom:`1px solid ${T.border}` }}>

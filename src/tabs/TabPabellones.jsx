@@ -368,7 +368,7 @@ export function TabPabellones({ onBack, T }) {
   const equipoColor = equipoActivo?.color ?? null;
 
   return (
-    <div style={{ minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40 }}>
+    <div style={{ minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40,position:"relative",zIndex:1 }}>
 
       <div style={{ position:"sticky",top:0,zIndex:10,background:T.bg,paddingTop:"calc(var(--sat) + 12px)",paddingBottom:10,borderBottom:`1px solid ${T.border}` }}>
         <div style={{ display:"flex",alignItems:"center",gap:10,padding:"0 16px" }}>

@@ -1128,7 +1128,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const isPink = T.accent === "#E8186A";
 
   return (
-    <div style={{minHeight:"100vh",background:T.bg}}>
+    <div style={{minHeight:"100vh",background:T.bg,position:"relative",zIndex:1}}>
       {/* Header */}
       <div style={{padding:"calc(var(--sat) + 14px) 12px 0",position:"sticky",top:0,
         background:T.bg,zIndex:10,borderBottom:`1px solid ${T.border}`}}>
