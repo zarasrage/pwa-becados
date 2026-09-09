@@ -176,7 +176,7 @@ export async function getSeminarioRanking() {
 
 export async function addSeminarioPuntos(becadoId, delta) {
   const puntos = await getConfigJSON("seminario_puntos", {});
-  puntos[becadoId] = (puntos[becadoId] || 0) + delta;
+  puntos[becadoId] = Math.max(0, (puntos[becadoId] || 0) + delta);
   return await setConfigJSON("seminario_puntos", puntos);
 }
 
