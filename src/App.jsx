@@ -31,6 +31,7 @@ import { TabEstadisticas } from "./tabs/TabEstadisticas.jsx";
 import { TabEquipos } from "./tabs/TabEquipos.jsx";
 import { TabEditor } from "./tabs/TabEditor.jsx";
 import { TabPabellones } from "./tabs/TabPabellones.jsx";
+import { TabSeminarioJuego } from "./tabs/TabSeminarioJuego.jsx";
 import { TabFellows } from "./tabs/TabFellows.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
@@ -61,6 +62,7 @@ export default function App() {
   const [editorTipos, setEditorTipos]     = useState([]);
   const [showSwap, setShowSwap] = useState(false);
   const [showPabellones, setShowPabellones] = useState(false);
+  const [showSeminarioJuego, setShowSeminarioJuego] = useState(false);
   const [showFellows, setShowFellows]       = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -142,7 +144,7 @@ export default function App() {
   };
 
   const anyOverlay = showRotaciones || showTurnos || showMapa || showEstadisticas
-    || showEquipos || showEditor || showPabellones || showFellows;
+    || showEquipos || showEditor || showPabellones || showSeminarioJuego || showFellows;
 
   const quickLinks = <QuickLinks onNav={handleNav} T={T}/>;
 
@@ -202,10 +204,12 @@ export default function App() {
         ? <TabEditor onBack={() => setShowEditor(false)} allowedTipos={editorTipos} T={T}/>
       : showPabellones
         ? <TabPabellones onBack={() => setShowPabellones(false)} T={T}/>
+      : showSeminarioJuego
+        ? <TabSeminarioJuego onBack={() => setShowSeminarioJuego(false)} T={T}/>
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
       : !becado ? (
-          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} error={initError} T={T}/>
+          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
       ) : (
         <>
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>

@@ -108,6 +108,78 @@ export async function getActividadesRango(becado, startDate, endDate) {
   return map;
 }
 
+// ── Juego de seminarios (números al azar + puntaje en vivo) ────────────────────
+// Solo los 15 becados de UNAB participan; "Gonzalez" es el moderador (no compite).
+// Se guarda todo en config (mismo mecanismo que temas_catalogo/avatares) para no
+// necesitar tablas nuevas ni permisos de administración sobre la base.
+export const SEMINARIO_MODERADOR = "Gonzalez";
+
+async function getConfigJSON(key, fallback) {
+  const { data } = await supabase.from("config").select("value").eq("key", key).single();
+  if (!data?.value) return fallback;
+  try { return JSON.parse(data.value); } catch { return fallback; }
+}
+async function setConfigJSON(key, obj) {
+  const { error } = await supabase
+    .from("config").upsert({ key, value: JSON.stringify(obj) }, { onConflict: "key" });
+  return !error;
+}
+
+export async function getSeminarioBecadosUNAB() {
+  const { data, error } = await supabase
+    .from("becados").select("id,nombre").order("id").limit(15);
+  if (error) return [];
+  return data || [];
+}
+
+// Devuelve el número (1-14) asignado a un becado. Si todavía no se ha repartido
+// ningún número, reparte un número al azar (sin repetir) a todos los
+// participantes (los 15 de UNAB menos el moderador) de una sola vez.
+export async function getOrAssignSeminarioNumero(becadoId) {
+  const numeros = await getConfigJSON("seminario_numeros", {});
+  if (numeros[becadoId] != null) return numeros[becadoId];
+
+  const becados = await getSeminarioBecadosUNAB();
+  const participantes = becados.filter(b => b.nombre !== SEMINARIO_MODERADOR);
+  const usados = new Set(Object.values(numeros));
+  const faltantes = participantes.filter(p => numeros[p.id] == null);
+
+  if (faltantes.length > 0) {
+    const disponibles = Array.from({ length: 14 }, (_, i) => i + 1).filter(n => !usados.has(n));
+    for (let i = disponibles.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [disponibles[i], disponibles[j]] = [disponibles[j], disponibles[i]];
+    }
+    faltantes.forEach((p, idx) => { numeros[p.id] = disponibles[idx]; });
+    await setConfigJSON("seminario_numeros", numeros);
+  }
+
+  return numeros[becadoId] ?? null;
+}
+
+export async function getSeminarioPuntosPorBecado() {
+  return await getConfigJSON("seminario_puntos", {});
+}
+
+// Ranking de puntaje, de mayor a menor — se lee directo de Supabase (no manipulable
+// desde el cliente salvo por addSeminarioPuntos, que usa el mismo mecanismo).
+export async function getSeminarioRanking() {
+  const [puntos, becados] = await Promise.all([
+    getConfigJSON("seminario_puntos", {}),
+    getSeminarioBecadosUNAB(),
+  ]);
+  const nombrePorId = Object.fromEntries(becados.map(b => [b.id, b.nombre]));
+  return Object.entries(puntos)
+    .map(([id, p]) => ({ nombre: nombrePorId[id] || "?", puntos: p }))
+    .sort((a, b) => b.puntos - a.puntos);
+}
+
+export async function addSeminarioPuntos(becadoId, delta) {
+  const puntos = await getConfigJSON("seminario_puntos", {});
+  puntos[becadoId] = (puntos[becadoId] || 0) + delta;
+  return await setConfigJSON("seminario_puntos", puntos);
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase
