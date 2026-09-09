@@ -13,7 +13,11 @@ const MEDALLAS = ["🥇", "🥈", "🥉"];
 // Tonos con contraste suficiente tanto en temas claros como oscuros
 const MEDALLA_COLOR = ["#E8B008", "#94A3B8", "#C67C3E"];
 
-// ── Selección de quién eres (15 becados UNAB) ───────────────────────────────
+// Staff que también puede corregir puntaje (sin PIN, solo +1 / -1)
+const SEMINARIO_STAFF = ["Innocenti", "Valiente", "C. Rojas"];
+const STAFF_COLOR = "#14B8A6";
+
+// ── Selección de quién eres (15 becados UNAB + staff) ───────────────────────
 function SelectBecadoJuego({ becados, onPick, T }) {
   return (
     <>
@@ -62,6 +66,45 @@ function SelectBecadoJuego({ becados, onPick, T }) {
             </button>
           );
         })}
+      </div>
+
+      {/* Staff */}
+      <div className="anim" style={{marginTop:18,animationDelay:"340ms"}}>
+        <div style={{
+          display:"flex",alignItems:"center",gap:6,marginBottom:8,
+          fontSize:11.5,fontWeight:700,letterSpacing:"0.1em",
+          color:STAFF_COLOR,textTransform:"uppercase",
+        }}>
+          <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:STAFF_COLOR}}/>
+          Staff
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          {SEMINARIO_STAFF.map((nombre, i) => (
+            <button key={nombre} className="press anim" onClick={() => onPick({ nombre, esStaff:true })}
+              style={{
+                animationDelay:`${360 + i*22}ms`,
+                display:"flex",alignItems:"center",gap:9,
+                background:`linear-gradient(135deg, ${STAFF_COLOR}18 0%, ${STAFF_COLOR}06 100%)`,
+                border:`1.5px solid ${STAFF_COLOR}55`,
+                borderRadius:14,padding:"11px 11px",cursor:"pointer",textAlign:"left",
+                fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden",
+              }}>
+              <span style={{
+                width:32,height:32,borderRadius:10,flexShrink:0,
+                background:`${STAFF_COLOR}1E`,color:STAFF_COLOR,fontWeight:800,fontSize:15,
+                display:"flex",alignItems:"center",justifyContent:"center",
+              }}>
+                🩺
+              </span>
+              <span style={{
+                minWidth:0,flex:1,fontSize:13.5,fontWeight:600,color:T.text,
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+              }}>
+                {nombre}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </>
   );
@@ -136,8 +179,10 @@ function PinModerador({ onSuccess, onCancel, T }) {
   );
 }
 
-// ── Panel del moderador: asignar puntos ─────────────────────────────────────
-function PanelModerador({ becados, T }) {
+// ── Panel para asignar puntos ────────────────────────────────────────────────
+// modo "moderador": -2/-1/+1/+2 · modo "staff": solo -1/+1
+function PanelModerador({ becados, T, modo = "moderador", nombreStaff }) {
+  const esStaff = modo === "staff";
   const [puntos, setPuntos] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -166,16 +211,19 @@ function PanelModerador({ becados, T }) {
 
   const maxPts = Math.max(1, ...participantes.map(p => p.pts));
 
+  const ac = esStaff ? STAFF_COLOR : T.accent;
+
   const Btn = ({ onClick, label, tone }) => {
     const rojo = tone === "menos";
-    const solido = label === "+2";
+    // El botón "principal" va sólido: +2 para el moderador, +1 para staff
+    const solido = label === (esStaff ? "+1" : "+2");
     return (
       <button className="press" onClick={onClick}
         style={{
-          width:32,height:32,borderRadius:10,flexShrink:0,
-          border: solido ? "none" : `1px solid ${rojo ? "#EF444455" : T.accent+"55"}`,
-          background: solido ? T.accent : rojo ? "#EF444416" : `${T.accent}16`,
-          color: solido ? "#fff" : rojo ? "#EF4444" : T.accent,
+          width: esStaff ? 40 : 32,height:32,borderRadius:10,flexShrink:0,
+          border: solido ? "none" : `1px solid ${rojo ? "#EF444455" : ac+"55"}`,
+          background: solido ? ac : rojo ? "#EF444416" : `${ac}16`,
+          color: solido ? "#fff" : rojo ? "#EF4444" : ac,
           fontWeight:800,fontSize:12.5,cursor:"pointer",
           fontFamily:"'Bricolage Grotesque',sans-serif",
         }}>
@@ -187,17 +235,21 @@ function PanelModerador({ becados, T }) {
   return (
     <>
       <div className="anim" style={{
-        background:`linear-gradient(135deg, ${T.accent}18 0%, ${T.accent}06 100%)`,
-        border:`1px solid ${T.accent}35`,borderRadius:16,padding:"14px 16px",marginBottom:16,
+        background:`linear-gradient(135deg, ${ac}18 0%, ${ac}06 100%)`,
+        border:`1px solid ${ac}35`,borderRadius:16,padding:"14px 16px",marginBottom:16,
       }}>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
-          <span style={{fontSize:18}}>🎛️</span>
+          <span style={{fontSize:18}}>{esStaff ? "🩺" : "🎛️"}</span>
           <span style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:18,fontWeight:800,color:T.text}}>
-            Panel de moderador
+            {esStaff ? nombreStaff : "Panel de moderador"}
           </span>
         </div>
         <div style={{fontSize:11.5,color:T.sub,lineHeight:1.5}}>
-          <b style={{color:T.accent}}>+1</b> respuesta a medias · <b style={{color:T.accent}}>+2</b> respuesta completa · <b style={{color:"#EF4444"}}>−</b> para corregir
+          {esStaff ? (
+            <><b style={{color:ac}}>+1</b> por buena respuesta · <b style={{color:"#EF4444"}}>−1</b> para corregir</>
+          ) : (
+            <><b style={{color:ac}}>+1</b> respuesta a medias · <b style={{color:ac}}>+2</b> respuesta completa · <b style={{color:"#EF4444"}}>−</b> para corregir</>
+          )}
         </div>
       </div>
 
@@ -222,7 +274,7 @@ function PanelModerador({ becados, T }) {
                 <div style={{
                   position:"absolute",left:0,top:0,bottom:0,
                   width:`${(b.pts / maxPts) * 100}%`,
-                  background:`linear-gradient(90deg, ${mc || T.accent}14, transparent)`,
+                  background:`linear-gradient(90deg, ${mc || ac}14, transparent)`,
                   pointerEvents:"none",transition:"width 0.35s ease",
                 }}/>
                 <span style={{
@@ -241,7 +293,7 @@ function PanelModerador({ becados, T }) {
                 <span style={{position:"relative",zIndex:1,flexShrink:0,minWidth:30,textAlign:"center"}}>
                   <span style={{
                     fontFamily:"'Bricolage Grotesque',sans-serif",
-                    fontSize:17,fontWeight:800,color: b.pts > 0 ? (mc || T.accent) : T.muted,
+                    fontSize:17,fontWeight:800,color: b.pts > 0 ? (mc || ac) : T.muted,
                   }}>
                     {b.pts}
                   </span>
@@ -257,10 +309,10 @@ function PanelModerador({ becados, T }) {
                   )}
                 </span>
                 <span style={{display:"flex",gap:4,zIndex:1,flexShrink:0}}>
-                  <Btn onClick={() => sumar(b.id,-2)} label="−2" tone="menos"/>
+                  {!esStaff && <Btn onClick={() => sumar(b.id,-2)} label="−2" tone="menos"/>}
                   <Btn onClick={() => sumar(b.id,-1)} label="−1" tone="menos"/>
                   <Btn onClick={() => sumar(b.id, 1)} label="+1" tone="mas"/>
-                  <Btn onClick={() => sumar(b.id, 2)} label="+2" tone="mas"/>
+                  {!esStaff && <Btn onClick={() => sumar(b.id, 2)} label="+2" tone="mas"/>}
                 </span>
               </div>
             );
@@ -449,7 +501,9 @@ export function TabSeminarioJuego({ onBack, T }) {
 
   function handlePick(b) {
     setYo(b);
-    setStep(b.nombre === SEMINARIO_MODERADOR ? "pin" : "participante");
+    // Staff entra directo (sin PIN); el moderador pide PIN; el resto es participante
+    if (b.esStaff) setStep("staff");
+    else setStep(b.nombre === SEMINARIO_MODERADOR ? "pin" : "participante");
   }
 
   function reset() { setYo(null); setStep("select"); }
@@ -475,6 +529,8 @@ export function TabSeminarioJuego({ onBack, T }) {
           <PinModerador onSuccess={()=>setStep("moderador")} onCancel={reset} T={T}/>
         ) : step === "moderador" ? (
           <PanelModerador becados={becados} T={T}/>
+        ) : step === "staff" ? (
+          <PanelModerador becados={becados} T={T} modo="staff" nombreStaff={yo?.nombre}/>
         ) : (
           <VistaParticipante becado={yo} T={T}/>
         )}
