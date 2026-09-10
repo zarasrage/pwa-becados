@@ -14,7 +14,7 @@ const MEDALLAS = ["🥇", "🥈", "🥉"];
 const MEDALLA_COLOR = ["#E8B008", "#94A3B8", "#C67C3E"];
 
 // Staff que también puede corregir puntaje (sin PIN, solo +1 / -1)
-const SEMINARIO_STAFF = ["Innocenti", "Valiente", "C. Rojas", "Koch"];
+const SEMINARIO_STAFF = ["Innocenti", "Valiente", "C. Rojas", "Koch", "Popin", "Tommy"];
 const STAFF_COLOR = "#14B8A6";
 
 // ── Selección de quién eres (15 becados UNAB + staff) ───────────────────────
