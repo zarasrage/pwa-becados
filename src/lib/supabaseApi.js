@@ -180,6 +180,30 @@ export async function addSeminarioPuntos(becadoId, delta) {
   return await setConfigJSON("seminario_puntos", puntos);
 }
 
+// ── Entrenamiento de artroscopía (cronómetro) ─────────────────────────────────
+// Registros guardados en config.artro_registros (misma lógica que el resto):
+// [{ id, fecha, tipo, conTapa, ms }]
+export async function getArtroRegistros() {
+  const lista = await getConfigJSON("artro_registros", []);
+  return Array.isArray(lista) ? lista : [];
+}
+
+export async function addArtroRegistro(registro) {
+  const lista = await getArtroRegistros();
+  // Se relee justo antes de escribir para minimizar perder registros
+  // guardados por otro dispositivo mientras se cronometraba.
+  const siguiente = [registro, ...lista].slice(0, 300);
+  const ok = await setConfigJSON("artro_registros", siguiente);
+  return ok ? siguiente : null;
+}
+
+export async function deleteArtroRegistro(id) {
+  const lista = await getArtroRegistros();
+  const siguiente = lista.filter(r => r.id !== id);
+  const ok = await setConfigJSON("artro_registros", siguiente);
+  return ok ? siguiente : null;
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase
