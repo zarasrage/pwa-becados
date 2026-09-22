@@ -3,9 +3,13 @@ import { todayISO } from "../utils/dates.js";
 import { safeStorage } from "../utils/storage.js";
 import { getBecados, getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
 
+// Los ids no se cambian nunca: quedan guardados dentro de cada registro.
 const TIPOS = [
-  { id: "Circulos", label: "Círculos", emoji: "⭕" },
-  { id: "Tubitos",  label: "Tubitos",  emoji: "🧪" },
+  { id: "Circulos",  label: "Círculos",  img: "/artro/circulos.webp" },
+  { id: "Tubitos",   label: "Tubitos",   img: "/artro/tubitos.webp" },
+  { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
+  { id: "Petalos",   label: "Pétalos",   img: "/artro/petalos.webp" },
+  { id: "Bandeja",   label: "Bandeja",   img: "/artro/bandeja.webp" },
 ];
 
 // Rangos por universidad (mismo orden por id que usa el resto de la app)
@@ -215,27 +219,53 @@ export function TabArtro({ onBack, T }) {
         ) : (
         <>
 
-        {/* Tipo de ejercicio */}
-        <div className="anim" style={{marginBottom:12}}>
-          <div style={{fontSize:11.5,fontWeight:700,letterSpacing:"0.08em",color:T.muted,textTransform:"uppercase",marginBottom:7}}>
+        {/* Tipo de ejercicio — fila horizontal para no empujar el cronómetro */}
+        <div className="anim" style={{marginBottom:14}}>
+          <div style={{fontSize:11.5,fontWeight:700,letterSpacing:"0.08em",color:T.muted,textTransform:"uppercase",marginBottom:8}}>
             Tipo de ejercicio
           </div>
-          <div style={{display:"flex",gap:8}}>
+          <div style={{
+            display:"flex",gap:8,overflowX:"auto",paddingBottom:4,
+            scrollbarWidth:"none",WebkitOverflowScrolling:"touch",
+          }}>
             {TIPOS.map(t => {
               const sel = tipo === t.id;
               return (
                 <button key={t.id} className="press" onClick={() => setTipo(t.id)}
                   style={{
-                    flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-                    height:46,borderRadius:13,cursor:"pointer",
+                    position:"relative",flexShrink:0,width:96,
+                    display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+                    padding:"8px 6px 7px",borderRadius:14,cursor:"pointer",
                     border:`1.5px solid ${sel ? T.accent+"70" : T.border}`,
-                    background: sel ? `${T.accent}16` : T.surface,
-                    color: sel ? T.accent : T.sub,
-                    fontSize:14,fontWeight:sel?700:500,
+                    background: sel ? `${T.accent}12` : T.surface,
+                    boxShadow: sel ? `0 0 14px ${T.accent}20` : "none",
                     fontFamily:"'Inter',sans-serif",
+                    transition:"border-color 0.15s, background 0.15s",
                   }}>
-                  <span style={{fontSize:16}}>{t.emoji}</span>
-                  {t.label}
+                  <img src={t.img} alt={t.label} loading="lazy"
+                    style={{
+                      width:66,height:66,objectFit:"contain",
+                      opacity: sel ? 1 : 0.7,
+                      filter: sel ? "none" : "saturate(0.7)",
+                      transition:"opacity 0.15s, filter 0.15s",
+                    }}/>
+                  <span style={{
+                    fontSize:12,fontWeight: sel ? 700 : 500,
+                    color: sel ? T.accent : T.sub,
+                    whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",
+                  }}>
+                    {t.label}
+                  </span>
+                  {sel && (
+                    <span style={{
+                      position:"absolute",top:5,right:5,
+                      width:17,height:17,borderRadius:"50%",background:T.accent,
+                      color:"#fff",fontSize:10,fontWeight:800,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                    }}>
+                      ✓
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -349,7 +379,9 @@ export function TabArtro({ onBack, T }) {
                   background:T.surface,border:`1px solid ${T.border}`,
                   borderRadius:12,padding:"10px 12px",
                 }}>
-                  <span style={{fontSize:16,flexShrink:0}}>{t?.emoji || "•"}</span>
+                  {t?.img
+                    ? <img src={t.img} alt="" loading="lazy" style={{width:30,height:30,objectFit:"contain",flexShrink:0}}/>
+                    : <span style={{fontSize:16,flexShrink:0}}>•</span>}
                   <span style={{flex:1,minWidth:0}}>
                     <span style={{display:"block",fontSize:13.5,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {t?.label || r.tipo}
