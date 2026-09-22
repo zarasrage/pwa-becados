@@ -10,6 +10,14 @@ const TIPOS = [
   { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
   { id: "Petalos",   label: "Pétalos",   img: "/artro/petalos.webp" },
   { id: "Bandeja",   label: "Bandeja",   img: "/artro/bandeja.webp" },
+  { id: "Lineas",    label: "Líneas",    img: "/artro/lineas.webp" },
+  { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp" },
+];
+
+// "Sin tapa" se entrena con la cúpula transparente; "con tapa", con la opaca.
+const TAPAS = [
+  { conTapa: true,  label: "Con tapa", img: "/artro/tapa-con.webp" },
+  { conTapa: false, label: "Sin tapa", img: "/artro/tapa-sin.webp" },
 ];
 
 // Rangos por universidad (mismo orden por id que usa el resto de la app)
@@ -273,26 +281,42 @@ export function TabArtro({ onBack, T }) {
         </div>
 
         {/* Con / sin tapa */}
-        <button className="press anim" onClick={() => setConTapa(v => !v)}
-          style={{
-            width:"100%",display:"flex",alignItems:"center",gap:11,marginBottom:22,
-            background:T.surface,border:`1px solid ${conTapa ? T.accent+"45" : T.border}`,
-            borderRadius:13,padding:"12px 14px",cursor:"pointer",textAlign:"left",
-            fontFamily:"'Inter',sans-serif",
-          }}>
-          <span style={{
-            width:22,height:22,borderRadius:7,flexShrink:0,
-            border:`1.5px solid ${conTapa ? T.accent : T.muted}`,
-            background: conTapa ? T.accent : "transparent",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:13,color:"#fff",fontWeight:800,
-          }}>
-            {conTapa && "✓"}
-          </span>
-          <span style={{flex:1,fontSize:14,fontWeight:600,color: conTapa ? T.text : T.sub}}>
-            {conTapa ? "Con tapa" : "Sin tapa"}
-          </span>
-        </button>
+        <div className="anim" style={{marginBottom:20}}>
+          <div style={{fontSize:11.5,fontWeight:700,letterSpacing:"0.08em",color:T.muted,textTransform:"uppercase",marginBottom:8}}>
+            Tapa
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {TAPAS.map(t => {
+              const sel = conTapa === t.conTapa;
+              return (
+                <button key={t.label} className="press" onClick={() => setConTapa(t.conTapa)}
+                  style={{
+                    position:"relative",flex:1,
+                    display:"flex",alignItems:"center",gap:9,
+                    padding:"8px 10px",borderRadius:13,cursor:"pointer",textAlign:"left",
+                    border:`1.5px solid ${sel ? T.accent+"70" : T.border}`,
+                    background: sel ? `${T.accent}12` : T.surface,
+                    boxShadow: sel ? `0 0 14px ${T.accent}20` : "none",
+                    fontFamily:"'Inter',sans-serif",
+                    transition:"border-color 0.15s, background 0.15s",
+                  }}>
+                  <img src={t.img} alt={t.label} loading="lazy"
+                    style={{
+                      width:44,height:44,objectFit:"contain",flexShrink:0,
+                      opacity: sel ? 1 : 0.65,
+                      transition:"opacity 0.15s",
+                    }}/>
+                  <span style={{
+                    fontSize:13.5,fontWeight: sel ? 700 : 500,
+                    color: sel ? T.accent : T.sub,
+                  }}>
+                    {t.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Cronómetro */}
         <div className="anim" style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20}}>
