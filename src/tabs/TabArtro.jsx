@@ -3,14 +3,15 @@ import { todayISO } from "../utils/dates.js";
 import { safeStorage } from "../utils/storage.js";
 import { getBecados, getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
 
-// Los ids no se cambian nunca: quedan guardados dentro de cada registro.
+// Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
+// (hoy se pueden cambiar sin migrar porque no hay registros previos).
 const TIPOS = [
-  { id: "Circulos",  label: "Círculos",  img: "/artro/circulos.webp" },
-  { id: "Tubitos",   label: "Tubitos",   img: "/artro/tubitos.webp" },
-  { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
-  { id: "Petalos",   label: "Pétalos",   img: "/artro/petalos.webp" },
-  { id: "Bandeja",   label: "Bandeja",   img: "/artro/bandeja.webp" },
+  { id: "Numeros",   label: "Números",   img: "/artro/numeros.webp" },
   { id: "Lineas",    label: "Líneas",    img: "/artro/lineas.webp" },
+  { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
+  { id: "Tubos1",    label: "Tubos 1",   img: "/artro/tubos-1.webp" },
+  { id: "Tubos2",    label: "Tubos 2",   img: "/artro/tubos-2.webp" },
+  { id: "Manguito",  label: "Manguito",  img: "/artro/manguito.webp" },
   { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp" },
 ];
 
