@@ -10,6 +10,14 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
+        // Las fotos de los módulos de Artro se precachean para que estén
+        // disponibles offline: si no, se piden a la red cada vez y con mala
+        // señal quedaban rotas.
+        globPatterns: [
+          "**/*.{js,css,html,ico,svg,webmanifest}",
+          "pwa-*.png",
+          "artro/*.webp",
+        ],
       },
       manifest: {
         name: "MimApp",

@@ -41,6 +41,49 @@ function fechaCorta(iso) {
   return new Date(y, m-1, d).toLocaleDateString("es-CL", { day:"numeric", month:"short" });
 }
 
+// Imagen que reintenta sola si la carga falla (señal intermitente) y, si tras
+// varios intentos no llega, muestra un recuadro neutro en vez del ícono roto.
+const MAX_INTENTOS = 4;
+function Foto({ src, alt, style, T }) {
+  const [intento, setIntento] = useState(0);
+  const [rendido, setRendido] = useState(false);
+  const timer = useRef(null);
+
+  useEffect(() => {
+    // Si cambia la foto, se parte de cero
+    setIntento(0); setRendido(false);
+    return () => clearTimeout(timer.current);
+  }, [src]);
+
+  function alFallar() {
+    if (intento >= MAX_INTENTOS) { setRendido(true); return; }
+    // Espera creciente; el parámetro evita que reuse la respuesta fallida
+    timer.current = setTimeout(() => setIntento(i => i + 1), 500 * (intento + 1));
+  }
+
+  if (rendido) {
+    return (
+      <span aria-label={alt} style={{
+        ...style,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        background:`${T.muted}14`,border:`1px dashed ${T.border}`,borderRadius:9,
+        color:T.muted,fontSize:13,boxSizing:"border-box",
+      }}>
+        ⏱
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={intento === 0 ? src : `${src}?r=${intento}`}
+      alt={alt}
+      onError={alFallar}
+      style={style}
+    />
+  );
+}
+
 // ── Selección de quién eres ──────────────────────────────────────────────────
 function SelectBecadoArtro({ becados, onPick, T }) {
   return (
@@ -251,7 +294,7 @@ export function TabArtro({ onBack, T }) {
                     fontFamily:"'Inter',sans-serif",
                     transition:"border-color 0.15s, background 0.15s",
                   }}>
-                  <img src={t.img} alt={t.label} loading="lazy"
+                  <Foto src={t.img} alt={t.label} T={T}
                     style={{
                       width:66,height:66,objectFit:"contain",
                       opacity: sel ? 1 : 0.7,
@@ -301,7 +344,7 @@ export function TabArtro({ onBack, T }) {
                     fontFamily:"'Inter',sans-serif",
                     transition:"border-color 0.15s, background 0.15s",
                   }}>
-                  <img src={t.img} alt={t.label} loading="lazy"
+                  <Foto src={t.img} alt={t.label} T={T}
                     style={{
                       width:44,height:44,objectFit:"contain",flexShrink:0,
                       opacity: sel ? 1 : 0.65,
@@ -405,7 +448,7 @@ export function TabArtro({ onBack, T }) {
                   borderRadius:12,padding:"10px 12px",
                 }}>
                   {t?.img
-                    ? <img src={t.img} alt="" loading="lazy" style={{width:30,height:30,objectFit:"contain",flexShrink:0}}/>
+                    ? <Foto src={t.img} alt={t.label} T={T} style={{width:30,height:30,objectFit:"contain",flexShrink:0}}/>
                     : <span style={{fontSize:16,flexShrink:0}}>•</span>}
                   <span style={{flex:1,minWidth:0}}>
                     <span style={{display:"block",fontSize:13.5,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
