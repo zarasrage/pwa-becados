@@ -801,12 +801,14 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     }
     return null;
   }
-  // Días desde el último Vie/Sáb/Dom con Noche antes de `date` (busca hasta 60 días / ~2 meses). null = ninguno.
+  // Días desde la última Noche "pesada" (Vie/Sáb/Dom o feriado) antes de `date`.
+  // Busca hasta 60 días / ~2 meses. null = ninguna.
   function diasDesdeUltimoFindeNoche(nombre, date) {
     for (let i = 1; i <= 60; i++) {
       const d = offsetDate(date, -i);
       const dow = getDow(d);
-      if ((dow === 5 || dow === 6 || dow === 0) && (nocheMap[d] || []).includes(nombre)) return i;
+      const pesado = dow === 5 || dow === 6 || dow === 0 || isFeriado(d);
+      if (pesado && (nocheMap[d] || []).includes(nombre)) return i;
     }
     return null;
   }
@@ -1289,10 +1291,12 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                     {week.map(date => {
                       const weekend = isWeekend(date);
                       return (
-                        <div key={date} style={{background:weekend?T.surface2:T.surface,
+                        <div key={date} style={{
+                          background: isFeriado(date) ? "#EF444410" : weekend ? T.surface2 : T.surface,
                           display:"flex",alignItems:"center",justifyContent:"center",
-                          padding:"3px 0",borderRadius:"0 0 4px 4px"}}>
-                          {!weekend && (
+                          padding:"3px 0",borderRadius:"0 0 4px 4px",
+                          borderBottom: isFeriado(date) ? "2px solid #EF4444" : "none"}}>
+                          {!weekend && !isFeriado(date) && (
                             <button className="press"
                               onClick={() => setSemPicker({date, existing:null})}
                               style={{width:18,height:18,borderRadius:99,
@@ -1374,15 +1378,19 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   {/* Fila de botones + */}
                   <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:8}}>
                     {week.map(date => (
-                      <div key={date} style={{background:isWeekend(date)?T.surface2:T.surface,
+                      <div key={date} style={{
+                        background: isFeriado(date) ? "#EF444410" : isWeekend(date) ? T.surface2 : T.surface,
                         display:"flex",alignItems:"center",justifyContent:"center",
-                        padding:"3px 0",borderRadius:"0 0 4px 4px"}}>
+                        padding:"3px 0",borderRadius:"0 0 4px 4px",
+                        borderBottom: isFeriado(date) ? "2px solid #EF4444" : "none"}}>
+                        {!isFeriado(date) && (
                         <button className="press"
                           onClick={() => setActPicker({date, existing:null})}
                           style={{width:18,height:18,borderRadius:99,
                             border:"1.5px dashed #8B73FF80",background:"transparent",
                             display:"flex",alignItems:"center",justifyContent:"center",
                             fontSize:13,color:"#8B73FF",cursor:"pointer",lineHeight:1}}>+</button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1401,16 +1409,18 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
                       const weekend = isWeekend(date);
+                      const feriado = isFeriado(date);
                       const isToday = date === today;
                       return (
                         <div key={date} style={{
                           textAlign:"center",
                           fontSize:13,fontWeight:800,
                           padding:"4px 2px 2px",
-                          color: isToday ? "#fff" : weekend ? T.muted : T.text,
-                          background: isToday ? color : weekend ? T.surface2 : T.surface,
+                          color: isToday ? "#fff" : feriado ? "#EF4444" : weekend ? T.muted : T.text,
+                          background: isToday ? color : feriado ? "#EF444418" : weekend ? T.surface2 : T.surface,
                           borderRadius:"4px 4px 0 0",
                           fontFamily:"'Bricolage Grotesque',sans-serif",
+                          borderTop: feriado ? "2px solid #EF4444" : "none",
                         }}>
                           {dayNum}
                         </div>
@@ -1423,6 +1433,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                     <div key={rowIdx} style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                       {week.map(date => {
                         const weekend = isWeekend(date);
+                        const feriado = isFeriado(date);
                         const asignados = yaAsignados(date);
                         const entry = asignados[rowIdx]; // { nombre, tipo }
                         const nombre = entry?.nombre;
@@ -1437,7 +1448,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                         return (
                           <div key={date} style={{
                             minHeight:26,
-                            background: weekend && !nombre ? T.surface2 : entryBg,
+                            background: nombre ? entryBg : feriado ? "#EF444410" : weekend ? T.surface2 : T.surface,
                             display:"flex",alignItems:"center",justifyContent:"center",
                             position:"relative",minWidth:0,overflow:"hidden",
                           }}>
@@ -1465,13 +1476,18 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:8}}>
                     {week.map(date => {
                       const weekend = isWeekend(date);
+                      const feriado = isFeriado(date);
                       const elegibles = elegiblesParaDia(date, tipo).filter(n=>!nombresAsignados(date).includes(n));
-                      const disabled = elegibles.length === 0 || (weekend && tipo!=="N" && tipo!=="A");
+                      // Feriado: solo Noche. Finde: todo menos Día/Poli.
+                      const disabled = elegibles.length === 0
+                        || (feriado && tipo !== "N")
+                        || (weekend && tipo!=="N" && tipo!=="A");
                       return (
                         <div key={date} style={{
-                          background: weekend ? T.surface2 : T.surface,
+                          background: feriado ? "#EF444410" : weekend ? T.surface2 : T.surface,
                           display:"flex",alignItems:"center",justifyContent:"center",
                           padding:"3px 0",borderRadius:"0 0 4px 4px",
+                          borderBottom: feriado ? "2px solid #EF4444" : "none",
                         }}>
                           {!disabled && (
                             <button className="press" onClick={() => setPicker({date})}
