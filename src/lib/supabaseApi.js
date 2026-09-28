@@ -192,7 +192,9 @@ export async function addArtroRegistro(registro) {
   const lista = await getArtroRegistros();
   // Se relee justo antes de escribir para minimizar perder registros
   // guardados por otro dispositivo mientras se cronometraba.
-  const siguiente = [registro, ...lista].slice(0, 300);
+  // El tope existe sólo para que el JSON no crezca sin control; se dejó alto
+  // porque el histórico importado ya supera los mil registros.
+  const siguiente = [registro, ...lista].slice(0, 5000);
   const ok = await setConfigJSON("artro_registros", siguiente);
   return ok ? siguiente : null;
 }
