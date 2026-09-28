@@ -16,7 +16,7 @@ const FOTOS = [
   "/fotos/WhatsApp Image 2026-05-02 at 16.37.38 (5).jpeg",
 ];
 
-export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowThemePicker, onShowEditor, T }) {
+export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowThemePicker, onShowEditor, onShowArtro, T }) {
   const [showSug, setShowSug]     = useState(false);
   const [text, setText]           = useState("");
   const [sent, setSent]           = useState(false);
@@ -64,6 +64,11 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
           style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
           <span style={{fontSize:15}}>✎</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Editor</span>
+        </button>
+        <button className="press" onClick={onShowArtro}
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          <span style={{fontSize:15}}>⏱️</span>
+          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Artro</span>
         </button>
         <button className="press" onClick={() => setShowSubirTabla(true)}
           style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>

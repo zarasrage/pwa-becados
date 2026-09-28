@@ -33,6 +33,7 @@ import { TabEditor } from "./tabs/TabEditor.jsx";
 import { TabPabellones } from "./tabs/TabPabellones.jsx";
 import { TabSeminarioJuego } from "./tabs/TabSeminarioJuego.jsx";
 import { TabArtro } from "./tabs/TabArtro.jsx";
+import { ArtroBecados } from "./tabs/ArtroBecados.jsx";
 import { TabFellows } from "./tabs/TabFellows.jsx";
 import { useSplash } from "./hooks/useSplash.js";
 
@@ -64,7 +65,7 @@ export default function App() {
   const [showSwap, setShowSwap] = useState(false);
   const [showPabellones, setShowPabellones] = useState(false);
   const [showSeminarioJuego, setShowSeminarioJuego] = useState(false);
-  const [showArtro, setShowArtro]           = useState(false);
+  const [artro, setArtro] = useState(null);   // { becado, desdeSettings } | null
   const [showFellows, setShowFellows]       = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
 
@@ -146,9 +147,10 @@ export default function App() {
   };
 
   const anyOverlay = showRotaciones || showTurnos || showMapa || showEstadisticas
-    || showEquipos || showEditor || showPabellones || showSeminarioJuego || showArtro || showFellows;
+    || showEquipos || showEditor || showPabellones || showSeminarioJuego || artro || showFellows;
 
   const quickLinks = <QuickLinks onNav={handleNav} T={T}/>;
+  const abrirArtro = () => setArtro({ becado, desdeSettings:false });
 
   if (loadingInit) return (
     <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",maxWidth:480,margin:"0 auto"}}>
@@ -175,7 +177,7 @@ export default function App() {
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={(tipos)=>{ setEditorTipos(tipos); setShowEditor(true); }} T={T}/>
+        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={(tipos)=>{ setEditorTipos(tipos); setShowEditor(true); }} onShowArtro={()=>{ setShowSettings(false); setArtro({ becado:null, desdeSettings:true }); }} T={T}/>
       )}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
       {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
@@ -208,17 +210,24 @@ export default function App() {
         ? <TabPabellones onBack={() => setShowPabellones(false)} T={T}/>
       : showSeminarioJuego
         ? <TabSeminarioJuego onBack={() => setShowSeminarioJuego(false)} T={T}/>
-      : showArtro
-        ? <TabArtro onBack={() => setShowArtro(false)} T={T}/>
+      : artro
+        ? (artro.becado
+            ? <TabArtro becado={artro.becado} T={T}
+                onBack={() => artro.desdeSettings
+                  ? setArtro({ becado:null, desdeSettings:true })   // vuelve al listado
+                  : setArtro(null)}/>
+            : <ArtroBecados T={T}
+                onPick={n => setArtro({ becado:n, desdeSettings:true })}
+                onBack={() => setArtro(null)}/>)
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
       : !becado ? (
-          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} onShowArtro={() => setShowArtro(true)} error={initError} T={T}/>
+          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
       ) : (
         <>
-          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
-          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
-          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} T={T}/></div>
+          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
+          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
+          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}

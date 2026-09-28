@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TURNO } from "../../constants/turnos.js";
 
-export function TurnoCard({ tipo, index, T }) {
+export function TurnoCard({ tipo, index, onClick, T }) {
   const t = TURNO[tipo];
   if (!t) return null;
   const [pressed, setPressed] = useState(false);
@@ -22,6 +22,7 @@ export function TurnoCard({ tipo, index, T }) {
         boxShadow: pressed ? `0 0 14px ${t.glow}` : "none",
         transition: "all 0.12s ease",
       }}
+      onClick={onClick}
       onPointerDown={() => setPressed(true)}
       onPointerUp={() => setPressed(false)}
       onPointerLeave={() => setPressed(false)}

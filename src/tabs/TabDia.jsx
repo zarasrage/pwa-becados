@@ -22,7 +22,7 @@ import { SemCard } from "../components/ui/SemCard.jsx";
 import { ActividadCard } from "../components/ui/ActividadCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
-export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
+export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const isOnline = useOnline();
@@ -136,7 +136,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, T }) {
 
               {(mediodia.length > 0 || artroCode) && <SectionDivider label="Mediodía" T={T}/>}
               {mediodia.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
-              {artroCode && <TurnoCard key="turno-artro" tipo={artroCode} index={cardIdx++} T={T}/>}
+              {artroCode && <TurnoCard key="turno-artro" tipo={artroCode} index={cardIdx++} onClick={onArtro} T={T}/>}
 
               {(tarde.length > 0 || (diaCode && !isPoliAM)) && <SectionDivider label="Tarde" T={T}/>}
               {tarde.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}

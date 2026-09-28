@@ -16,7 +16,7 @@ import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 
-export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
+export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(() => {
     const d = new Date();
@@ -160,7 +160,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, T }) {
                       )}
                       {day.turno?.diaCode && (() => { const t=TURNO[day.turno.diaCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
                       {day.turno?.nocheCode && (() => { const t=TURNO[day.turno.nocheCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
-                      {day.turno?.artroCode && (() => { const t=TURNO[day.turno.artroCode]; return t ? <span style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`}}>{t.label}</span> : null; })()}
+                      {day.turno?.artroCode && (() => { const t=TURNO[day.turno.artroCode]; return t ? <span className="press" onClick={onArtro} style={{fontSize:12,fontWeight:700,color:t.accent,background:t.light,borderRadius:99,padding:"1px 7px",border:`1px solid ${t.accent}30`,cursor:"pointer"}}>{t.label} ›</span> : null; })()}
                     </div>
                   </div>
                   {claseCPQ && (

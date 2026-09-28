@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { todayISO } from "../utils/dates.js";
-import { safeStorage } from "../utils/storage.js";
-import { getBecados, getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
+import { getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
 
 // Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
 // (hoy se pueden cambiar sin migrar porque no hay registros previos).
@@ -38,13 +37,6 @@ function IconoMano({ espejo }) {
 const MANOS = [
   { id: "izq", label: "Izquierda", espejo: true  },
   { id: "der", label: "Derecha",   espejo: false },
-];
-
-// Rangos por universidad (mismo orden por id que usa el resto de la app)
-const GRUPOS = [
-  { label: "UNAB",   desde: 0,  hasta: 15 },
-  { label: "UANDES", desde: 15, hasta: 33 },
-  { label: "IST",    desde: 33, hasta: 36 },
 ];
 
 function fmt(ms) {
@@ -103,70 +95,8 @@ function Foto({ src, alt, style, T }) {
   );
 }
 
-// ── Selección de quién eres ──────────────────────────────────────────────────
-function SelectBecadoArtro({ becados, onPick, T }) {
-  return (
-    <>
-      <div className="anim" style={{textAlign:"center",marginBottom:20}}>
-        <div style={{fontSize:40,lineHeight:1,marginBottom:8}}>⏱️</div>
-        <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:22,fontWeight:800,color:T.text,lineHeight:1.1}}>
-          ¿Quién eres?
-        </div>
-        <div style={{fontSize:12.5,color:T.muted,marginTop:4}}>Para registrar tus propios tiempos</div>
-      </div>
-
-      {GRUPOS.map(g => {
-        const nombres = becados.slice(g.desde, g.hasta);
-        if (!nombres.length) return null;
-        return (
-          <div key={g.label} className="anim" style={{marginBottom:14}}>
-            <div style={{
-              display:"flex",alignItems:"center",gap:6,marginBottom:7,
-              fontSize:11,fontWeight:700,letterSpacing:"0.1em",
-              color:T.muted,textTransform:"uppercase",
-            }}>
-              <span style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:T.muted}}/>
-              {g.label}
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-              {nombres.map(n => (
-                <button key={n} className="press" onClick={() => onPick(n)}
-                  style={{
-                    display:"flex",alignItems:"center",gap:8,
-                    background:T.surface,border:`1px solid ${T.border}`,
-                    borderRadius:12,padding:"9px 10px",cursor:"pointer",textAlign:"left",
-                    fontFamily:"'Inter',sans-serif",minWidth:0,overflow:"hidden",
-                  }}>
-                  <span style={{
-                    width:28,height:28,borderRadius:9,flexShrink:0,
-                    background:`${T.accent}18`,color:T.accent,fontWeight:800,fontSize:13,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontFamily:"'Bricolage Grotesque',sans-serif",
-                  }}>
-                    {n.charAt(0).toUpperCase()}
-                  </span>
-                  <span style={{
-                    minWidth:0,flex:1,fontSize:13,fontWeight:500,color:T.text,
-                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
-                  }}>
-                    {n}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-export function TabArtro({ onBack, T }) {
+export function TabArtro({ becado, onBack, T }) {
   const hoy = todayISO();
-
-  // Quién registra (se recuerda entre sesiones)
-  const [becados, setBecados] = useState([]);
-  const [becado, setBecado] = useState(() => safeStorage.get("artroBecado") || "");
 
   // Cronómetro
   const [running, setRunning] = useState(false);
@@ -182,16 +112,11 @@ export function TabArtro({ onBack, T }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const [porBorrar, setPorBorrar] = useState(null);   // registro esperando confirmación
 
   useEffect(() => {
-    getBecados().then(r => setBecados(r.becados || [])).catch(() => setBecados([]));
     getArtroRegistros().then(r => { setRegistros(r); setLoading(false); });
   }, []);
-
-  function elegirBecado(n) {
-    safeStorage.set("artroBecado", n);
-    setBecado(n);
-  }
 
   useEffect(() => {
     if (!running) return;
@@ -246,8 +171,11 @@ export function TabArtro({ onBack, T }) {
     setSaving(false);
   }
 
-  async function borrar(id) {
-    const lista = await deleteArtroRegistro(id);
+  async function confirmarBorrado() {
+    const reg = porBorrar;
+    setPorBorrar(null);
+    if (!reg) return;
+    const lista = await deleteArtroRegistro(reg.id);
     if (lista) setRegistros(lista);
   }
 
@@ -267,11 +195,10 @@ export function TabArtro({ onBack, T }) {
           Artro
         </div>
         {becado && (
-          <button className="press" onClick={() => { safeStorage.remove("artroBecado"); setBecado(""); }}
-            style={{
+          <div style={{
               marginLeft:"auto",display:"flex",alignItems:"center",gap:6,
               height:30,padding:"0 10px 0 6px",borderRadius:99,
-              border:`1px solid ${T.accent}35`,background:`${T.accent}12`,cursor:"pointer",
+              border:`1px solid ${T.accent}35`,background:`${T.accent}12`,
               fontFamily:"'Inter',sans-serif",
             }}>
             <span style={{
@@ -281,17 +208,11 @@ export function TabArtro({ onBack, T }) {
               {becado.charAt(0).toUpperCase()}
             </span>
             <span style={{fontSize:12.5,fontWeight:600,color:T.accent}}>{becado}</span>
-            <span style={{fontSize:10,color:T.accent,opacity:0.7}}>▾</span>
-          </button>
+          </div>
         )}
       </div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
-
-        {!becado ? (
-          <SelectBecadoArtro becados={becados} onPick={elegirBecado} T={T}/>
-        ) : (
-        <>
 
         {/* Tipo de ejercicio — fila horizontal para no empujar el cronómetro */}
         <div className="anim" style={{marginBottom:14}}>
@@ -498,58 +419,66 @@ export function TabArtro({ onBack, T }) {
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {misRegistros.map((r, i) => {
               const t = TIPOS.find(x => x.id === r.tipo);
+              const izq = r.mano === "izq";
               return (
                 <div key={r.id} className="anim" style={{
                   animationDelay:`${Math.min(i,10)*25}ms`,
-                  display:"flex",alignItems:"center",gap:10,
+                  display:"flex",alignItems:"center",gap:11,
                   background:T.surface,border:`1px solid ${T.border}`,
                   borderRadius:12,padding:"10px 12px",
                 }}>
-                  {t?.img
-                    ? <Foto src={t.img} alt={t.label} T={T} style={{width:30,height:30,objectFit:"contain",flexShrink:0}}/>
-                    : <span style={{fontSize:16,flexShrink:0}}>•</span>}
-                  <span style={{flex:1,minWidth:0}}>
-                    <span style={{display:"block",fontSize:13.5,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {t?.label || r.tipo}
-                      <span style={{
-                        fontSize:10.5,fontWeight:700,marginLeft:7,padding:"2px 7px",borderRadius:99,
-                        color: r.conTapa ? T.accent : T.muted,
-                        background: r.conTapa ? `${T.accent}16` : T.surface2,
-                        border:`1px solid ${r.conTapa ? T.accent+"35" : T.border}`,
-                      }}>
-                        {r.conTapa ? "con tapa" : "sin tapa"}
-                      </span>
-                      {r.mano && (
-                        <span style={{
-                          display:"inline-flex",alignItems:"center",gap:3,
-                          fontSize:10.5,fontWeight:700,marginLeft:5,padding:"2px 7px",borderRadius:99,
-                          color:T.sub,background:T.surface2,border:`1px solid ${T.border}`,
-                          verticalAlign:"middle",
-                        }}>
-                          <span style={{display:"inline-flex",width:12,height:12}}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                              style={{transform: r.mano === "izq" ? "scaleX(-1)" : "none"}}>
-                              <path d="M18 11V6a2 2 0 0 0-4 0"/>
-                              <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
-                              <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
-                              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
-                            </svg>
-                          </span>
-                          {r.mano === "izq" ? "izq" : "der"}
-                        </span>
-                      )}
+                  {/* Tiempo a la izquierda: es el dato principal */}
+                  <span style={{flexShrink:0,minWidth:74}}>
+                    <span style={{
+                      display:"block",
+                      fontFamily:"'Bricolage Grotesque',sans-serif",
+                      fontSize:18,fontWeight:800,color:T.accent,
+                      fontVariantNumeric:"tabular-nums",lineHeight:1.1,
+                    }}>
+                      {fmt(r.ms)}
                     </span>
-                    <span style={{fontSize:11.5,color:T.muted}}>{fechaCorta(r.fecha)}</span>
+                    <span style={{fontSize:11,color:T.muted}}>{fechaCorta(r.fecha)}</span>
                   </span>
-                  <span style={{
-                    fontFamily:"'Bricolage Grotesque',sans-serif",
-                    fontSize:16,fontWeight:800,color:T.accent,flexShrink:0,
-                    fontVariantNumeric:"tabular-nums",
-                  }}>
-                    {fmt(r.ms)}
+
+                  {/* Condiciones */}
+                  <span style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span style={{
+                      display:"inline-flex",alignItems:"center",gap:4,
+                      fontSize:11,fontWeight:600,color:T.sub,
+                      background:T.surface2,borderRadius:7,padding:"3px 7px",
+                    }}>
+                      <span style={{
+                        width:8,height:8,borderRadius:"50%",flexShrink:0,
+                        background: r.conTapa ? T.sub : "transparent",
+                        border:`1.5px solid ${T.sub}`,
+                      }}/>
+                      {r.conTapa ? "tapa" : "s/tapa"}
+                    </span>
+                    {r.mano && (
+                      <span style={{
+                        display:"inline-flex",alignItems:"center",gap:4,
+                        fontSize:11,fontWeight:600,color:T.sub,
+                        background:T.surface2,borderRadius:7,padding:"3px 7px",
+                      }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+                          style={{transform: izq ? "scaleX(-1)" : "none",flexShrink:0}}>
+                          <path d="M18 11V6a2 2 0 0 0-4 0"/>
+                          <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
+                          <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+                          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+                        </svg>
+                        {izq ? "izq" : "der"}
+                      </span>
+                    )}
                   </span>
-                  <button className="press" onClick={() => borrar(r.id)}
+
+                  {/* Ejercicio a la derecha */}
+                  {t?.img && (
+                    <Foto src={t.img} alt={t.label} T={T}
+                      style={{width:28,height:28,objectFit:"contain",flexShrink:0,opacity:0.85}}/>
+                  )}
+                  <button className="press" onClick={() => setPorBorrar(r)}
                     style={{
                       width:26,height:26,borderRadius:8,flexShrink:0,
                       border:`1px solid ${T.border}`,background:"transparent",
@@ -562,10 +491,42 @@ export function TabArtro({ onBack, T }) {
             })}
           </div>
         )}
-
-        </>
-        )}
       </div>
+
+      {porBorrar && (
+        <div onClick={() => setPorBorrar(null)}
+          style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",
+            justifyContent:"center",padding:24,background:"rgba(0,0,0,0.55)"}}>
+          <div onClick={e => e.stopPropagation()} className="anim"
+            style={{width:"100%",maxWidth:330,background:T.surface,borderRadius:18,
+              border:`1px solid ${T.border}`,padding:"22px 20px 18px",
+              boxShadow:"0 12px 48px rgba(0,0,0,0.35)",textAlign:"center"}}>
+            <div style={{fontSize:30,marginBottom:10}}>🗑️</div>
+            <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:18,fontWeight:800,color:T.text,marginBottom:6}}>
+              ¿Borrar este tiempo?
+            </div>
+            <div style={{fontSize:13,color:T.muted,marginBottom:18,lineHeight:1.45}}>
+              {TIPOS.find(t => t.id === porBorrar.tipo)?.label || porBorrar.tipo}
+              {" · "}{fmt(porBorrar.ms)}{" · "}{fechaCorta(porBorrar.fecha)}
+              <br/>No se puede deshacer.
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button className="press" onClick={() => setPorBorrar(null)}
+                style={{flex:1,height:44,borderRadius:12,border:`1px solid ${T.border}`,
+                  background:T.surface2,color:T.sub,fontSize:14,fontWeight:600,cursor:"pointer",
+                  fontFamily:"'Inter',sans-serif"}}>
+                Cancelar
+              </button>
+              <button className="press" onClick={confirmarBorrado}
+                style={{flex:1,height:44,borderRadius:12,border:"none",
+                  background:"#EF4444",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",
+                  fontFamily:"'Inter',sans-serif"}}>
+                Borrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

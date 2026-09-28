@@ -22,7 +22,7 @@ function formatDayLabel(iso) {
   return new Date(y, m - 1, d).toLocaleDateString("es-CL", { weekday:"long", day:"numeric", month:"long" });
 }
 
-export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
+export function TabMes({ becado, onChangeBecado, quickLinks, onArtro, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
@@ -231,13 +231,17 @@ export function TabMes({ becado, onChangeBecado, quickLinks, T }) {
                         const t = TURNO[code];
                         if (!t) return null;
                         return (
-                          <div key={code} style={{display:"flex",alignItems:"center",gap:10,background:`${t.accent}10`,border:`1px solid ${t.accent}25`,borderLeft:`3px solid ${t.accent}`,borderRadius:8,padding:"8px 12px"}}>
+                          <div key={code}
+                            onClick={code === "A" ? onArtro : undefined}
+                            className={code === "A" ? "press" : ""}
+                            style={{display:"flex",alignItems:"center",gap:10,background:`${t.accent}10`,border:`1px solid ${t.accent}25`,borderLeft:`3px solid ${t.accent}`,borderRadius:8,padding:"8px 12px",cursor: code === "A" ? "pointer" : "default"}}>
                             <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:t.accent,lineHeight:1.2,minWidth:44}}>
                               {t.desde}
                               <div style={{fontSize:13,opacity:0.5,marginTop:1}}>{t.hasta}</div>
                             </div>
                             <div style={{width:1,height:24,background:`${t.accent}25`}}/>
-                            <div style={{fontSize:13,fontWeight:500,color:T.text}}>{t.label}</div>
+                            <div style={{fontSize:13,fontWeight:500,color:T.text,flex:1}}>{t.label}</div>
+                            {code === "A" && <span style={{fontSize:13,color:t.accent,opacity:0.8}}>›</span>}
                           </div>
                         );
                       })}
