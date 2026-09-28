@@ -294,7 +294,7 @@ export async function getDaily(becado, dateStr) {
     TyP:"Tobillo y Pie", Col:"Columna", I:"Infantil",
     A:"Anestesia", rx:"Radiología", F:"Fisiatría",
     V:"Vacaciones", T:"Tumores", CPQ:"Cirugía Plástica",
-    TMT:"TMT General",
+    TMT:"TMT General", E:"Urgencias",
   };
 
   return {
