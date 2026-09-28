@@ -18,6 +18,9 @@ export default defineConfig({
           "pwa-*.png",
           "artro/*.webp",
         ],
+        // xlsx solo se usa al exportar (acción puntual y con red): no vale
+        // sumarle 429 KB a la instalación de todos.
+        globIgnores: ["**/xlsx-*.js"],
       },
       manifest: {
         name: "MimApp",

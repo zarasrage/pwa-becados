@@ -118,6 +118,46 @@ export function TabTurnos({ onBack, T }) {
 
   const SEM_COLOR = "#E879F9";
 
+  // Exporta el mes visible (según la pestaña activa) como calendario en Excel.
+  // xlsx se carga sólo al exportar: pesa bastante y no vale precargarlo.
+  const [exportando, setExportando] = useState(false);
+  async function exportarExcel() {
+    if (exportando) return;
+    setExportando(true);
+    try {
+      const XLSX = await import("xlsx");
+      const etiqueta = TURNO_TABS.find(t => t.id === sub)?.label || sub;
+      const filas = [
+        [`${etiqueta.toUpperCase()} — ${monthLabel(year, month).toUpperCase()}`],
+        [],
+        ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"],
+      ];
+
+      for (let i = 0; i < slots.length; i += 7) {
+        const semana = slots.slice(i, i + 7);
+        filas.push(semana.map(iso => (iso ? Number(iso.split("-")[2]) : "")));
+
+        const contenido = semana.map(iso => {
+          const d = iso && lookup[iso];
+          if (!d) return [];
+          if (sub === "S") return [[d.presenter, d.title].filter(Boolean).join(" — ")];
+          return d.names.map(n => (n.isAM ? `${n.name} (AM)` : n.name));
+        });
+        const alto = Math.max(0, ...contenido.map(c => c.length));
+        for (let r = 0; r < alto; r++) filas.push(contenido.map(c => c[r] || ""));
+        filas.push([]);
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(filas);
+      ws["!cols"] = Array.from({ length: 7 }, () => ({ wch: 16 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, etiqueta.slice(0, 31));
+      XLSX.writeFile(wb, `${etiqueta}-${year}-${String(month + 1).padStart(2, "0")}.xlsx`);
+    } finally {
+      setExportando(false);
+    }
+  }
+
   return (
     <div
       ref={scrollRef}
@@ -155,6 +195,19 @@ export function TabTurnos({ onBack, T }) {
               {t.label}
             </button>
           ))}
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+          <button className="press" onClick={exportarExcel} disabled={!data || exportando}
+            style={{
+              display:"flex",alignItems:"center",gap:6,height:32,padding:"0 12px",borderRadius:99,
+              border:`1px solid ${T.border}`,background:T.surface2,
+              color: (!data || exportando) ? T.muted : T.sub,
+              fontSize:12.5,fontWeight:600,fontFamily:"'Inter',sans-serif",
+              cursor: (!data || exportando) ? "default" : "pointer",
+            }}>
+            <span style={{fontSize:13}}>⬇</span>
+            {exportando ? "Generando…" : "Exportar Excel"}
+          </button>
         </div>
       </div>
 
