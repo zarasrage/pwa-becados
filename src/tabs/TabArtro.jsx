@@ -21,6 +21,25 @@ const TAPAS = [
   { conTapa: false, label: "Sin tapa", img: "/artro/tapa-sin.webp" },
 ];
 
+// Ícono de mano; el izquierdo es el mismo espejado.
+function IconoMano({ espejo }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ transform: espejo ? "scaleX(-1)" : "none" }}>
+      <path d="M18 11V6a2 2 0 0 0-4 0"/>
+      <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
+      <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+    </svg>
+  );
+}
+
+const MANOS = [
+  { id: "izq", label: "Izquierda", espejo: true  },
+  { id: "der", label: "Derecha",   espejo: false },
+];
+
 // Rangos por universidad (mismo orden por id que usa el resto de la app)
 const GRUPOS = [
   { label: "UNAB",   desde: 0,  hasta: 15 },
@@ -158,6 +177,7 @@ export function TabArtro({ onBack, T }) {
   // Registro
   const [tipo, setTipo] = useState(TIPOS[0].id);
   const [conTapa, setConTapa] = useState(true);
+  const [mano, setMano] = useState("der");
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -213,6 +233,7 @@ export function TabArtro({ onBack, T }) {
       fecha: hoy,
       tipo,
       conTapa,
+      mano,
       ms: Math.round(ms),
     };
     const lista = await addArtroRegistro(registro);
@@ -362,6 +383,35 @@ export function TabArtro({ onBack, T }) {
           </div>
         </div>
 
+        {/* Mano */}
+        <div className="anim" style={{marginBottom:20}}>
+          <div style={{fontSize:11.5,fontWeight:700,letterSpacing:"0.08em",color:T.muted,textTransform:"uppercase",marginBottom:8}}>
+            Mano
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            {MANOS.map(m => {
+              const sel = mano === m.id;
+              return (
+                <button key={m.id} className="press" onClick={() => setMano(m.id)}
+                  style={{
+                    flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                    height:46,borderRadius:13,cursor:"pointer",
+                    border:`1.5px solid ${sel ? T.accent+"70" : T.border}`,
+                    background: sel ? `${T.accent}12` : T.surface,
+                    boxShadow: sel ? `0 0 14px ${T.accent}20` : "none",
+                    color: sel ? T.accent : T.sub,
+                    fontSize:14,fontWeight: sel ? 700 : 500,
+                    fontFamily:"'Inter',sans-serif",
+                    transition:"border-color 0.15s, background 0.15s",
+                  }}>
+                  <IconoMano espejo={m.espejo}/>
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Cronómetro */}
         <div className="anim" style={{display:"flex",flexDirection:"column",alignItems:"center",marginBottom:20}}>
           <button className="press" onClick={toggle}
@@ -461,6 +511,26 @@ export function TabArtro({ onBack, T }) {
                       }}>
                         {r.conTapa ? "con tapa" : "sin tapa"}
                       </span>
+                      {r.mano && (
+                        <span style={{
+                          display:"inline-flex",alignItems:"center",gap:3,
+                          fontSize:10.5,fontWeight:700,marginLeft:5,padding:"2px 7px",borderRadius:99,
+                          color:T.sub,background:T.surface2,border:`1px solid ${T.border}`,
+                          verticalAlign:"middle",
+                        }}>
+                          <span style={{display:"inline-flex",width:12,height:12}}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                              style={{transform: r.mano === "izq" ? "scaleX(-1)" : "none"}}>
+                              <path d="M18 11V6a2 2 0 0 0-4 0"/>
+                              <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
+                              <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+                              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+                            </svg>
+                          </span>
+                          {r.mano === "izq" ? "izq" : "der"}
+                        </span>
+                      )}
                     </span>
                     <span style={{fontSize:11.5,color:T.muted}}>{fechaCorta(r.fecha)}</span>
                   </span>
