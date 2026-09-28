@@ -177,7 +177,7 @@ export function TabArtro({ onBack, T }) {
   // Registro
   const [tipo, setTipo] = useState(TIPOS[0].id);
   const [conTapa, setConTapa] = useState(true);
-  const [mano, setMano] = useState("der");
+  const [mano, setMano] = useState("der");   // siempre queda una mano registrada
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
