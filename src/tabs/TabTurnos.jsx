@@ -118,24 +118,47 @@ export function TabTurnos({ onBack, T }) {
 
   const SEM_COLOR = "#E879F9";
 
-  // Exporta el mes visible (según la pestaña activa) como calendario en Excel.
-  // xlsx se carga sólo al exportar: pesa bastante y no vale precargarlo.
+  // Exporta el mes visible (según la pestaña activa) como calendario en Excel,
+  // replicando el formato de la planilla del servicio: título gris, encabezado
+  // naranjo, números en blanco y nombres en azul, con feriados en rojo.
+  // Se usa xlsx-js-style (el xlsx community ignora los estilos al escribir) y
+  // se carga con import dinámico porque pesa ~430 KB.
   const [exportando, setExportando] = useState(false);
   async function exportarExcel() {
     if (exportando) return;
     setExportando(true);
     try {
-      const XLSX = await import("xlsx");
+      const XLSX = (await import("xlsx-js-style")).default;
+
+      const GRIS = "BFBFBF", NARANJO = "F4B183", AZUL = "8EA9DB", ROJO = "FF5B5B", BLANCO = "FFFFFF";
+      const borde = { style: "thin", color: { rgb: "7F7F7F" } };
+      const bordes = { top: borde, bottom: borde, left: borde, right: borde };
+      const centro = { horizontal: "center", vertical: "center" };
+      const celda = (v, fondo, opts = {}) => ({
+        v: v === undefined || v === null ? "" : v,
+        t: typeof v === "number" ? "n" : "s",
+        s: {
+          fill: { patternType: "solid", fgColor: { rgb: fondo } },
+          font: { name: "Calibri", sz: 11, bold: !!opts.bold },
+          alignment: centro,
+          border: bordes,
+        },
+      });
+
       const etiqueta = TURNO_TABS.find(t => t.id === sub)?.label || sub;
-      const filas = [
-        [`${etiqueta.toUpperCase()} — ${monthLabel(year, month).toUpperCase()}`],
-        [],
-        ["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"],
-      ];
+      const titulo = `${monthLabel(year, month).toUpperCase()}  TURNOS ${etiqueta.toUpperCase()}`;
+      const filas = [];
+
+      filas.push([celda(titulo, GRIS, { bold: true }), ...Array(6).fill(celda("", GRIS))]);
+      filas.push(["LUNES","MARTES","MIÉRCOLES","JUEVES","VIERNES","SÁBADO","DOMINGO"]
+        .map(d => celda(d, NARANJO, { bold: true })));
 
       for (let i = 0; i < slots.length; i += 7) {
         const semana = slots.slice(i, i + 7);
-        filas.push(semana.map(iso => (iso ? Number(iso.split("-")[2]) : "")));
+        const feriados = semana.map(iso => !!iso && isFeriado(iso));
+
+        filas.push(semana.map((iso, c) =>
+          celda(iso ? Number(iso.split("-")[2]) : "", feriados[c] ? ROJO : BLANCO, { bold: true })));
 
         const contenido = semana.map(iso => {
           const d = iso && lookup[iso];
@@ -143,13 +166,18 @@ export function TabTurnos({ onBack, T }) {
           if (sub === "S") return [[d.presenter, d.title].filter(Boolean).join(" — ")];
           return d.names.map(n => (n.isAM ? `${n.name} (AM)` : n.name));
         });
-        const alto = Math.max(0, ...contenido.map(c => c.length));
-        for (let r = 0; r < alto; r++) filas.push(contenido.map(c => c[r] || ""));
-        filas.push([]);
+        const alto = Math.max(1, ...contenido.map(c => c.length));
+        for (let r = 0; r < alto; r++) {
+          filas.push(contenido.map((c, ci) => celda(c[r] || "", feriados[ci] ? ROJO : AZUL)));
+        }
+        filas.push(semana.map((_, c) => celda("", feriados[c] ? ROJO : AZUL)));
       }
 
       const ws = XLSX.utils.aoa_to_sheet(filas);
-      ws["!cols"] = Array.from({ length: 7 }, () => ({ wch: 16 }));
+      ws["!cols"] = Array.from({ length: 7 }, () => ({ wch: 15 }));
+      ws["!rows"] = filas.map(() => ({ hpt: 18 }));
+      ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, etiqueta.slice(0, 31));
       XLSX.writeFile(wb, `${etiqueta}-${year}-${String(month + 1).padStart(2, "0")}.xlsx`);
@@ -157,6 +185,7 @@ export function TabTurnos({ onBack, T }) {
       setExportando(false);
     }
   }
+
 
   return (
     <div
