@@ -252,7 +252,8 @@ export function TabArtro({ onBack, T }) {
   }
 
   const puedeGuardar = ms > 0 && !saving;
-  const misRegistros = registros.filter(r => r.becado === becado);
+  // El historial muestra sólo el ejercicio elegido arriba
+  const misRegistros = registros.filter(r => r.becado === becado && r.tipo === tipo);
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40,position:"relative",zIndex:1}}>
@@ -471,6 +472,13 @@ export function TabArtro({ onBack, T }) {
           <span style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:16,fontWeight:800,color:T.text}}>
             Mis tiempos
           </span>
+          <span style={{
+            fontSize:11.5,fontWeight:700,color:T.accent,
+            background:`${T.accent}16`,border:`1px solid ${T.accent}35`,
+            borderRadius:99,padding:"2px 9px",
+          }}>
+            {TIPOS.find(t => t.id === tipo)?.label || tipo}
+          </span>
           {misRegistros.length > 0 && (
             <span style={{fontSize:11,fontWeight:700,color:T.muted}}>{misRegistros.length}</span>
           )}
@@ -484,7 +492,7 @@ export function TabArtro({ onBack, T }) {
             border:`1px dashed ${T.border}`,borderRadius:14,
           }}>
             <div style={{fontSize:28,marginBottom:8,opacity:0.35}}>⏱️</div>
-            <div style={{fontSize:13,color:T.muted}}>Todavía no tienes tiempos guardados</div>
+            <div style={{fontSize:13,color:T.muted}}>Todavía no tienes tiempos de este ejercicio</div>
           </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
