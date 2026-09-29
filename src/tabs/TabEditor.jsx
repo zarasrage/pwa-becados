@@ -243,9 +243,12 @@ function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliM
 }
 
 // ── Contadores ────────────────────────────────────────────────────────────────
-function Contadores({ turnos, dates, tipo, T }) {
+function Contadores({ turnos, dates, tipo, elegibles = [], T }) {
   const COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
   const byBecado = {};
+  // Parte con todos los que podrían tener turno en el período, para que los
+  // que aún no tienen ninguno salgan en cero en vez de quedar fuera de la lista.
+  for (const n of elegibles) byBecado[n] = [];
   for (const [date, entries] of Object.entries(turnos)) {
     if (!dates.includes(date)) continue;
     for (const e of entries) {
@@ -254,7 +257,8 @@ function Contadores({ turnos, dates, tipo, T }) {
       byBecado[n].push(date);
     }
   }
-  const entries = Object.entries(byBecado).sort((a,b)=>b[1].length-a[1].length);
+  const entries = Object.entries(byBecado)
+    .sort((a,b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
   if (!entries.length) return null;
 
   function gapWarning(fechas) {
@@ -281,11 +285,13 @@ function Contadores({ turnos, dates, tipo, T }) {
             <div key={nombre} style={{display:"flex",alignItems:"center",
               justifyContent:"space-between",padding:"6px 14px",
               borderBottom:`1px solid ${T.border}20`}}>
-              <span style={{fontSize:12,color:warn?"#EF4444":T.text,fontWeight:warn?700:400}}>{nombre}</span>
+              <span style={{fontSize:12,color:warn?"#EF4444":fechas.length?T.text:T.muted,fontWeight:warn?700:400}}>{nombre}</span>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 {warn && <span style={{fontSize:12,color:"#EF4444",fontWeight:700}}>⚠ &lt;6d</span>}
-                <span style={{fontSize:12,fontWeight:700,color:COLOR[tipo],
-                  background:`${COLOR[tipo]}18`,border:`1px solid ${COLOR[tipo]}30`,
+                <span style={{fontSize:12,fontWeight:700,
+                  color: fechas.length ? COLOR[tipo] : T.muted,
+                  background: fechas.length ? `${COLOR[tipo]}18` : T.surface2,
+                  border:`1px solid ${fechas.length ? COLOR[tipo]+"30" : T.border}`,
                   borderRadius:99,padding:"2px 9px",minWidth:24,textAlign:"center"}}>
                   {fechas.length}
                 </span>
@@ -1106,6 +1112,13 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setSaving(false);
   }
 
+  // Quiénes podrían tener este turno en alguna fecha del período visible
+  const elegiblesDelPeriodo = useMemo(() => {
+    const set = new Set();
+    for (const d of dates) for (const n of elegiblesParaDia(d, tipo)) set.add(n);
+    return [...set];
+  }, [dates, tipo, becados, rotMap]);
+
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
   const weekdayOnly = tipo !== "N" && tipo !== "AC";
   const COL_LABELS = weekdayOnly ? COL_LABELS_5 : COL_LABELS_7;
@@ -1506,7 +1519,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               );
             })}
 
-            <Contadores turnos={turnos} dates={dates} tipo={tipo} T={T}/>
+            <Contadores turnos={turnos} dates={dates} tipo={tipo} elegibles={elegiblesDelPeriodo} T={T}/>
           </>
         )}
       </div>
