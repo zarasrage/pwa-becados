@@ -58,6 +58,45 @@ function extraerFecha(filename) {
   return null;
 }
 
+// Las columnas del Excel se mueven cada cierto tiempo (p.ej. en sept/2026
+// desapareció "UPQ ficha" y todo lo siguiente corrió un lugar), así que se
+// ubican por nombre de encabezado y no por posición.
+function mapearColumnas(encabezados) {
+  const norm = (s) =>
+    String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .trim().toLowerCase().replace(/\s+/g, " ");
+  const cols = encabezados.map((h, i) => ({ i, h: norm(h) }));
+  const usados = new Set();
+  const buscar = (...patrones) => {
+    for (const p of patrones) {
+      const c = cols.find((c) => !usados.has(c.i) && c.h && c.h.includes(p));
+      if (c) { usados.add(c.i); return c.i; }
+    }
+    return -1;
+  };
+  // De lo más específico a lo más genérico: si no, "tipo de paciente" o
+  // "contacto paciente" se quedarían con la columna de "paciente".
+  const m = {};
+  m.hora             = buscar("hora");
+  m.dur_plan         = buscar("dur");
+  m.tipo_paciente    = buscar("tipo de paciente");
+  m.clase_episodio   = buscar("clase de episodio");
+  m.episodio         = buscar("episodio");
+  m.destino          = buscar("destino");
+  m.rut              = buscar("rut");
+  m.prestacion       = buscar("prestacion");
+  m.equipo           = buscar("equipo");
+  m.habitacion       = buscar("habitaci");
+  m.alertas          = buscar("alerta");
+  m.transporte       = buscar("transporte");
+  m.upq_instrumental = buscar("upq instrumental", "instrumental");
+  m.upq_ficha        = buscar("upq ficha", "ficha");
+  m.coordinadora     = buscar("coordinadora", "arsenalera");
+  m.paciente         = buscar("paciente");
+  m.hora_fin         = buscar("hora");   // la segunda "HORA", si existe
+  return m;
+}
+
 function parsearExcel(buffer, filename) {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   const registros = [];
@@ -78,6 +117,11 @@ function parsearExcel(buffer, filename) {
 
     // Log header row so column mapping can be verified in Netlify Function Logs
     console.log(`[excel] sheet="${sheetName}" headerRow=${headerRow} cols:`, rows[headerRow].map((v, i) => `${i}:${v}`).join(" | "));
+    const mapa = mapearColumnas(rows[headerRow]);
+    console.log(`[excel] mapeo:`, Object.entries(mapa).map(([k, v]) => `${k}=${v}`).join(" | "));
+    if (mapa.upq_instrumental === -1) {
+      console.error('[excel] no se encontró la columna de instrumental: el detalle quedará vacío');
+    }
 
     const fecha = extraerFecha(filename);
     let pabellon = null;
@@ -96,8 +140,8 @@ function parsearExcel(buffer, filename) {
       const hora = parseTime(row[0]);
       if (!hora && !isCancelacion) continue;
 
-      const col = (n) => (row.length > n ? limpiar(row[n]) : null);
-      const dur = col(1);
+      const col = (n) => (n >= 0 && row.length > n ? limpiar(row[n]) : null);
+      const dur = col(mapa.dur_plan);
 
       if (!firstDataLogged) {
         firstDataLogged = true;
@@ -108,22 +152,22 @@ function parsearExcel(buffer, filename) {
         fecha,
         pabellon,
         hora,
-        hora_fin: row.length > 16 ? parseTime(row[16]) : null,
+        hora_fin: mapa.hora_fin >= 0 && row.length > mapa.hora_fin ? parseTime(row[mapa.hora_fin]) : null,
         dur_plan: dur && /^\d/.test(dur) ? parseInt(dur) : null,
-        tipo_paciente: col(2),
-        episodio: col(3),
-        clase_episodio: col(4),
-        destino: col(5),
-        rut: col(6),
-        paciente: col(7),
-        prestacion: col(8),
-        equipo: col(9),
-        habitacion: col(10),
-        alertas: col(11),
-        transporte: col(12),
-        upq_ficha: col(13),
-        upq_instrumental: col(14),
-        coordinadora: col(15),
+        tipo_paciente: col(mapa.tipo_paciente),
+        episodio: col(mapa.episodio),
+        clase_episodio: col(mapa.clase_episodio),
+        destino: col(mapa.destino),
+        rut: col(mapa.rut),
+        paciente: col(mapa.paciente),
+        prestacion: col(mapa.prestacion),
+        equipo: col(mapa.equipo),
+        habitacion: col(mapa.habitacion),
+        alertas: col(mapa.alertas),
+        transporte: col(mapa.transporte),
+        upq_ficha: col(mapa.upq_ficha),
+        upq_instrumental: col(mapa.upq_instrumental),
+        coordinadora: col(mapa.coordinadora),
         cancelada: isCancelacion,
         diagnostico: null,
         cirugia: null,
