@@ -10,7 +10,12 @@ const INICIO = { P: "14:00", p: "08:00", D: "14:00", N: "20:00", A: "13:00" };
 const NOMBRE = { P: "Poli", p: "Poli mañana", D: "turno de día", N: "turno de noche", A: "Artroscopía" };
 
 // Lo que el usuario marca en la app → tipos de la tabla turnos.
+// "PS" (poli staff) no es un turno: son los bloques "Poli ..." del horario de
+// la rotación, así que se arma aparte.
 const TIPOS_DE_PREF = { D: ["D"], N: ["N"], P: ["P", "p"], A: ["A"] };
+
+// Rotaciones que no tienen horario propio (misma lista que getDaily).
+const SIN_HORARIO = ["V", "I", "A", "rx", "F", "T", "CPQ", "TMT"];
 
 const ANTES_MIN = { "15m": 15, "30m": 30, "1h": 60 };
 const VENTANA = 15;            // la función corre cada 15 min
@@ -61,6 +66,33 @@ export const handler = async () => {
   const porDia = {};
   for (const t of (turnos || [])) (porDia[`${t.becado_id}|${t.fecha}`] ||= []).push(t.tipo);
 
+  // Poli staff: sale del horario de la rotación, no de la tabla de turnos.
+  const quierenPoliStaff = subs.some(s => s.tipos.includes("PS"));
+  let rotDe = {}, catalogo = {};
+  if (quierenPoliStaff) {
+    const { data: rots } = await sb()
+      .from("rotaciones").select("becado_id,codigo,fecha_inicio,fecha_fin")
+      .in("becado_id", Object.values(idDe))
+      .lte("fecha_inicio", manana).gte("fecha_fin", fecha);
+    for (const r of (rots || [])) {
+      for (const d of [fecha, manana]) {
+        if (r.fecha_inicio <= d && d <= r.fecha_fin) rotDe[`${r.becado_id}|${d}`] = r.codigo;
+      }
+    }
+    catalogo = await getConfigJSON("horario_catalogo", {});
+  }
+
+  // Bloques "Poli ..." del horario de esa rotación ese día de la semana.
+  const poliStaffDe = (becadoId, dia) => {
+    const cod = rotDe[`${becadoId}|${dia}`];
+    if (!cod || SIN_HORARIO.includes(cod)) return [];
+    const dow = new Date(dia + "T12:00:00Z").getUTCDay();   // 0=Dom
+    const bloques = catalogo?.[cod]?.[String(dow === 0 ? 7 : dow)] || [];
+    return bloques
+      .filter(b => /^\s*poli\b/i.test(String(b.act || "")))
+      .map(b => ({ act: String(b.act).trim(), inicio: String(b.i).slice(0, 5) }));
+  };
+
   // No repetir un aviso ya mandado (la ventana puede solaparse entre corridas).
   const yaEnviados = await getConfigJSON("push_enviados", {});
   const nuevos = {};
@@ -69,36 +101,38 @@ export const handler = async () => {
     const id = idDe[s.becado];
     if (!id) continue;
 
-    // Según "cuándo recordar", qué día miramos y en qué minuto avisamos.
+    // "Cuándo recordar" define qué día se mira y en qué minuto se avisa.
+    // El día anterior a las 22:00 mira mañana; el resto, hoy.
+    const dia = s.cuando === "vispera" ? manana : fecha;
+    const minutoDe = (inicio) =>
+      ANTES_MIN[s.cuando] != null ? m2(inicio) - ANTES_MIN[s.cuando]
+      : s.cuando === "manana"     ? HORA_MANANA
+      : s.cuando === "vispera"    ? HORA_VISPERA
+      : null;
+
     const casos = [];
-    if (ANTES_MIN[s.cuando] != null) {
-      for (const tipo of (porDia[`${id}|${fecha}`] || [])) {
-        casos.push({ dia: fecha, tipo, minuto: m2(INICIO[tipo] || "08:00") - ANTES_MIN[s.cuando] });
-      }
-    } else if (s.cuando === "manana") {
-      for (const tipo of (porDia[`${id}|${fecha}`] || [])) {
-        casos.push({ dia: fecha, tipo, minuto: HORA_MANANA });
-      }
-    } else if (s.cuando === "vispera") {
-      for (const tipo of (porDia[`${id}|${manana}`] || [])) {
-        casos.push({ dia: manana, tipo, minuto: HORA_VISPERA });
+    for (const tipo of (porDia[`${id}|${dia}`] || [])) {
+      if (!s.tipos.some(p => (TIPOS_DE_PREF[p] || []).includes(tipo))) continue;
+      const inicio = INICIO[tipo] || "08:00";
+      casos.push({ id: tipo, titulo: `Tienes ${NOMBRE[tipo] || tipo}`, inicio, minuto: minutoDe(inicio) });
+    }
+    if (s.tipos.includes("PS")) {
+      for (const b of poliStaffDe(id, dia)) {
+        casos.push({ id: `PS-${b.act}`, titulo: `Tienes ${b.act}`, inicio: b.inicio, minuto: minutoDe(b.inicio) });
       }
     }
 
     for (const c of casos) {
-      const quiere = (s.tipos || []).some(p => (TIPOS_DE_PREF[p] || []).includes(c.tipo));
-      if (!quiere || !enVentana(c.minuto, minutos)) continue;
+      if (c.minuto == null || !enVentana(c.minuto, minutos)) continue;
 
-      const clave = `${s.endpoint.slice(-24)}|${c.dia}|${c.tipo}|${s.cuando}`;
+      const clave = `${s.endpoint.slice(-24)}|${dia}|${c.id}|${s.cuando}`;
       if (yaEnviados[clave]) continue;
 
-      const cuando = c.dia === fecha
-        ? `hoy a las ${INICIO[c.tipo]}`
-        : `mañana a las ${INICIO[c.tipo]}`;
+      const cuando = dia === fecha ? "hoy" : "mañana";
       await enviar([s], {
         tipo: "recordatorio",
-        titulo: `Tienes ${NOMBRE[c.tipo] || c.tipo}`,
-        body: `Empieza ${cuando}.`,
+        titulo: c.titulo,
+        body: `Empieza ${cuando} a las ${c.inicio}.`,
         tag: clave,
       });
       nuevos[clave] = Date.now();
