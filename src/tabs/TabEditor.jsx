@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase.js";
-import { bumpDataVersion, getTemasCatalogo } from "../lib/supabaseApi.js";
+import { bumpDataVersion, getTemasCatalogo, getPabellonK, resetPabellonK } from "../lib/supabaseApi.js";
 import { todayISO, offsetDate } from "../utils/dates.js";
 import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
@@ -667,8 +667,25 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const [loading, setLoading] = useState(true);
   const [historial, setHistorial] = useState([]); // máx 5 acciones deshacer
   const [refreshSem, setRefreshSem] = useState(0);
+  // Pabellón K: solo el editor maestro puede liberar el llamado del día.
+  const puedeResetK = !!allowedTipos?.includes("K");
+  const [pkReg, setPkReg] = useState(null);     // { fecha, por, ts } de hoy
+  const [pkReseteando, setPkReseteando] = useState(false);
   const [ultimoSemPorBecado, setUltimoSemPorBecado] = useState({}); // { nombre: fecha del último seminario expuesto (cualquier tipo) }
   const [ultimoSemPorBecadoYTag, setUltimoSemPorBecadoYTag] = useState({}); // { tag: { nombre: fecha } }
+
+  useEffect(() => {
+    if (!puedeResetK) return;
+    let vivo = true;
+    getPabellonK().then(r => { if (vivo) setPkReg(r?.fecha === today ? r : null); });
+    return () => { vivo = false; };
+  }, [puedeResetK, today]);
+
+  const handleResetK = async () => {
+    setPkReseteando(true);
+    if (await resetPabellonK()) setPkReg(null);
+    setPkReseteando(false);
+  };
 
   const dates = useMemo(() => get4Weeks(monday), [monday]);
   const start = dates[0];
@@ -1144,7 +1161,9 @@ export function TabEditor({ onBack, allowedTipos, T }) {
       {/* Header */}
       <div style={{padding:"calc(var(--sat) + 14px) 12px 0",position:"sticky",top:0,
         background:T.bg,zIndex:10,borderBottom:`1px solid ${T.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+        {/* paddingRight: el engranaje es fijo arriba a la derecha y tapaba los
+            botones de esta fila (deshacer, liberar K). */}
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingRight:40}}>
           <button className="press" onClick={onBack}
             style={{width:30,height:30,borderRadius:8,border:`1px solid ${T.border}`,
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
@@ -1162,6 +1181,16 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   borderRadius:8,border:`1px solid ${T.border}`,background:T.surface2,
                   fontSize:13,fontWeight:600,color:saving?T.muted:T.text,cursor:saving?"not-allowed":"pointer"}}>
                 ↩ <span style={{fontSize:12,color:T.muted}}>({historial.length})</span>
+              </button>
+            )}
+            {puedeResetK && pkReg && (
+              <button className="press" onClick={handleResetK} disabled={pkReseteando}
+                title={`Lo llamó ${pkReg.por}`}
+                style={{display:"flex",alignItems:"center",gap:5,height:28,padding:"0 10px",
+                  borderRadius:8,border:"1px solid #EF444455",background:"#EF444414",
+                  fontSize:12,fontWeight:700,color:"#EF4444",
+                  cursor:pkReseteando?"not-allowed":"pointer",opacity:pkReseteando?0.6:1}}>
+                ↺ <span>Liberar K</span>
               </button>
             )}
             {saving && <div style={{fontSize:12,color:T.muted}}>Guardando…</div>}

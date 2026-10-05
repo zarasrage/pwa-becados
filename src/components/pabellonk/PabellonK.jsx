@@ -72,12 +72,15 @@ export function PabellonK({ becado, onBack, T }) {
           style={{width:32,height:32,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub}}>‹</button>
       </div>
 
-      <div style={{flex:1,display:"flex",flexDirection:"column",padding:"14px 16px calc(var(--sab) + 22px)",minHeight:0}}>
+      <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"14px 16px calc(var(--sab) + 22px)",minHeight:0}}>
         <button
           onClick={apretar}
           disabled={usado || enviando || cargando}
           style={{
-            flex:1,width:"100%",border:"none",borderRadius:26,
+            // Disco: ocupa el ancho disponible pero nunca más que el alto, para
+            // que siga siendo un círculo en pantallas chicas.
+            width:"min(100%, 70vh)",aspectRatio:"1",maxHeight:"100%",
+            border:"none",borderRadius:"50%",
             background: usado
               ? "linear-gradient(160deg,#6B7280 0%,#4B5563 100%)"
               : "linear-gradient(160deg,#FF2D2D 0%,#C81E1E 100%)",
@@ -93,7 +96,7 @@ export function PabellonK({ becado, onBack, T }) {
         >
           <span style={{
             fontFamily:"'Bricolage Grotesque',sans-serif",
-            fontSize:52,fontWeight:800,lineHeight:0.95,letterSpacing:"-0.02em",textAlign:"center",
+            fontSize:44,fontWeight:800,lineHeight:1,letterSpacing:"-0.02em",textAlign:"center",
           }}>
             PABELLON<br/>K
           </span>

@@ -252,6 +252,12 @@ export async function dispararPabellonK(becado, hoy) {
   return { ok: confirmado?.por === becado && confirmado?.ts === reg.ts, reg: confirmado || reg };
 }
 
+// Libera el llamado para que se pueda volver a apretar hoy. Solo lo usa el
+// editor maestro desde la app.
+export async function resetPabellonK() {
+  return await setConfigJSON("pabellon_k", null);
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase
