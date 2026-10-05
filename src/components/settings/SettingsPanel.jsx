@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SubirTabla } from "./SubirTabla.jsx";
 
 const EDITOR_PINS = {
   "1429": ["N","D","P","A","S","AC","K"],
@@ -24,7 +23,6 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
   const [loading, setLoading]     = useState(false);
   const [showPin, setShowPin]     = useState(false);
   const [pinInput, setPinInput]   = useState("");
-  const [showSubirTabla, setShowSubirTabla] = useState(false);
 
   return (
     <>
@@ -38,22 +36,12 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
         fontFamily:"'Inter',sans-serif",
       }}>
         <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase",color:T.muted,marginBottom:12}}>
-          Apariencia
+          Menú
         </div>
         <button className="press" onClick={onSwapTurnos}
           style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
           <span style={{fontSize:15}}>⇄</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Cambio de turno</span>
-        </button>
-        <button className="press" onClick={onPreviewSplash}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
-          <span style={{fontSize:15}}>🎭</span>
-          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Ver intro</span>
-        </button>
-        <button className="press" onClick={onShowThemePicker}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
-          <span style={{fontSize:15}}>🎨</span>
-          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Temas</span>
         </button>
         <button className="press" onClick={() => { setShowSug(true); setSent(false); setText(""); }}
           style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
@@ -71,14 +59,9 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Artro</span>
         </button>
         <button className="press" onClick={onShowConfig}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
           <span style={{fontSize:15}}>⚙️</span>
           <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Configuraciones</span>
-        </button>
-        <button className="press" onClick={() => setShowSubirTabla(true)}
-          style={{width:"100%",display:"flex",alignItems:"center",gap:9,background:T.surface2,border:`1px solid ${T.border}`,borderRadius:10,padding:"10px 12px"}}>
-          <span style={{fontSize:15}}>🔪</span>
-          <span style={{fontSize:13,fontWeight:500,color:T.sub}}>Subir tabla</span>
         </button>
       </div>
 
@@ -129,8 +112,6 @@ export function SettingsPanel({ onClose, onPreviewSplash, onSwapTurnos, onShowTh
           </div>
         </div>
       )}
-
-      {showSubirTabla && <SubirTabla onClose={() => setShowSubirTabla(false)} T={T} />}
 
       {showSug && (
         <>

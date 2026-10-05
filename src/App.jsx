@@ -228,7 +228,10 @@ export default function App() {
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
       : showConfig
-        ? <ConfigGeneral becado={becado} onBack={() => setShowConfig(false)} T={T}/>
+        ? <ConfigGeneral becado={becado}
+            onShowThemePicker={()=>setShowThemePicker(true)}
+            onPreviewSplash={()=>{setShowConfig(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}}
+            onBack={() => setShowConfig(false)} T={T}/>
       : !becado ? (
           <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
       ) : (

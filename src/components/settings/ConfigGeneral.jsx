@@ -158,7 +158,7 @@ function Notificaciones({ becado, onBack, T }) {
 }
 
 // ── Menú general ─────────────────────────────────────────────────────────────
-export function ConfigGeneral({ becado, onBack, T }) {
+export function ConfigGeneral({ becado, onShowThemePicker, onPreviewSplash, onBack, T }) {
   const [vista, setVista] = useState("menu");
 
   if (vista === "notificaciones") {
@@ -171,6 +171,12 @@ export function ConfigGeneral({ becado, onBack, T }) {
       <Seccion titulo="General" T={T}>
         <Fila label="Notificaciones" desc="Turnos, recordatorios y Pabellón K" T={T}
           onClick={() => setVista("notificaciones")}
+          right={<span style={{fontSize:15,color:T.muted,flexShrink:0}}>›</span>}/>
+        <Fila label="Temas" desc="Apariencia de la app" T={T}
+          onClick={onShowThemePicker}
+          right={<span style={{fontSize:15,color:T.muted,flexShrink:0}}>›</span>}/>
+        <Fila label="Ver intro" desc="Vuelve a mostrar la animación de inicio" T={T}
+          onClick={onPreviewSplash}
           right={<span style={{fontSize:15,color:T.muted,flexShrink:0}}>›</span>}/>
       </Seccion>
     </Pantalla>
