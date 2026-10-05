@@ -6,6 +6,10 @@
 [functions."*"]
   timeout = 26
 
+# Recordatorios de turno: se revisa cada 15 min quién tiene algo por empezar.
+[functions."recordatorios"]
+  schedule = "*/15 * * * *"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

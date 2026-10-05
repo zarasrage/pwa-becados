@@ -228,7 +228,7 @@ export default function App() {
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
       : showConfig
-        ? <ConfigGeneral onBack={() => setShowConfig(false)} T={T}/>
+        ? <ConfigGeneral becado={becado} onBack={() => setShowConfig(false)} T={T}/>
       : !becado ? (
           <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
       ) : (

@@ -206,6 +206,28 @@ export async function deleteArtroRegistro(id) {
   return ok ? siguiente : null;
 }
 
+// ── Suscripciones de notificaciones push ─────────────────────────────────────
+// config.push_subs guarda un arreglo de dispositivos:
+// [{ endpoint, keys, becado, tipos, cuando, pabellonK }]
+// Las funciones de Netlify lo leen para decidir a quién mandarle cada aviso.
+export async function getPushSubs() {
+  const lista = await getConfigJSON("push_subs", []);
+  return Array.isArray(lista) ? lista : [];
+}
+
+export async function guardarPushSub(sub) {
+  // Se relee justo antes de escribir porque varios dispositivos pueden estar
+  // activando notificaciones al mismo tiempo.
+  const lista = await getPushSubs();
+  const siguiente = [sub, ...lista.filter(s => s.endpoint !== sub.endpoint)].slice(0, 200);
+  return await setConfigJSON("push_subs", siguiente);
+}
+
+export async function borrarPushSub(endpoint) {
+  const lista = await getPushSubs();
+  return await setConfigJSON("push_subs", lista.filter(s => s.endpoint !== endpoint));
+}
+
 // ── Pabellón K (llamado de una vez al día, para todos) ────────────────────────
 // Se guarda en config.pabellon_k como { fecha, por, ts }. El candado es por
 // fecha: si ya hay un registro de hoy, nadie más puede disparar el llamado.

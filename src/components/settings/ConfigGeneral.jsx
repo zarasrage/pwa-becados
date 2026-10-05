@@ -3,6 +3,7 @@ import {
   NOTIF_TIPOS, NOTIF_CUANDO,
   getNotifPrefs, setNotifPrefs, pedirPermisoNotificaciones,
 } from "../../utils/notifPrefs.js";
+import { registrarPush, desregistrarPush, pushSoportado, esIOS, instaladaEnInicio } from "../../utils/push.js";
 
 // Cabecera común de las pantallas de configuración.
 function Header({ titulo, onBack, T }) {
@@ -70,15 +71,28 @@ function Seccion({ titulo, nota, T, children }) {
 }
 
 // ── Notificaciones ───────────────────────────────────────────────────────────
-function Notificaciones({ onBack, T }) {
+function Notificaciones({ becado, onBack, T }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [denegado, setDenegado] = useState(false);
 
-  // Guarda y, si se está activando algo, pide permiso al navegador.
+  // iPhone solo entrega push si la app está instalada en la pantalla de inicio.
+  const faltaInstalar = esIOS() && !instaladaEnInicio();
+
+  // Guarda, y si quedó algo activado suscribe este dispositivo al push
+  // (pidiendo permiso la primera vez). Si no queda nada, se da de baja.
   const guardar = async (next, pidePermiso) => {
     setPrefs(next);
     setNotifPrefs(next);
-    if (pidePermiso) setDenegado(!await pedirPermisoNotificaciones());
+
+    const algoActivo = next.tipos.length > 0 || next.pabellonK;
+    if (!algoActivo) { await desregistrarPush(); setDenegado(false); return; }
+    if (!pushSoportado()) return;
+
+    if (pidePermiso && !await pedirPermisoNotificaciones()) { setDenegado(true); return; }
+    if (typeof Notification !== "undefined" && Notification.permission !== "granted") return;
+
+    setDenegado(false);
+    await registrarPush(becado, next);
   };
 
   const toggleTipo = (id) => {
@@ -90,6 +104,13 @@ function Notificaciones({ onBack, T }) {
   return (
     <Pantalla T={T}>
       <Header titulo="Notificaciones" onBack={onBack} T={T}/>
+
+      {faltaInstalar && (
+        <div style={{margin:"0 16px 16px",padding:"11px 13px",borderRadius:12,background:"#F59E0B14",border:"1px solid #F59E0B40",fontSize:12,color:T.sub,lineHeight:1.45,position:"relative",zIndex:1}}>
+          En iPhone las notificaciones solo llegan si agregas MimApp a la pantalla
+          de inicio: toca Compartir y luego "Agregar a inicio", y vuelve a entrar desde ahí.
+        </div>
+      )}
 
       <Seccion titulo="Qué quiero que me avisen" T={T}
         nota="Se avisa solo de los turnos que te tocan a ti.">
@@ -137,11 +158,11 @@ function Notificaciones({ onBack, T }) {
 }
 
 // ── Menú general ─────────────────────────────────────────────────────────────
-export function ConfigGeneral({ onBack, T }) {
+export function ConfigGeneral({ becado, onBack, T }) {
   const [vista, setVista] = useState("menu");
 
   if (vista === "notificaciones") {
-    return <Notificaciones onBack={() => setVista("menu")} T={T}/>;
+    return <Notificaciones becado={becado} onBack={() => setVista("menu")} T={T}/>;
   }
 
   return (

@@ -21,6 +21,9 @@ export default defineConfig({
         // xlsx solo se usa al exportar (acción puntual y con red): no vale
         // sumarle ~870 KB a la instalación de todos.
         globIgnores: ["**/xlsx*.js"],
+        // Handler de push: se inyecta en el SW generado para que las
+        // notificaciones lleguen con la app cerrada.
+        importScripts: ["push-sw.js"],
       },
       manifest: {
         name: "MimApp",

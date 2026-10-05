@@ -31,10 +31,29 @@ export function PabellonK({ becado, onBack, T }) {
   const usado = !!reg;
   const fueMio = reg?.por === becado;
 
+  // El llamado se dispara en el servidor: ahí se aplica el candado del día y se
+  // mandan las notificaciones. Si las claves de push todavía no están puestas,
+  // se cae al camino directo contra Supabase: el candado igual funciona, pero
+  // sin aviso al resto.
+  const llamar = async () => {
+    try {
+      const r = await fetch("/.netlify/functions/pabellon-k", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ becado, hoy }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        if (typeof d.ok === "boolean") return d;
+      }
+    } catch { /* sin red o función caída */ }
+    return await dispararPabellonK(becado, hoy);
+  };
+
   const apretar = async () => {
     if (usado || enviando) return;
     setEnviando(true);
-    const { ok, reg: actual } = await dispararPabellonK(becado, hoy);
+    const { ok, reg: actual } = await llamar();
     if (actual?.fecha === hoy) setReg(actual);
     setPerdido(!ok);
     setEnviando(false);
