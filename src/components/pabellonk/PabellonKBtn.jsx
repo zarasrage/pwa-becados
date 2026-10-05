@@ -16,16 +16,19 @@ export function PabellonKBtn({ onClick }) {
   if (!activo) return null;
 
   return (
+    // A propósito no es una píldora como el chip de rotación: es un disco
+    // sólido, para que no se confundan de un vistazo.
     <button className="press" onClick={onClick} aria-label="Llamar a Pabellón K"
       style={{
-        flexShrink:0,marginTop:2,
-        display:"flex",alignItems:"center",gap:6,
-        background:"#EF444418",border:"1px solid #EF444455",
-        borderRadius:99,padding:"5px 11px",cursor:"pointer",
-        fontFamily:"'Inter',sans-serif",
+        flexShrink:0,marginTop:1,
+        width:32,height:32,borderRadius:"50%",
+        display:"flex",alignItems:"center",justifyContent:"center",
+        background:"linear-gradient(160deg,#FF3B3B 0%,#C81E1E 100%)",
+        border:"none",boxShadow:"0 2px 8px rgba(200,30,30,0.45)",
+        cursor:"pointer",fontFamily:"'Bricolage Grotesque',sans-serif",
+        fontSize:16,fontWeight:800,color:"#fff",lineHeight:1,
       }}>
-      <span style={{width:7,height:7,borderRadius:"50%",background:"#EF4444",boxShadow:"0 0 6px #EF4444"}}/>
-      <span style={{fontSize:13,fontWeight:700,color:"#EF4444"}}>K</span>
+      K
     </button>
   );
 }
