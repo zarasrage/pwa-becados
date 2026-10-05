@@ -206,6 +206,30 @@ export async function deleteArtroRegistro(id) {
   return ok ? siguiente : null;
 }
 
+// ── Pabellón K (llamado de una vez al día, para todos) ────────────────────────
+// Se guarda en config.pabellon_k como { fecha, por, ts }. El candado es por
+// fecha: si ya hay un registro de hoy, nadie más puede disparar el llamado.
+export async function getPabellonK() {
+  const reg = await getConfigJSON("pabellon_k", null);
+  return reg && reg.fecha ? reg : null;
+}
+
+// Intenta disparar el llamado. Devuelve { ok, reg }:
+//   ok=true  → lo disparó este becado
+//   ok=false → ya estaba tomado hoy; reg dice por quién
+export async function dispararPabellonK(becado, hoy) {
+  const previo = await getPabellonK();
+  if (previo?.fecha === hoy) return { ok: false, reg: previo };
+
+  const reg = { fecha: hoy, por: becado, ts: new Date().toISOString() };
+  if (!await setConfigJSON("pabellon_k", reg)) return { ok: false, reg: previo };
+
+  // Releer: si dos personas apretaron casi al mismo tiempo, gana la última
+  // escritura y el resto tiene que enterarse de que no fue suyo.
+  const confirmado = await getPabellonK();
+  return { ok: confirmado?.por === becado && confirmado?.ts === reg.ts, reg: confirmado || reg };
+}
+
 // ── getBecados ────────────────────────────────────────────────────────────────
 export async function getBecados() {
   const { data, error } = await supabase

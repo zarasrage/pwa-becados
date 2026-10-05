@@ -15,6 +15,7 @@ import { useOnline } from "../hooks/useOnline.js";
 import { usePullToRefresh } from "../hooks/usePullToRefresh.js";
 import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
+import { PabellonKBtn } from "../components/pabellonk/PabellonKBtn.jsx";
 
 
 function formatDayLabel(iso) {
@@ -22,7 +23,7 @@ function formatDayLabel(iso) {
   return new Date(y, m - 1, d).toLocaleDateString("es-CL", { weekday:"long", day:"numeric", month:"long" });
 }
 
-export function TabMes({ becado, onChangeBecado, quickLinks, onArtro, T }) {
+export function TabMes({ becado, onChangeBecado, quickLinks, onArtro, onPabellonK, T }) {
   const today = useMemo(() => todayISO(), []);
   const [year, setYear]   = useState(() => Number(today.split("-")[0]));
   const [month, setMonth] = useState(() => Number(today.split("-")[1]) - 1);
@@ -70,7 +71,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, onArtro, T }) {
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <BecadoHeader eyebrow="Mi mes" name={becado} onTap={onChangeBecado} T={T}/>
+        <BecadoHeader eyebrow="Mi mes" name={becado} onTap={onChangeBecado} action={<PabellonKBtn onClick={onPabellonK}/>} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
           <button className="press" onClick={prevMonth} style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>

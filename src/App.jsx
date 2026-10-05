@@ -14,6 +14,8 @@ import {
 } from "./effects/index.js";
 import { ACCENT_MAP, ThemePicker } from "./components/settings/ThemePicker.jsx";
 import { SettingsPanel } from "./components/settings/SettingsPanel.jsx";
+import { ConfigGeneral } from "./components/settings/ConfigGeneral.jsx";
+import { PabellonK } from "./components/pabellonk/PabellonK.jsx";
 import { SwapTurnos } from "./components/swap/SwapTurnos.jsx";
 import { SplashScreen } from "./components/splash/SplashScreen.jsx";
 import { Spinner } from "./components/ui/Spinner.jsx";
@@ -68,6 +70,8 @@ export default function App() {
   const [artro, setArtro] = useState(null);   // { becado, desdeSettings } | null
   const [showFellows, setShowFellows]       = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showConfig, setShowConfig]         = useState(false);
+  const [showPabellonK, setShowPabellonK]   = useState(false);
 
   const ACCENT = ACCENT_MAP[theme] || "#348FFF";
   const T = { ...THEMES[theme], accent: ACCENT };
@@ -147,7 +151,8 @@ export default function App() {
   };
 
   const anyOverlay = showRotaciones || showTurnos || showMapa || showEstadisticas
-    || showEquipos || showEditor || showPabellones || showSeminarioJuego || artro || showFellows;
+    || showEquipos || showEditor || showPabellones || showSeminarioJuego || artro || showFellows
+    || showConfig;
 
   const quickLinks = <QuickLinks onNav={handleNav} T={T}/>;
   const abrirArtro = () => setArtro({ becado, desdeSettings:false });
@@ -177,8 +182,9 @@ export default function App() {
 
       <GearBtn onClick={()=>setShowSettings(s=>!s)} T={T}/>
       {showSettings && (
-        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={(tipos)=>{ setEditorTipos(tipos); setShowEditor(true); }} onShowArtro={()=>{ setShowSettings(false); setArtro({ becado:null, desdeSettings:true }); }} T={T}/>
+        <SettingsPanel onClose={()=>setShowSettings(false)} onPreviewSplash={()=>{setShowSettings(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}} onSwapTurnos={()=>{setShowSettings(false);setShowSwap(true);}} onShowThemePicker={()=>{setShowSettings(false);setShowThemePicker(true);}} onShowEditor={(tipos)=>{ setEditorTipos(tipos); setShowEditor(true); }} onShowArtro={()=>{ setShowSettings(false); setArtro({ becado:null, desdeSettings:true }); }} onShowConfig={()=>{ setShowSettings(false); setShowConfig(true); }} T={T}/>
       )}
+      {showPabellonK && becado && <PabellonK becado={becado} onBack={()=>setShowPabellonK(false)} T={T}/>}
       {showSwap && <SwapTurnos becados={becados} onClose={()=>setShowSwap(false)} T={T}/>}
       {showThemePicker && <ThemePicker current={theme} onSelect={applyTheme} onClose={()=>setShowThemePicker(false)}/>}
       {theme === "ocean"  && <OceanBubbles/>}
@@ -221,13 +227,15 @@ export default function App() {
                 onBack={() => setArtro(null)}/>)
       : showFellows
         ? <TabFellows onBack={() => setShowFellows(false)} T={T}/>
+      : showConfig
+        ? <ConfigGeneral onBack={() => setShowConfig(false)} T={T}/>
       : !becado ? (
           <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
       ) : (
         <>
-          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
-          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
-          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} T={T}/></div>
+          <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} onPabellonK={()=>setShowPabellonK(true)} T={T}/></div>
+          <div className={activeTab==="semana"?"tab-in":""} style={{display:activeTab==="semana"?"block":"none"}}><TabSemana becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} onPabellonK={()=>setShowPabellonK(true)} T={T}/></div>
+          <div className={activeTab==="mes"?"tab-in":""} style={{display:activeTab==="mes"?"block":"none"}}><TabMes becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} onPabellonK={()=>setShowPabellonK(true)} T={T}/></div>
           <TabBar active={activeTab} onChange={handleTabChange} T={T}/>
         </>
       )}

@@ -15,8 +15,9 @@ import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
+import { PabellonKBtn } from "../components/pabellonk/PabellonKBtn.jsx";
 
-export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, T }) {
+export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, onPabellonK, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [refDate, setRefDate] = useState(() => {
     const d = new Date();
@@ -106,7 +107,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, T }) {
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <BecadoHeader eyebrow="Mi semana" name={becado} onTap={onChangeBecado} T={T}/>
+        <BecadoHeader eyebrow="Mi semana" name={becado} onTap={onChangeBecado} action={<PabellonKBtn onClick={onPabellonK}/>} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
             style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>

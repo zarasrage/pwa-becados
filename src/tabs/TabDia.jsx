@@ -21,8 +21,9 @@ import { TurnoCard } from "../components/ui/TurnoCard.jsx";
 import { SemCard } from "../components/ui/SemCard.jsx";
 import { ActividadCard } from "../components/ui/ActividadCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
+import { PabellonKBtn } from "../components/pabellonk/PabellonKBtn.jsx";
 
-export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, T }) {
+export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, onPabellonK, T }) {
   const today = useMemo(()=>todayISO(),[]);
   const [date, setDate] = useState(today);
   const isOnline = useOnline();
@@ -73,7 +74,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, T }) {
       )}
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0",position:"relative",zIndex:1}}>
-        <BecadoHeader eyebrow="Mi día" name={becado} onTap={onChangeBecado} T={T}
+        <BecadoHeader eyebrow="Mi día" name={becado} onTap={onChangeBecado} action={<PabellonKBtn onClick={onPabellonK}/>} T={T}
           right={daily?.rotationCode && (
             <div style={{display:"flex",alignItems:"center",gap:6,background:c.light,border:`1px solid ${c.accent}30`,borderRadius:99,padding:"5px 11px",flexShrink:0,marginTop:2}}>
               <span style={{width:7,height:7,borderRadius:"50%",background:c.accent,display:"inline-block",boxShadow:`0 0 6px ${c.accent}`}}/>
