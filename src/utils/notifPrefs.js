@@ -9,7 +9,8 @@ export const NOTIF_TIPOS = [
   { id: "N",  label: "Turno noche", color: "#4F6EFF" },
   { id: "P",  label: "Poli",        color: "#06B6D4" },
   { id: "A",  label: "Artroscopía", color: "#72FF00" },
-  { id: "PS", label: "Poli staff",  color: "#E879F9" },
+  { id: "PS", label: "Poli staff",  color: "#A78BFA" },
+  { id: "S",  label: "Seminarios",  color: "#E879F9" },
 ];
 
 export const NOTIF_CUANDO = [

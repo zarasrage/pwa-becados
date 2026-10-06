@@ -113,7 +113,7 @@ function Notificaciones({ becado, onBack, T }) {
       )}
 
       <Seccion titulo="Qué quiero que me avisen" T={T}
-        nota="Se avisa solo de los turnos que te tocan a ti.">
+        nota="Se avisa de tus turnos, y del seminario del día si estás rotando.">
         {NOTIF_TIPOS.map(t => (
           <Fila key={t.id} label={t.label} punto={t.color} T={T}
             onClick={() => toggleTipo(t.id)}

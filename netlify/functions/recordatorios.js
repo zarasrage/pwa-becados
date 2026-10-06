@@ -17,6 +17,9 @@ const TIPOS_DE_PREF = { D: ["D"], N: ["N"], P: ["P", "p"], A: ["A"] };
 // Rotaciones que no tienen horario propio (misma lista que getDaily).
 const SIN_HORARIO = ["V", "I", "A", "rx", "F", "T", "CPQ", "TMT"];
 
+// Día de la semana → tag del seminario (misma tabla que getDaily).
+const SEMINARIO_DIA = { 2: "Seminario Hombro", 3: "Seminario Rodilla", 4: "Seminario Mano" };
+
 const ANTES_MIN = { "15m": 15, "30m": 30, "1h": 60 };
 const VENTANA = 15;            // la función corre cada 15 min
 const HORA_MANANA = 7 * 60;    // "el mismo día en la mañana"
@@ -67,9 +70,12 @@ export const handler = async () => {
   for (const t of (turnos || [])) (porDia[`${t.becado_id}|${t.fecha}`] ||= []).push(t.tipo);
 
   // Poli staff: sale del horario de la rotación, no de la tabla de turnos.
+  // Tanto poli staff como los seminarios dependen de si el becado está
+  // rotando ese día.
   const quierenPoliStaff = subs.some(s => s.tipos.includes("PS"));
+  const quierenSeminario = subs.some(s => s.tipos.includes("S"));
   let rotDe = {}, catalogo = {};
-  if (quierenPoliStaff) {
+  if (quierenPoliStaff || quierenSeminario) {
     const { data: rots } = await sb()
       .from("rotaciones").select("becado_id,codigo,fecha_inicio,fecha_fin")
       .in("becado_id", Object.values(idDe))
@@ -79,8 +85,30 @@ export const handler = async () => {
         if (r.fecha_inicio <= d && d <= r.fecha_fin) rotDe[`${r.becado_id}|${d}`] = r.codigo;
       }
     }
-    catalogo = await getConfigJSON("horario_catalogo", {});
+    if (quierenPoliStaff) catalogo = await getConfigJSON("horario_catalogo", {});
   }
+
+  // Seminarios de hoy y mañana, indexados por fecha.
+  const semDe = {};
+  if (quierenSeminario) {
+    const { data: sems } = await sb()
+      .from("seminarios").select("fecha,tag,hora,titulo,presentador_nombre")
+      .in("fecha", [fecha, manana]);
+    // Indexado por fecha+tag: si algún día quedara más de una fila, que no
+    // se pisen entre ellas y se tome igual la que corresponde al día.
+    for (const x of (sems || [])) semDe[`${x.fecha}|${x.tag}`] = x;
+  }
+
+  // El seminario del día le aparece a todo el que esté rotando, igual que en
+  // la app: martes hombro, miércoles rodilla, jueves mano.
+  const seminarioDe = (becadoId, dia) => {
+    if (!rotDe[`${becadoId}|${dia}`]) return null;
+    const dow = new Date(dia + "T12:00:00Z").getUTCDay();
+    const tag = SEMINARIO_DIA[dow];
+    const sem = tag ? semDe[`${dia}|${tag}`] : null;
+    if (!sem || !sem.hora) return null;
+    return { ...sem, inicio: String(sem.hora).slice(0, 5) };
+  };
 
   // Bloques "Poli ..." del horario de esa rotación ese día de la semana.
   const poliStaffDe = (becadoId, dia) => {
@@ -116,6 +144,19 @@ export const handler = async () => {
       const inicio = INICIO[tipo] || "08:00";
       casos.push({ id: tipo, titulo: `Tienes ${NOMBRE[tipo] || tipo}`, inicio, minuto: minutoDe(inicio) });
     }
+    if (s.tipos.includes("S")) {
+      const sem = seminarioDe(id, dia);
+      if (sem) {
+        const expone = sem.presentador_nombre === s.becado;
+        casos.push({
+          id: "S",
+          titulo: expone ? "Te toca exponer" : sem.tag,
+          // El título del seminario queda en "?" hasta que lo definen.
+          extra: sem.titulo && sem.titulo !== "?" ? ` — ${sem.titulo}` : "",
+          inicio: sem.inicio, minuto: minutoDe(sem.inicio),
+        });
+      }
+    }
     if (s.tipos.includes("PS")) {
       for (const b of poliStaffDe(id, dia)) {
         casos.push({ id: `PS-${b.act}`, titulo: `Tienes ${b.act}`, inicio: b.inicio, minuto: minutoDe(b.inicio) });
@@ -132,7 +173,7 @@ export const handler = async () => {
       await enviar([s], {
         tipo: "recordatorio",
         titulo: c.titulo,
-        body: `Empieza ${cuando} a las ${c.inicio}.`,
+        body: `Empieza ${cuando} a las ${c.inicio}.${c.extra || ""}`,
         tag: clave,
       });
       nuevos[clave] = Date.now();
