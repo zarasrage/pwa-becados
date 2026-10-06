@@ -14,12 +14,6 @@ const TIPOS = [
   { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp" },
 ];
 
-// "Sin tapa" se entrena con la cúpula transparente; "con tapa", con la opaca.
-const TAPAS = [
-  { conTapa: true,  label: "Con tapa", img: "/artro/tapa-con.webp" },
-  { conTapa: false, label: "Sin tapa", img: "/artro/tapa-sin.webp" },
-];
-
 // Ícono de mano; el izquierdo es el mismo espejado.
 function IconoMano({ espejo }) {
   return (
@@ -106,7 +100,6 @@ export function TabArtro({ becado, onBack, T }) {
 
   // Registro
   const [tipo, setTipo] = useState(TIPOS[0].id);
-  const [conTapa, setConTapa] = useState(true);
   const [mano, setMano] = useState("der");   // siempre queda una mano registrada
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +150,6 @@ export function TabArtro({ becado, onBack, T }) {
       becado,
       fecha: hoy,
       tipo,
-      conTapa,
       mano,
       ms: Math.round(ms),
     };
@@ -261,44 +253,6 @@ export function TabArtro({ becado, onBack, T }) {
                       ✓
                     </span>
                   )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Con / sin tapa */}
-        <div className="anim" style={{marginBottom:20}}>
-          <div style={{fontSize:11.5,fontWeight:700,letterSpacing:"0.08em",color:T.muted,textTransform:"uppercase",marginBottom:8}}>
-            Tapa
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            {TAPAS.map(t => {
-              const sel = conTapa === t.conTapa;
-              return (
-                <button key={t.label} className="press" onClick={() => setConTapa(t.conTapa)}
-                  style={{
-                    position:"relative",flex:1,
-                    display:"flex",alignItems:"center",gap:9,
-                    padding:"8px 10px",borderRadius:13,cursor:"pointer",textAlign:"left",
-                    border:`1.5px solid ${sel ? T.accent+"70" : T.border}`,
-                    background: sel ? `${T.accent}12` : T.surface,
-                    boxShadow: sel ? `0 0 14px ${T.accent}20` : "none",
-                    fontFamily:"'Inter',sans-serif",
-                    transition:"border-color 0.15s, background 0.15s",
-                  }}>
-                  <Foto src={t.img} alt={t.label} T={T}
-                    style={{
-                      width:44,height:44,objectFit:"contain",flexShrink:0,
-                      opacity: sel ? 1 : 0.65,
-                      transition:"opacity 0.15s",
-                    }}/>
-                  <span style={{
-                    fontSize:13.5,fontWeight: sel ? 700 : 500,
-                    color: sel ? T.accent : T.sub,
-                  }}>
-                    {t.label}
-                  </span>
                 </button>
               );
             })}
@@ -442,18 +396,6 @@ export function TabArtro({ becado, onBack, T }) {
 
                   {/* Condiciones */}
                   <span style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    <span style={{
-                      display:"inline-flex",alignItems:"center",gap:4,
-                      fontSize:11,fontWeight:600,color:T.sub,
-                      background:T.surface2,borderRadius:7,padding:"3px 7px",
-                    }}>
-                      <span style={{
-                        width:8,height:8,borderRadius:"50%",flexShrink:0,
-                        background: r.conTapa ? T.sub : "transparent",
-                        border:`1.5px solid ${T.sub}`,
-                      }}/>
-                      {r.conTapa ? "tapa" : "s/tapa"}
-                    </span>
                     {r.mano && (
                       <span style={{
                         display:"inline-flex",alignItems:"center",gap:4,

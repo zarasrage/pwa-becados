@@ -182,7 +182,7 @@ export async function addSeminarioPuntos(becadoId, delta) {
 
 // ── Entrenamiento de artroscopía (cronómetro) ─────────────────────────────────
 // Registros guardados en config.artro_registros (misma lógica que el resto):
-// [{ id, fecha, tipo, conTapa, ms }]
+// [{ id, fecha, tipo, mano, ms }]
 export async function getArtroRegistros() {
   const lista = await getConfigJSON("artro_registros", []);
   return Array.isArray(lista) ? lista : [];
