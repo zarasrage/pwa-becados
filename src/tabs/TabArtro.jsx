@@ -1,9 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { todayISO } from "../utils/dates.js";
 import { getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
+import { agruparEnCiclos, siguiente, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
 
 // Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
 // (hoy se pueden cambiar sin migrar porque no hay registros previos).
+// Mano abierta; la izquierda es la misma silueta espejada.
+function Mano({ izq, size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+      style={{transform: izq ? "scaleX(-1)" : "none",flexShrink:0}}>
+      <path d="M18 11V6a2 2 0 0 0-4 0"/>
+      <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
+      <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+    </svg>
+  );
+}
+
 const TIPOS = [
   { id: "Numeros",   label: "Números",   img: "/artro/numeros.webp" },
   { id: "Lineas",    label: "Líneas",    img: "/artro/lineas.webp" },
@@ -152,6 +167,9 @@ export function TabArtro({ becado, onBack, T }) {
       tipo,
       mano,
       ms: Math.round(ms),
+      // Marca de tiempo para poder ordenar dentro de un mismo día: sin esto,
+      // dos registros del mismo día no tienen cómo desempatarse.
+      ts: Date.now(),
     };
     const lista = await addArtroRegistro(registro);
     if (lista) {
@@ -174,6 +192,11 @@ export function TabArtro({ becado, onBack, T }) {
   const puedeGuardar = ms > 0 && !saving;
   // El historial muestra sólo el ejercicio elegido arriba
   const misRegistros = registros.filter(r => r.becado === becado && r.tipo === tipo);
+  // Más nuevo arriba: igual que el dibujo, el ciclo en curso queda primero y
+  // dentro de él la repetición más reciente también.
+  const ciclos = agruparEnCiclos(misRegistros);
+  const ciclosDesc = [...ciclos].reverse();
+  const toca = siguiente(ciclos);
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40,position:"relative",zIndex:1}}>
@@ -359,6 +382,23 @@ export function TabArtro({ becado, onBack, T }) {
           )}
         </div>
 
+        {/* Qué toca ahora en este ejercicio */}
+        <div style={{
+          display:"flex",alignItems:"center",gap:7,marginBottom:10,
+          background:`${T.accent}0E`,border:`1px solid ${T.accent}33`,
+          borderRadius:11,padding:"8px 11px",
+        }}>
+          <span style={{fontSize:10.5,fontWeight:700,letterSpacing:"0.07em",color:T.muted,textTransform:"uppercase"}}>
+            Te toca
+          </span>
+          <span style={{display:"flex",alignItems:"center",gap:6,marginLeft:"auto",fontSize:12.5,fontWeight:700,color:T.accent}}>
+            Ciclo {toca.ciclo} · R{toca.rep}
+            <span style={{display:"inline-flex",alignItems:"center",gap:3}}>
+              <Mano izq={toca.mano === "izq"} size={12}/>{toca.mano}
+            </span>
+          </span>
+        </div>
+
         {loading ? (
           <div style={{textAlign:"center",padding:24,color:T.muted,fontSize:13}}>Cargando…</div>
         ) : misRegistros.length === 0 ? (
@@ -370,64 +410,89 @@ export function TabArtro({ becado, onBack, T }) {
             <div style={{fontSize:13,color:T.muted}}>Todavía no tienes tiempos de este ejercicio</div>
           </div>
         ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {misRegistros.map((r, i) => {
-              const t = TIPOS.find(x => x.id === r.tipo);
-              const izq = r.mano === "izq";
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {ciclosDesc.map((c, idx) => {
+              const llenas = llenasDe(c);
+              const completo = llenas === REPS_POR_CICLO * 2;
               return (
-                <div key={r.id} className="anim" style={{
-                  animationDelay:`${Math.min(i,10)*25}ms`,
-                  display:"flex",alignItems:"center",gap:11,
-                  background:T.surface,border:`1px solid ${T.border}`,
-                  borderRadius:12,padding:"10px 12px",
+                <div key={c.n} className="anim" style={{
+                  animationDelay:`${Math.min(idx,8)*30}ms`,
+                  background:T.surface,border:`1px solid ${completo ? T.border : T.accent+"45"}`,
+                  borderRadius:14,overflow:"hidden",
                 }}>
-                  {/* Tiempo a la izquierda: es el dato principal */}
-                  <span style={{flexShrink:0,minWidth:74}}>
-                    <span style={{
-                      display:"block",
-                      fontFamily:"'Bricolage Grotesque',sans-serif",
-                      fontSize:18,fontWeight:800,color:T.accent,
-                      fontVariantNumeric:"tabular-nums",lineHeight:1.1,
-                    }}>
-                      {fmt(r.ms)}
+                  <div style={{
+                    display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
+                    background:T.surface2,borderBottom:`1px solid ${T.border}`,
+                  }}>
+                    <span style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:13.5,fontWeight:800,color:T.text}}>
+                      Ciclo {c.n}
                     </span>
-                    <span style={{fontSize:11,color:T.muted}}>{fechaCorta(r.fecha)}</span>
-                  </span>
+                    <span style={{marginLeft:"auto",fontSize:11,fontWeight:700,color:completo?"#13C045":T.muted}}>
+                      {completo ? "completo" : `${llenas}/${REPS_POR_CICLO * 2}`}
+                    </span>
+                  </div>
 
-                  {/* Condiciones */}
-                  <span style={{flex:1,minWidth:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    {r.mano && (
-                      <span style={{
-                        display:"inline-flex",alignItems:"center",gap:4,
-                        fontSize:11,fontWeight:600,color:T.sub,
-                        background:T.surface2,borderRadius:7,padding:"3px 7px",
-                      }}>
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
-                          style={{transform: izq ? "scaleX(-1)" : "none",flexShrink:0}}>
-                          <path d="M18 11V6a2 2 0 0 0-4 0"/>
-                          <path d="M14 10V4a2 2 0 0 0-4 0v2"/>
-                          <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
-                          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
-                        </svg>
-                        {izq ? "izq" : "der"}
-                      </span>
-                    )}
-                  </span>
+                  <div style={{padding:"7px 10px 10px",display:"flex",flexDirection:"column",gap:5}}>
+                    <div style={{display:"grid",gridTemplateColumns:`30px 1fr 1fr`,gap:6}}>
+                      <span/>
+                      {["izq","der"].map(m => (
+                        <span key={m} style={{
+                          display:"flex",alignItems:"center",justifyContent:"center",gap:4,
+                          fontSize:10.5,fontWeight:700,letterSpacing:"0.06em",
+                          color:T.muted,textTransform:"uppercase",
+                        }}>
+                          <Mano izq={m==="izq"} size={11}/>{m}
+                        </span>
+                      ))}
+                    </div>
 
-                  {/* Ejercicio a la derecha */}
-                  {t?.img && (
-                    <Foto src={t.img} alt={t.label} T={T}
-                      style={{width:28,height:28,objectFit:"contain",flexShrink:0,opacity:0.85}}/>
-                  )}
-                  <button className="press" onClick={() => setPorBorrar(r)}
-                    style={{
-                      width:26,height:26,borderRadius:8,flexShrink:0,
-                      border:`1px solid ${T.border}`,background:"transparent",
-                      color:T.muted,fontSize:13,cursor:"pointer",lineHeight:1,
-                    }}>
-                    ✕
-                  </button>
+                    {[...c.reps].reverse().map(r => (
+                      <div key={r.n} style={{display:"grid",gridTemplateColumns:`30px 1fr 1fr`,gap:6}}>
+                        <span style={{
+                          display:"flex",alignItems:"center",justifyContent:"center",
+                          fontSize:11,fontWeight:800,color:T.muted,
+                          fontFamily:"'Bricolage Grotesque',sans-serif",
+                        }}>
+                          R{r.n}
+                        </span>
+                        {["izq","der"].map(m => {
+                          const reg = r[m];
+                          const esTurno = !reg && toca.ciclo === c.n && toca.rep === r.n && toca.mano === m;
+                          if (!reg) return (
+                            <span key={m} style={{
+                              display:"flex",alignItems:"center",justifyContent:"center",
+                              minHeight:34,borderRadius:9,
+                              border:`1px dashed ${esTurno ? T.accent+"90" : T.border}`,
+                              background: esTurno ? `${T.accent}10` : "transparent",
+                              fontSize:10.5,fontWeight:700,
+                              color: esTurno ? T.accent : T.muted,
+                            }}>
+                              {esTurno ? "te toca" : ""}
+                            </span>
+                          );
+                          return (
+                            <button key={m} className="press" onClick={() => setPorBorrar(reg)}
+                              title={`${fechaCorta(reg.fecha)} — tocar para borrar`}
+                              style={{
+                                display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                                minHeight:34,borderRadius:9,cursor:"pointer",
+                                border:`1px solid ${T.border}`,background:T.surface2,
+                                fontFamily:"'Inter',sans-serif",lineHeight:1.1,
+                              }}>
+                              <span style={{
+                                fontFamily:"'Bricolage Grotesque',sans-serif",
+                                fontSize:15,fontWeight:800,color:T.accent,
+                                fontVariantNumeric:"tabular-nums",
+                              }}>
+                                {fmt(reg.ms)}
+                              </span>
+                              <span style={{fontSize:9.5,color:T.muted}}>{fechaCorta(reg.fecha)}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
