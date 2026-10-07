@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { todayISO } from "../utils/dates.js";
 import { getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
-import { agruparEnCiclos, siguiente, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
+import { ciclosConPendiente, agruparEnCiclos, siguiente, recomendacion, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
 
 // Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
 // (hoy se pueden cambiar sin migrar porque no hay registros previos).
@@ -194,9 +194,22 @@ export function TabArtro({ becado, onBack, T }) {
   const misRegistros = registros.filter(r => r.becado === becado && r.tipo === tipo);
   // Más nuevo arriba: igual que el dibujo, el ciclo en curso queda primero y
   // dentro de él la repetición más reciente también.
-  const ciclos = agruparEnCiclos(misRegistros);
+  const ciclos = ciclosConPendiente(misRegistros);
   const ciclosDesc = [...ciclos].reverse();
-  const toca = siguiente(ciclos);
+  const toca = siguiente(agruparEnCiclos(misRegistros));
+
+  // Qué ejercicio conviene hacer: el que arrastra el hueco más antiguo.
+  const mios = registros.filter(r => r.becado === becado);
+  const porTipo = {};
+  for (const t of TIPOS) porTipo[t.id] = [];
+  for (const r of mios) if (porTipo[r.tipo]) porTipo[r.tipo].push(r);
+  // Sólo se sugieren ejercicios que alguien esté usando: Manguito y Meniscos
+  // no tienen ni un registro en toda la base, así que si entraran al cálculo
+  // serían siempre los más atrasados y la sugerencia nunca cambiaría.
+  const enUso = new Set(registros.map(r => r.tipo));
+  const candidatos = TIPOS.map(t => t.id).filter(id => enUso.has(id));
+  const sugerido = candidatos.length ? recomendacion(porTipo, candidatos) : null;
+  const yaEstaEnSugerido = sugerido && sugerido.tipo === tipo && sugerido.mano === mano;
 
   return (
     <div style={{minHeight:"100vh",background:T.bg,maxWidth:480,margin:"0 auto",fontFamily:"'Inter',sans-serif",paddingBottom:40,position:"relative",zIndex:1}}>
@@ -228,6 +241,41 @@ export function TabArtro({ becado, onBack, T }) {
       </div>
 
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
+
+        {/* Recomendación: arrastra el hueco más antiguo de todos los ejercicios */}
+        {!loading && sugerido && (
+          <button className="press" onClick={() => { setTipo(sugerido.tipo); setMano(sugerido.mano); }}
+            style={{
+              width:"100%",display:"flex",alignItems:"center",gap:10,marginBottom:16,
+              background: yaEstaEnSugerido ? `${T.accent}0E` : "#EF444410",
+              border:`1.5px solid ${yaEstaEnSugerido ? T.accent+"45" : "#EF444455"}`,
+              borderRadius:14,padding:"10px 12px",cursor:"pointer",textAlign:"left",
+              fontFamily:"'Inter',sans-serif",
+            }}>
+            <span style={{fontSize:17,flexShrink:0}}>{yaEstaEnSugerido ? "✓" : "👉"}</span>
+            <span style={{flex:1,minWidth:0}}>
+              <span style={{display:"block",fontSize:10.5,fontWeight:700,letterSpacing:"0.07em",color:T.muted,textTransform:"uppercase"}}>
+                Te toca hacer
+              </span>
+              <span style={{
+                display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginTop:2,
+                fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:14.5,fontWeight:800,
+                color: yaEstaEnSugerido ? T.accent : "#EF4444",
+              }}>
+                {TIPOS.find(t => t.id === sugerido.tipo)?.label || sugerido.tipo}
+                <span style={{fontSize:12.5,fontWeight:700,color:T.sub}}>
+                  Ciclo {sugerido.ciclo} · R{sugerido.rep}
+                </span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:12.5,fontWeight:700,color:T.sub}}>
+                  <Mano izq={sugerido.mano === "izq"} size={12}/>{sugerido.mano}
+                </span>
+              </span>
+            </span>
+            {!yaEstaEnSugerido && (
+              <span style={{fontSize:11,fontWeight:700,color:"#EF4444",flexShrink:0}}>ir →</span>
+            )}
+          </button>
+        )}
 
         {/* Tipo de ejercicio — fila horizontal para no empujar el cronómetro */}
         <div className="anim" style={{marginBottom:14}}>
@@ -435,7 +483,7 @@ export function TabArtro({ becado, onBack, T }) {
                   <div style={{padding:"7px 10px 10px",display:"flex",flexDirection:"column",gap:5}}>
                     <div style={{display:"grid",gridTemplateColumns:`30px 1fr 1fr`,gap:6}}>
                       <span/>
-                      {["izq","der"].map(m => (
+                      {["der","izq"].map(m => (
                         <span key={m} style={{
                           display:"flex",alignItems:"center",justifyContent:"center",gap:4,
                           fontSize:10.5,fontWeight:700,letterSpacing:"0.06em",
@@ -455,19 +503,19 @@ export function TabArtro({ becado, onBack, T }) {
                         }}>
                           R{r.n}
                         </span>
-                        {["izq","der"].map(m => {
+                        {["der","izq"].map(m => {
                           const reg = r[m];
                           const esTurno = !reg && toca.ciclo === c.n && toca.rep === r.n && toca.mano === m;
                           if (!reg) return (
                             <span key={m} style={{
                               display:"flex",alignItems:"center",justifyContent:"center",
                               minHeight:34,borderRadius:9,
-                              border:`1px dashed ${esTurno ? T.accent+"90" : T.border}`,
-                              background: esTurno ? `${T.accent}10` : "transparent",
-                              fontSize:10.5,fontWeight:700,
-                              color: esTurno ? T.accent : T.muted,
+                              border:`1.5px dashed ${esTurno ? "#EF4444" : T.border}`,
+                              background: esTurno ? "#EF444410" : "transparent",
+                              fontSize:10.5,fontWeight:800,letterSpacing:"0.04em",
+                              color: esTurno ? "#EF4444" : T.muted,
                             }}>
-                              {esTurno ? "te toca" : ""}
+                              {esTurno ? "TE TOCA" : ""}
                             </span>
                           );
                           return (
