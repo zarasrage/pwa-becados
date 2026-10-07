@@ -77,18 +77,16 @@ export function posicionDe({ ciclo, rep, mano }) {
 // De todos los ejercicios, cuál conviene hacer: el que tenga el hueco más
 // antiguo. Alguien con 16 derechas y ninguna izquierda sigue debiendo la
 // izquierda de la R1, así que ese ejercicio pesa más que uno recién empezado.
-// `regsPorTipo` es { tipo: [registros] } y `orden` fija el desempate.
+// `regsPorTipo` es { tipo: [registros] } y `orden` es la lista de ejercicios en
+// el orden en que se deben hacer, que además desempata.
 export function recomendacion(regsPorTipo, orden) {
   let mejor = null;
   for (const tipo of orden) {
     const regs = regsPorTipo[tipo] || [];
     const toca = siguiente(agruparEnCiclos(regs));
     const cand = { tipo, ...toca, posicion: posicionDe(toca), total: regs.length };
-    if (!mejor
-      || cand.posicion < mejor.posicion
-      || (cand.posicion === mejor.posicion && cand.total < mejor.total)) {
-      mejor = cand;
-    }
+    // Gana el hueco más antiguo; si empatan, el que va antes en la lista.
+    if (!mejor || cand.posicion < mejor.posicion) mejor = cand;
   }
   return mejor;
 }
