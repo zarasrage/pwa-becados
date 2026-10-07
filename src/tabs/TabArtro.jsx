@@ -25,8 +25,9 @@ const TIPOS = [
   { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
   { id: "Tubos1",    label: "Tubos 1",   img: "/artro/tubos-1.webp" },
   { id: "Tubos2",    label: "Tubos 2",   img: "/artro/tubos-2.webp" },
-  { id: "Manguito",  label: "Manguito",  img: "/artro/manguito.webp" },
-  { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp" },
+  // Bloqueados: son de otra rotación, todavía no les toca a estos becados.
+  { id: "Manguito",  label: "Manguito",  img: "/artro/manguito.webp", bloqueado: true },
+  { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp", bloqueado: true },
 ];
 
 // Ícono de mano; el izquierdo es el mismo espejado.
@@ -203,11 +204,9 @@ export function TabArtro({ becado, onBack, T }) {
   const porTipo = {};
   for (const t of TIPOS) porTipo[t.id] = [];
   for (const r of mios) if (porTipo[r.tipo]) porTipo[r.tipo].push(r);
-  // Sólo se sugieren ejercicios que alguien esté usando: Manguito y Meniscos
-  // no tienen ni un registro en toda la base, así que si entraran al cálculo
-  // serían siempre los más atrasados y la sugerencia nunca cambiaría.
-  const enUso = new Set(registros.map(r => r.tipo));
-  const candidatos = TIPOS.map(t => t.id).filter(id => enUso.has(id));
+  // Los bloqueados no entran: si entraran serían siempre los más atrasados
+  // (no tienen ningún registro) y la sugerencia nunca cambiaría.
+  const candidatos = TIPOS.filter(t => !t.bloqueado).map(t => t.id);
   const sugerido = candidatos.length ? recomendacion(porTipo, candidatos) : null;
   const yaEstaEnSugerido = sugerido && sugerido.tipo === tipo && sugerido.mano === mano;
 
@@ -288,33 +287,52 @@ export function TabArtro({ becado, onBack, T }) {
           }}>
             {TIPOS.map(t => {
               const sel = tipo === t.id;
+              const bloq = !!t.bloqueado;
               return (
-                <button key={t.id} className="press" onClick={() => setTipo(t.id)}
+                <button key={t.id} className={bloq ? "" : "press"}
+                  onClick={() => { if (!bloq) setTipo(t.id); }}
+                  disabled={bloq}
+                  aria-label={bloq ? `${t.label} — bloqueado` : t.label}
+                  title={bloq ? "Todavía no disponible" : undefined}
                   style={{
                     position:"relative",flexShrink:0,width:96,
                     display:"flex",flexDirection:"column",alignItems:"center",gap:2,
-                    padding:"8px 6px 7px",borderRadius:14,cursor:"pointer",
-                    border:`1.5px solid ${sel ? T.accent+"70" : T.border}`,
-                    background: sel ? `${T.accent}12` : T.surface,
-                    boxShadow: sel ? `0 0 14px ${T.accent}20` : "none",
+                    padding:"8px 6px 7px",borderRadius:14,
+                    cursor: bloq ? "not-allowed" : "pointer",
+                    border:`1.5px ${bloq ? "dashed" : "solid"} ${sel ? T.accent+"70" : T.border}`,
+                    background: bloq ? T.surface2 : sel ? `${T.accent}12` : T.surface,
+                    boxShadow: sel && !bloq ? `0 0 14px ${T.accent}20` : "none",
                     fontFamily:"'Inter',sans-serif",
                     transition:"border-color 0.15s, background 0.15s",
                   }}>
                   <Foto src={t.img} alt={t.label} T={T}
                     style={{
                       width:66,height:66,objectFit:"contain",
-                      opacity: sel ? 1 : 0.7,
-                      filter: sel ? "none" : "saturate(0.7)",
+                      opacity: bloq ? 0.3 : sel ? 1 : 0.7,
+                      filter: bloq ? "grayscale(1)" : sel ? "none" : "saturate(0.7)",
                       transition:"opacity 0.15s, filter 0.15s",
                     }}/>
                   <span style={{
-                    fontSize:12,fontWeight: sel ? 700 : 500,
-                    color: sel ? T.accent : T.sub,
+                    fontSize:12,fontWeight: sel && !bloq ? 700 : 500,
+                    color: bloq ? T.muted : sel ? T.accent : T.sub,
                     whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%",
                   }}>
                     {t.label}
                   </span>
-                  {sel && (
+                  {bloq ? (
+                    <span style={{
+                      position:"absolute",top:5,right:5,
+                      width:19,height:19,borderRadius:"50%",
+                      background:T.surface,border:`1px solid ${T.border}`,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                    }}>
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.muted}
+                        strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    </span>
+                  ) : sel && (
                     <span style={{
                       position:"absolute",top:5,right:5,
                       width:17,height:17,borderRadius:"50%",background:T.accent,
