@@ -325,7 +325,7 @@ function ordenarPorEspera(becadosNombres, ultimoPorNombre, today) {
 }
 
 // ── SeminarioPicker ───────────────────────────────────────────────────────────
-function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becadosNombres, ultimoSemPorBecado, ultimoSemPorBecadoYTag, today, T }) {
+function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onMover, onClose, becadosNombres, ultimoSemPorBecado, ultimoSemPorBecadoYTag, today, T }) {
   const [tag,       setTag]       = useState(existing?.tag       || "Seminario Hombro");
   const [presenter, setPresenter] = useState(existing?.presentador || "");
   const [titulo,    setTitulo]    = useState(existing?.titulo    || "");
@@ -478,6 +478,20 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onClose, becad
                 background:"#F59E0B18",fontSize:13,fontWeight:600,color:"#F59E0B",cursor:"pointer"}}>
               Aplazar →
             </button>
+          )}
+          {existing && (
+            <div style={{flexBasis:"100%",display:"flex",gap:8}}>
+              <button className="press" onClick={()=>onMover(existing.id, -7)}
+                style={{flex:1,height:44,borderRadius:11,border:`1px solid ${T.border}`,
+                  background:T.surface2,fontSize:13,fontWeight:600,color:T.text,cursor:"pointer"}}>
+                ← Retroceder 1 sem
+              </button>
+              <button className="press" onClick={()=>onMover(existing.id, 7)}
+                style={{flex:1,height:44,borderRadius:11,border:`1px solid ${T.border}`,
+                  background:T.surface2,fontSize:13,fontWeight:600,color:T.text,cursor:"pointer"}}>
+                Avanzar 1 sem →
+              </button>
+            </div>
           )}
           <button className="press"
             onClick={()=>canSave && onSave({ tag, presenter:presenter.trim(), titulo:titulo.trim(), hora })}
@@ -1060,6 +1074,16 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setRefreshSem(r => r + 1);
   }
 
+  // Mueve SOLO este seminario ±N días (no toca los demás)
+  async function handleMoverSem(id, date, dias) {
+    setSemPicker(null); setSaving(true);
+    const { error } = await supabase.from("seminarios")
+      .update({ fecha: offsetDate(date, dias) }).eq("id", id);
+    if (!error) await bumpDataVersion();
+    setSaving(false);
+    setRefreshSem(r => r + 1);
+  }
+
   // Actividades especiales load
   useEffect(() => {
     if (tipo !== "AC") return;
@@ -1556,6 +1580,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           onSave={vals => handleSaveSem(semPicker.date, vals, semPicker.existing?.id)}
           onDelete={id => handleDeleteSem(id, semPicker.date)}
           onAplazar={() => handleAplazarSem(semPicker.date)}
+          onMover={(id, dias) => handleMoverSem(id, semPicker.date, dias)}
           onClose={() => setSemPicker(null)}
           becadosNombres={becados.map(b=>b.nombre)}
           ultimoSemPorBecado={ultimoSemPorBecado}
