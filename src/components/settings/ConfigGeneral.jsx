@@ -3,7 +3,7 @@ import {
   NOTIF_TIPOS, NOTIF_CUANDO,
   getNotifPrefs, setNotifPrefs, pedirPermisoNotificaciones,
 } from "../../utils/notifPrefs.js";
-import { registrarPush, desregistrarPush, pushSoportado, esIOS, instaladaEnInicio } from "../../utils/push.js";
+import { registrarPush, desregistrarPush, probarPush, pushSoportado, esIOS, instaladaEnInicio } from "../../utils/push.js";
 
 // Cabecera común de las pantallas de configuración.
 function Header({ titulo, onBack, T }) {
@@ -74,6 +74,7 @@ function Seccion({ titulo, nota, T, children }) {
 function Notificaciones({ becado, onBack, T }) {
   const [prefs, setPrefs] = useState(getNotifPrefs);
   const [denegado, setDenegado] = useState(false);
+  const [prueba, setPrueba] = useState("");   // "", "contando", "listo" o el motivo del error
 
   // iPhone solo entrega push si la app está instalada en la pantalla de inicio.
   const faltaInstalar = esIOS() && !instaladaEnInicio();
@@ -145,6 +146,24 @@ function Notificaciones({ becado, onBack, T }) {
               }/>
           );
         })}
+      </Seccion>
+
+      {/* Prueba: sirve para ver cómo llega de verdad una notificación en este
+          teléfono, en particular si muestra los botones de respuesta. */}
+      <Seccion titulo="Probar" T={T}
+        nota="La notificación llega 5 segundos después, para que alcances a bloquear el teléfono. Trae botones Voy / No voy: si aparecen, este teléfono los soporta.">
+        <Fila
+          label={prueba === "contando" ? "Llega en 5 segundos…" : "Enviarme una notificación de prueba"}
+          desc={prueba && prueba !== "contando" && prueba !== "listo" ? prueba : undefined}
+          T={T}
+          onClick={async () => {
+            if (prueba === "contando") return;
+            setPrueba("contando");
+            const r = await probarPush(5);
+            setPrueba(r.ok ? "listo" : (r.motivo || "no se pudo enviar"));
+            setTimeout(() => setPrueba(""), 6000);
+          }}
+          right={<span style={{fontSize:15,flexShrink:0}}>{prueba === "contando" ? "⏳" : prueba === "listo" ? "✓" : "🧪"}</span>}/>
       </Seccion>
 
       <Seccion titulo="Pabellón K" T={T}

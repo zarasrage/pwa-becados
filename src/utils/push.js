@@ -61,6 +61,30 @@ export async function registrarPush(becado, prefs) {
   return { ok, motivo: ok ? "" : "guardado" };
 }
 
+// Pide al servidor un push de prueba a ESTE dispositivo, con unos segundos de
+// retraso para alcanzar a bloquear el teléfono.
+export async function probarPush(segundos = 5) {
+  if (!pushSoportado()) return { ok: false, motivo: "no-soportado" };
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return { ok: false, motivo: "sin-suscripcion" };
+
+  try {
+    const r = await fetch("/.netlify/functions/probar-push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint, segundos }),
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      return { ok: false, motivo: d.error || `error ${r.status}` };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "sin-red" };
+  }
+}
+
 // Se llama al apagar todo: deja de recibir y se saca de la lista del servidor.
 export async function desregistrarPush() {
   if (!pushSoportado()) return;
