@@ -71,7 +71,7 @@ export function TabMes({ becado, onChangeBecado, quickLinks, onArtro, onPabellon
     >
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <BecadoHeader eyebrow="Mi mes" name={becado} onTap={onChangeBecado} action={<PabellonKBtn onClick={onPabellonK}/>} T={T}/>
+        <BecadoHeader eyebrow="Mi mes" name={becado} onTap={onChangeBecado} action={<PabellonKBtn becado={becado} onClick={onPabellonK}/>} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
           <button className="press" onClick={prevMonth} style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>
           <div style={{flex:1,textAlign:"center",fontSize:13,fontWeight:500,color:T.text,textTransform:"capitalize"}}>{monthLabel(year, month)}</div>

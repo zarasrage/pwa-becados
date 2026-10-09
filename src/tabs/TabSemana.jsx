@@ -107,7 +107,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, onPabel
       <PullIndicator pullY={ptr.pullY} triggered={ptr.triggered} T={T}/>
 
       <div style={{padding:"calc(var(--sat) + 20px) 16px 0"}}>
-        <BecadoHeader eyebrow="Mi semana" name={becado} onTap={onChangeBecado} action={<PabellonKBtn onClick={onPabellonK}/>} T={T}/>
+        <BecadoHeader eyebrow="Mi semana" name={becado} onTap={onChangeBecado} action={<PabellonKBtn becado={becado} onClick={onPabellonK}/>} T={T}/>
         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
           <button className="press" onClick={()=>setRefDate(d=>offsetDate(d,-7))}
             style={{width:44,height:44,borderRadius:10,border:`1px solid ${T.border}`,background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:T.sub,flexShrink:0}}>‹</button>

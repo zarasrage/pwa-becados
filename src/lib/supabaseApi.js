@@ -252,6 +252,29 @@ export async function dispararPabellonK(becado, hoy) {
   return { ok: confirmado?.por === becado && confirmado?.ts === reg.ts, reg: confirmado || reg };
 }
 
+// Responde "voy" o "no" al llamado de hoy. Devuelve el registro actualizado.
+//
+// Varias personas contestan a la vez sobre el mismo JSON, así que se relee,
+// se mezcla y se verifica que la propia respuesta haya quedado; si otro
+// escribió encima en el intertanto, se reintenta.
+export async function responderPabellonK(becado, hoy, respuesta) {
+  for (let intento = 0; intento < 4; intento++) {
+    const reg = await getPabellonK();
+    if (!reg || reg.fecha !== hoy) return null;      // ya no hay llamado vigente
+    if (reg.respuestas?.[becado] === respuesta) return reg;
+
+    await setConfigJSON("pabellon_k", {
+      ...reg,
+      respuestas: { ...(reg.respuestas || {}), [becado]: respuesta },
+    });
+
+    const confirmado = await getPabellonK();
+    if (confirmado?.respuestas?.[becado] === respuesta) return confirmado;
+    await new Promise(r => setTimeout(r, 120 * (intento + 1)));
+  }
+  return null;
+}
+
 // Libera el llamado para que se pueda volver a apretar hoy. Solo lo usa el
 // editor maestro desde la app.
 export async function resetPabellonK() {

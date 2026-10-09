@@ -36,7 +36,9 @@ export const handler = async (event) => {
   const r = await enviar(destinatarios, {
     tipo: "pabellonK",
     titulo: "🔴 PABELLÓN K",
-    body: `${becado} está llamando a Pabellón K.`,
+    // iPhone no muestra botones de respuesta en la notificación, así que se
+    // contesta abriendo la app.
+    body: `${becado} está llamando a Pabellón K. Abre la app para decir si vas.`,
     tag: `pabellonk-${hoy}`,
   });
 
