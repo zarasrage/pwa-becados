@@ -109,6 +109,26 @@ export const THEMES = {
     text:"#240742", sub:"#6B2FA0", muted:"#B594E0", tabBg:"rgba(245,238,255,0.94)",
     skeleton:"#E9DCFF", skeletonShine:"#FFFFFF", accent:"#9333EA", glow:"#9333EA",
   },
+  holo: {
+    bg:"#F5F4FB", surface:"#FFFFFF", surface2:"#EFEDF8", border:"#DCD8EE",
+    text:"#14122B", sub:"#5A5680", muted:"#A29EC4", tabBg:"rgba(248,247,253,0.82)",
+    skeleton:"#ECEAF6", skeletonShine:"#FFFFFF", accent:"#6C4DFF", glow:"#8F7BFF",
+  },
+  bauhaus: {
+    bg:"#F2EEE3", surface:"#FBF9F3", surface2:"#ECE6D6", border:"#D8D0BC",
+    text:"#111111", sub:"#4A4538", muted:"#A39C88", tabBg:"rgba(242,238,227,0.88)",
+    skeleton:"#ECE6D6", skeletonShine:"#FBF9F3", accent:"#E1301F", glow:"#E1301F",
+  },
+  topo: {
+    bg:"#EDF0EA", surface:"#FAFBF8", surface2:"#E3E8DF", border:"#C9D1C2",
+    text:"#15201A", sub:"#4D5E52", muted:"#98A698", tabBg:"rgba(237,240,234,0.88)",
+    skeleton:"#E3E8DF", skeletonShine:"#FAFBF8", accent:"#FF5A1F", glow:"#FF5A1F",
+  },
+  quirofano: {
+    bg:"#EAF5F2", surface:"#FFFFFF", surface2:"#DCEFEA", border:"#B9DDD4",
+    text:"#08231E", sub:"#2F6B60", muted:"#86B8AD", tabBg:"rgba(240,249,246,0.86)",
+    skeleton:"#DCEFEA", skeletonShine:"#FFFFFF", accent:"#0A9E8A", glow:"#0A9E8A",
+  },
 };
 
 export const THEME_BG = {
@@ -117,4 +137,5 @@ export const THEME_BG = {
   synthwave:"#0A0015", cryo:"#020D1A", cosmos:"#020008", tormenta:"#04060E",
   wabi:"#F7F2E8", amanecer:"#EEE8F5",
   mint:"#EAFBF3", coral:"#FFF1EC", sky:"#EAF4FF", lemon:"#FFFBEA", grape:"#F5EEFF",
+  holo:"#F5F4FB", bauhaus:"#F2EEE3", topo:"#EDF0EA", quirofano:"#EAF5F2",
 };

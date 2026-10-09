@@ -6,6 +6,11 @@ export const THEME_OPTIONS_BASIC = [
 ];
 
 export const THEME_OPTIONS = [
+  // ── Claros — nueva generación ───────────────────
+  { id:"holo",      name:"Holo",       desc:"Lámina holográfica viva",     preview:["#F5F4FB","#FFFFFF","#6C4DFF"],  emoji:"🪩" },
+  { id:"bauhaus",   name:"Bauhaus",    desc:"Geometría pura en movimiento",preview:["#F2EEE3","#FBF9F3","#E1301F"],  emoji:"🔺" },
+  { id:"topo",      name:"Topo",       desc:"Carta topográfica andina",    preview:["#EDF0EA","#FAFBF8","#FF5A1F"],  emoji:"🏔️" },
+  { id:"quirofano", name:"Quirófano",  desc:"Monitor en vivo, HR 72",      preview:["#EAF5F2","#FFFFFF","#0A9E8A"],  emoji:"🩺" },
   // ── Claros ──────────────────────────────────────
   { id:"pink",      name:"Sakura",     desc:"Pétalos de cerezo",           preview:["#FEE6F2","#FFF0F8","#E8186A"],  emoji:"🌸" },
   { id:"wabi",      name:"Shodo",      desc:"Pincelazos de tinta épicos",  preview:["#F7F2E8","#FDFAF4","#C8A010"],  emoji:"🖋️" },
@@ -38,9 +43,10 @@ export const ACCENT_MAP = {
   synthwave:"#FF006E", cryo:"#00CFFF", cosmos:"#FF6BF5", tormenta:"#00E5FF",
   wabi:"#C8A010", amanecer:"#A040FF",
   mint:"#10B981", coral:"#FF6B35", sky:"#2D8CFF", lemon:"#F2C200", grape:"#9333EA",
+  holo:"#6C4DFF", bauhaus:"#E1301F", topo:"#FF5A1F", quirofano:"#0A9E8A",
 };
 
-const LIGHT_THEMES = ["light","pink","wabi","amanecer","mint","coral","sky","lemon","grape"];
+const LIGHT_THEMES = ["light","pink","wabi","amanecer","mint","coral","sky","lemon","grape","holo","bauhaus","topo","quirofano"];
 
 export function ThemePicker({ current, onSelect, onClose }) {
   const [hovered, setHovered] = useState(null);

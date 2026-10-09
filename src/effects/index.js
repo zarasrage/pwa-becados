@@ -10,3 +10,7 @@ export { CosmosEffect } from "./CosmosEffect.jsx";
 export { LightningBoltSVG, StormEffect } from "./StormEffect.jsx";
 export { WabiEffect } from "./WabiEffect.jsx";
 export { AmanecerEffect } from "./AmanecerEffect.jsx";
+export { HoloEffect } from "./HoloEffect.jsx";
+export { BauhausEffect } from "./BauhausEffect.jsx";
+export { TopoEffect } from "./TopoEffect.jsx";
+export { QuirofanoEffect } from "./QuirofanoEffect.jsx";

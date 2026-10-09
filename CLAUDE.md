@@ -60,6 +60,10 @@ src/
     StormEffect.jsx        # tormenta
     WabiEffect.jsx         # wabi
     AmanecerEffect.jsx     # amanecer
+    HoloEffect.jsx         # holo
+    BauhausEffect.jsx      # bauhaus
+    TopoEffect.jsx         # topo
+    QuirofanoEffect.jsx    # quirofano
   styles/
     globalCSS.js           # CSS global como string (animaciones, variables, reset)
   tabs/
@@ -122,7 +126,7 @@ P=Poli tarde(#06B6D4), p=Poli mañana, D=Día(#F59E0B), N=Noche(#4F6EFF), A=Artr
 Seminarios: S (#E879F9)
 
 ## Temas (14 total)
-dark, light, pink(Sakura), ocean(Abismo), sunset(Volcán), forest(Bosque), aurora, neon(Glitch), synthwave, cryo, cosmos, tormenta, wabi, amanecer  
+dark, light, pink(Sakura), ocean(Abismo), sunset(Volcán), forest(Bosque), aurora, neon(Glitch), synthwave, cryo, cosmos, tormenta, wabi, amanecer, holo, bauhaus, topo, quirofano  
 - Acceso: 5 taps en ⚙️ → ThemePicker
 - Cada tema tiene efecto ambiental en `src/effects/`
 - Efectos: `position:fixed; zIndex:0` — tabs: `zIndex:1`

@@ -10,7 +10,7 @@ import { CSS } from "./styles/globalCSS.js";
 import {
   SakuraPetals, OceanBubbles, AuroraEffect, ForestFireflies,
   SunsetEmbers, NeonGrid, SynthwaveEffect, CryoEffect, CosmosEffect, StormEffect,
-  WabiEffect, AmanecerEffect,
+  WabiEffect, AmanecerEffect, HoloEffect, BauhausEffect, TopoEffect, QuirofanoEffect,
 } from "./effects/index.js";
 import { ACCENT_MAP, ThemePicker } from "./components/settings/ThemePicker.jsx";
 import { SettingsPanel } from "./components/settings/SettingsPanel.jsx";
@@ -198,6 +198,10 @@ export default function App() {
       {theme === "tormenta"  && <StormEffect/>}
       {theme === "wabi"      && <WabiEffect/>}
       {theme === "amanecer"  && <AmanecerEffect/>}
+      {theme === "holo"      && <HoloEffect/>}
+      {theme === "bauhaus"   && <BauhausEffect/>}
+      {theme === "topo"      && <TopoEffect/>}
+      {theme === "quirofano" && <QuirofanoEffect/>}
 
       {/* Overlays — accesibles desde SelectScreen o desde los tabs de un becado */}
       {showRotaciones
