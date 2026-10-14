@@ -3,6 +3,7 @@ import { API_TOKEN } from "../../constants/api.js";
 import { apiGet } from "../../utils/api.js";
 import { todayISO, monthNameLabel, getMonthDates } from "../../utils/dates.js";
 import { CalendarGrid } from "../ui/CalendarGrid.jsx";
+import { displayName } from "../../utils/displayName.js";
 
 
 const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00", S:"#E879F9" };
@@ -61,7 +62,7 @@ export function TurnoSelector({ label, becados, tipoCode, selected, onSelect, T 
       <div style={{position:"relative",marginBottom: becado ? 10 : 0}}>
         <select value={becado} onChange={e => { setBecado(e.target.value); onSelect(null); }} style={selectStyle}>
           <option value="">Seleccionar becado…</option>
-          {becados.map(b => <option key={b} value={b}>{b}</option>)}
+          {becados.map(b => <option key={b} value={b}>{displayName(b)}</option>)}
         </select>
         <span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",color:T.muted,fontSize:12}}>▾</span>
       </div>

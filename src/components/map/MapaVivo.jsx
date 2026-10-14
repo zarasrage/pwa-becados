@@ -12,6 +12,7 @@ import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
 import { AVATAR_IDENTITY, AVATAR_SCALE, SHARED_COLOR_PARTS } from "../../constants/avatarIdentity.js";
 import { getAvatares, saveAvatares } from "../../lib/supabaseApi.js";
 import { PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, accLayers, ACC_SECTIONS, getRecoloredFrames } from "./recolorSprites.js";
+import { displayName } from "../../utils/displayName.js";
 
 // Presets de color por parte (además del color picker libre)
 const PART_PRESETS = {
@@ -381,7 +382,7 @@ export function MapaVivo({ becados, T, onBack }) {
                       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
                         <SpritePreview look={look} size={44}/>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:15,fontWeight:700,color:T.text}}>{selected.name}</div>
+                          <div style={{fontSize:15,fontWeight:700,color:T.text}}>{displayName(selected.name)}</div>
                           <div style={{fontSize:11,color:T.muted}}>{selected.rotName}</div>
                         </div>
                       </div>

@@ -16,6 +16,7 @@ import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { SkeletonWeekCard } from "../components/ui/SkeletonCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 import { PabellonKBtn } from "../components/pabellonk/PabellonKBtn.jsx";
+import { displayName } from "../utils/displayName.js";
 
 export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, onPabellonK, T }) {
   const today = useMemo(()=>todayISO(),[]);
@@ -183,7 +184,7 @@ export function TabSemana({ becado, onChangeBecado, quickLinks, onArtro, onPabel
                     <div style={{padding:"6px 13px 0",display:"flex",alignItems:"baseline",gap:8}}>
                       <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"#E879F9",opacity:0.8,flexShrink:0,minWidth:40}}>{day.seminario.time||"07:30"}</span>
                       <span style={{fontSize:12,color:"#E879F9",lineHeight:1.3,fontWeight:500}}>
-                        {day.seminario.presenter}: {day.seminario.title}
+                        {displayName(day.seminario.presenter)}: {day.seminario.title}
                         <span style={{fontSize:12,opacity:0.65,marginLeft:5}}>{day.seminario.tag}</span>
                       </span>
                     </div>

@@ -5,6 +5,7 @@ import { apiSWR } from "../utils/api.js";
 import { Spinner } from "../components/ui/Spinner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { FERIADOS } from "../constants/feriados.js";
+import { displayName } from "../utils/displayName.js";
 
 const TIPO_COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00", S:"#E879F9" };
 
@@ -270,7 +271,7 @@ export function TabEstadisticas({ onBack, T }) {
 
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {s.name}
+                        {displayName(s.name)}
                       </div>
                       <div style={{display:"flex",gap:4,marginTop:3,flexWrap:"wrap"}}>
                         {s.P > 0 && <span style={{fontSize:12,fontWeight:700,color:TIPO_COLOR.P,background:`${TIPO_COLOR.P}20`,borderRadius:99,padding:"1px 6px"}}>P×{s.P}</span>}

@@ -5,6 +5,7 @@ import { Spinner } from "../components/ui/Spinner.jsx";
 import { FELLOWS } from "../data/fellows.js";
 import { useApiData } from "../hooks/useApiData.js";
 import { API_TOKEN } from "../constants/api.js";
+import { displayName } from "../utils/displayName.js";
 
 export const EQUIPOS = [
   { id: 1, nombre: "Mano",          color: "#EF4444", cirujanos: ["BRANES ROCIO ALEJANDRA FRANCISCA","BREYER JUAN MANUEL","FERRADA PAULINA","GOMEZ CARLOS JOSE","GUERRA CARLOS JAVIER","GATICA PAMELA","HERES VICTORIA","MATHEUS JESUS ALBERTO","PEREZ ALFONSO JAVIER","SOTELO PAULA ALEJANDRA","STURIZA VANJA MARIA","URRUTIA ESTEBAN FELIPE","VERGARA PAMELA ISABEL","VERGARA LAURA","GUTIERREZ JAIME","BASAURI TOMAS","CORDOVA CARLOS"] },
@@ -171,7 +172,7 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
               return (
                 <span key={nombre} onClick={e => { e.stopPropagation(); onRemover(nombre); }}
                   style={{ fontSize:12,fontWeight:600,color:c,background:`${c}18`,borderRadius:99,padding:"1px 7px",border:`1px solid ${c}44`,whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:3,cursor:"pointer" }}>
-                  {nombre.split(" ")[0]}
+                  {displayName(nombre.split(" ")[0])}
                   <span style={{ fontSize:13,opacity:0.6 }}>✕</span>
                 </span>
               );
@@ -209,7 +210,7 @@ function PacienteCard({ r, color, T, summaryGroups, asistentes, onAsignar, onRem
                     return (
                       <button key={nombre} onClick={() => toggleAsistente(nombre)}
                         style={{ borderRadius:99,padding:"3px 10px",fontSize:13,fontWeight:600,border:`1px solid ${c}`,background:asig?c:`${c}18`,color:asig?"#fff":c,cursor:"pointer" }}>
-                        {asig ? "✓ " : ""}{nombre.split(" ")[0]}
+                        {asig ? "✓ " : ""}{displayName(nombre.split(" ")[0])}
                       </button>
                     );
                   })}

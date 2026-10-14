@@ -1,3 +1,4 @@
+import { displayName } from "../../utils/displayName.js";
 // Header compartido de identidad para los tabs (Día/Semana/Mes) y vistas con becado.
 // Unifica el bloque "eyebrow + nombre + hint" para no repetir estilos en cada tab.
 export function BecadoHeader({ eyebrow, name, hint = "toca para cambiar", onTap, action, right, T }) {
@@ -13,7 +14,7 @@ export function BecadoHeader({ eyebrow, name, hint = "toca para cambiar", onTap,
             WebkitTextFillColor: glass ? "transparent" : "unset",
             color: glass ? "transparent" : T.text,
             filter: glass ? "drop-shadow(0 0 8px #E8186A50)" : "none",
-          }}>{name}</div>
+          }}>{displayName(name)}</div>
           {hint && <div style={{fontSize:13,color:T.muted,marginTop:2}}>{hint}</div>}
         </button>
         {action}

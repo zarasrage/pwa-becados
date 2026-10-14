@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { todayISO } from "../utils/dates.js";
 import { getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
 import { ciclosConPendiente, agruparEnCiclos, siguiente, recomendacion, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
+import { displayName } from "../utils/displayName.js";
 
 // Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
 // (hoy se pueden cambiar sin migrar porque no hay registros previos).
@@ -235,9 +236,9 @@ export function TabArtro({ becado, onBack, T }) {
               width:20,height:20,borderRadius:"50%",background:`${T.accent}25`,color:T.accent,
               fontSize:10.5,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",
             }}>
-              {becado.charAt(0).toUpperCase()}
+              {displayName(becado).charAt(0).toUpperCase()}
             </span>
-            <span style={{fontSize:12.5,fontWeight:600,color:T.accent}}>{becado}</span>
+            <span style={{fontSize:12.5,fontWeight:600,color:T.accent}}>{displayName(becado)}</span>
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ import { todayISO, formatDate } from "../../utils/dates.js";
 import { cacheKey, _revalidatedThisSession } from "../../utils/cache.js";
 import { safeStorage } from "../../utils/storage.js";
 import { TurnoSelector } from "./TurnoSelector.jsx";
+import { displayName } from "../../utils/displayName.js";
 
 const SWAP_PIN = "0001";
 
@@ -136,9 +137,9 @@ export function SwapTurnos({ becados, onClose, T }) {
             <div style={{background:T.surface2,border:`1px solid ${tipoObj.color}30`,borderRadius:12,padding:"12px 14px"}}>
               <div style={{fontSize:11,fontWeight:700,color:tipoObj.color,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>Confirmando cambio</div>
               <div style={{fontSize:13,color:T.sub,lineHeight:1.8}}>
-                <span style={{color:T.text,fontWeight:600}}>{selA.becado}</span> el {formatDate(selA.date).split(",")[1]?.trim() || selA.date}
+                <span style={{color:T.text,fontWeight:600}}>{displayName(selA.becado)}</span> el {formatDate(selA.date).split(",")[1]?.trim() || selA.date}
                 <span style={{color:T.muted}}> ↔ </span>
-                <span style={{color:T.text,fontWeight:600}}>{selB.becado}</span> el {formatDate(selB.date).split(",")[1]?.trim() || selB.date}
+                <span style={{color:T.text,fontWeight:600}}>{displayName(selB.becado)}</span> el {formatDate(selB.date).split(",")[1]?.trim() || selB.date}
               </div>
             </div>
           )}

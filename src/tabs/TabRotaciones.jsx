@@ -12,6 +12,7 @@ import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { SkeletonLine } from "../components/ui/SkeletonCard.jsx";
+import { displayName } from "../utils/displayName.js";
 
 export function TabRotaciones({ onChangeBecado, T }) {
   const today = useMemo(()=>todayISO(),[]);
@@ -95,7 +96,7 @@ export function TabRotaciones({ onChangeBecado, T }) {
                     {names.map((name,ni)=>(
                       <div key={ni} style={{fontSize:13,color:T.sub,display:"flex",alignItems:"center",gap:7}}>
                         <span style={{width:4,height:4,borderRadius:"50%",background:c.accent,opacity:0.55,flexShrink:0}}/>
-                        {name}
+                        {displayName(name)}
                       </div>
                     ))}
                   </div>

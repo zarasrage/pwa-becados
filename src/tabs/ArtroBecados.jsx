@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getSeminarioBecadosUNAB } from "../lib/supabaseApi.js";
 import { getArtroRegistros } from "../lib/supabaseApi.js";
+import { displayName } from "../utils/displayName.js";
 
 // Paleta de acentos para que cada tarjeta se vea distinta
 const TONOS = [
@@ -85,7 +86,7 @@ export function ArtroBecados({ onPick, onBack, T }) {
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontFamily:"'Bricolage Grotesque',sans-serif",
                   }}>
-                    {n.charAt(0).toUpperCase()}
+                    {displayName(n).charAt(0).toUpperCase()}
                   </span>
                   <span style={{flex:1,minWidth:0}}>
                     <span style={{
@@ -93,7 +94,7 @@ export function ArtroBecados({ onPick, onBack, T }) {
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                       fontFamily:"'Bricolage Grotesque',sans-serif",
                     }}>
-                      {n}
+                      {displayName(n)}
                     </span>
                     <span style={{fontSize:11.5,color:T.muted}}>
                       {r ? `${r.n} ${r.n === 1 ? "tiempo" : "tiempos"} · mejor ${fmt(r.mejor)}` : "sin tiempos aún"}

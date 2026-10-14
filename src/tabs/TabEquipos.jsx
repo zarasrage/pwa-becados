@@ -8,6 +8,7 @@ import { PullIndicator } from "../components/ui/PullIndicator.jsx";
 import { OfflineBanner } from "../components/ui/OfflineBanner.jsx";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { SkeletonLine } from "../components/ui/SkeletonCard.jsx";
+import { displayName } from "../utils/displayName.js";
 
 const MAIN_TEAMS = [
   { code: "M",   name: "Mano" },
@@ -140,7 +141,7 @@ function TeamCard({ code, weekDates, today, summaryGroups, turnoLookup, T }) {
             borderBottom: ni < names.length - 1 ? `1px solid ${T.border}` : "none",
           }}>
             <div style={{ fontSize: 11, color: T.sub, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 4 }}>
-              {shortName(name)}
+              {shortName(displayName(name))}
             </div>
             {workDays.map(date => {
               const types = turnoLookup?.[name]?.[date] || [];

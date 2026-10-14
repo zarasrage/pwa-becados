@@ -6,6 +6,7 @@ import { isFeriado } from "../constants/feriados.js";
 import { TAG_TO_AREA, TEMAS_SEED } from "../constants/temasSeminarios.js";
 import { TemasChecklist } from "../components/ui/TemasChecklist.jsx";
 import { UNIVERSIDADES } from "../constants/universities.js";
+import { displayName } from "../utils/displayName.js";
 
 const ROTS_TODOS_TURNOS = ["H","M","CyP","R","TyP","Col","A","rx","F","CPQ"];
 // NHT (Nochero) siempre solo Noche. Tumores (T) es FALP, fuera del hospital:
@@ -203,7 +204,7 @@ function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliM
               style={{display:"flex",alignItems:"center",justifyContent:"space-between",
                 width:"100%",padding:"12px 16px",border:"none",background:"none",
                 textAlign:"left",cursor:conflicto?"not-allowed":"pointer",opacity:conflicto?0.6:1}}>
-              <span style={{fontSize:14,fontWeight:500,color:conflicto?"#EF4444":T.text}}>{nombre}</span>
+              <span style={{fontSize:14,fontWeight:500,color:conflicto?"#EF4444":T.text}}>{displayName(nombre)}</span>
               {conflicto ? (
                 <span style={{fontSize:12,fontWeight:700,color:"#EF4444",
                   background:"#EF444418",border:"1px solid #EF444440",
@@ -282,7 +283,7 @@ function Contadores({ turnos, dates, tipo, elegibles = [], T }) {
             <div key={nombre} style={{display:"flex",alignItems:"center",
               justifyContent:"space-between",padding:"6px 14px",
               borderBottom:`1px solid ${T.border}20`}}>
-              <span style={{fontSize:12,color:warn?"#EF4444":fechas.length?T.text:T.muted,fontWeight:warn?700:400}}>{nombre}</span>
+              <span style={{fontSize:12,color:warn?"#EF4444":fechas.length?T.text:T.muted,fontWeight:warn?700:400}}>{displayName(nombre)}</span>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 {warn && <span style={{fontSize:12,color:"#EF4444",fontWeight:700}}>⚠ &lt;6d</span>}
                 <span style={{fontSize:12,fontWeight:700,
@@ -393,7 +394,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onMover, onClo
                     padding:"6px 10px",borderRadius:10,cursor:"pointer",
                     border:`1.5px solid ${idx===0?"#E879F9":T.border}`,
                     background:idx===0?"#E879F918":T.surface2}}>
-                  <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#E879F9":T.text}}>{nombre}</span>
+                  <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#E879F9":T.text}}>{displayName(nombre)}</span>
                   <span style={{fontSize:11,color:T.muted}}>{dias==null?"nunca":`hace ${dias}d`}</span>
                 </button>
               ))}
@@ -414,7 +415,7 @@ function SeminarioPicker({ existing, onSave, onDelete, onAplazar, onMover, onClo
                     padding:"6px 10px",borderRadius:10,cursor:"pointer",
                     border:`1.5px solid ${idx===0?"#4F6EFF":T.border}`,
                     background:idx===0?"#4F6EFF18":T.surface2}}>
-                  <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#4F6EFF":T.text}}>{nombre}</span>
+                  <span style={{fontSize:12.5,fontWeight:600,color:idx===0?"#4F6EFF":T.text}}>{displayName(nombre)}</span>
                   <span style={{fontSize:11,color:T.muted}}>{dias==null?"nunca":`hace ${dias}d`}</span>
                 </button>
               ))}
@@ -626,7 +627,7 @@ function ActividadPicker({ existing, becados, nombrePriority, onSave, onDelete, 
                       fontSize:12,color:"#fff",fontWeight:700}}>
                       {checked && "✓"}
                     </span>
-                    <span style={{fontSize:13.5,fontWeight:500,color:T.text}}>{nombre}</span>
+                    <span style={{fontSize:13.5,fontWeight:500,color:T.text}}>{displayName(nombre)}</span>
                   </button>
                 </div>
               );
@@ -1526,7 +1527,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                                   overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap",
                                   display:"block",
                                 }}>
-                                {conflicto && "⚠ "}{nombre}
+                                {conflicto && "⚠ "}{displayName(nombre)}
                               </button>
                             ) : null}
                           </div>

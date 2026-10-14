@@ -22,6 +22,7 @@ import { SemCard } from "../components/ui/SemCard.jsx";
 import { ActividadCard } from "../components/ui/ActividadCard.jsx";
 import { BecadoHeader } from "../components/ui/BecadoHeader.jsx";
 import { PabellonKBtn } from "../components/pabellonk/PabellonKBtn.jsx";
+import { displayName } from "../utils/displayName.js";
 
 export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, onPabellonK, T }) {
   const today = useMemo(()=>todayISO(),[]);
@@ -130,7 +131,7 @@ export function TabDia({ becado, onChangeBecado, quickLinks, onArtro, onPabellon
                 </div>
               )}
               {actividades.map(a => <ActividadCard key={a.id} titulo={a.titulo} hora={a.hora} color={a.color} index={cardIdx++} T={T}/>)}
-              {sem && <SemCard key="sem" presenter={sem.presenter} title={sem.title} tag={sem.tag} time={sem.time} index={cardIdx++} T={T}/>}
+              {sem && <SemCard key="sem" presenter={displayName(sem.presenter)} title={sem.title} tag={sem.tag} time={sem.time} index={cardIdx++} T={T}/>}
               {(manana.length > 0 || isPoliAM) && <SectionDivider label="Mañana" T={T}/>}
               {manana.map(it => <ActivityCard key={cardIdx} index={cardIdx++} from={it.from} to={it.to} activity={it.activity} accent={c.accent} light={c.light} glow={c.glow} T={T}/>)}
               {isPoliAM && <TurnoCard key="turno-dia" tipo={diaCode} index={cardIdx++} T={T}/>}

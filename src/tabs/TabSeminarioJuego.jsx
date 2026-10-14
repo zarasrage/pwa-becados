@@ -7,6 +7,7 @@ import {
   getSeminarioPuntosPorBecado,
   addSeminarioPuntos,
 } from "../lib/supabaseApi.js";
+import { displayName } from "../utils/displayName.js";
 
 const PIN_MODERADOR = "0001";
 const MEDALLAS = ["🥇", "🥈", "🥉"];
@@ -51,11 +52,11 @@ function SelectBecadoJuego({ becados, onPick, T }) {
                 display:"flex",alignItems:"center",justifyContent:"center",
                 fontFamily:"'Bricolage Grotesque',sans-serif",
               }}>
-                {esMod ? "★" : b.nombre.charAt(0).toUpperCase()}
+                {esMod ? "★" : displayName(b.nombre).charAt(0).toUpperCase()}
               </span>
               <span style={{minWidth:0,flex:1}}>
                 <span style={{display:"block",fontSize:13.5,fontWeight:600,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                  {b.nombre}
+                  {displayName(b.nombre)}
                 </span>
                 {esMod && (
                   <span style={{display:"block",fontSize:10,fontWeight:700,letterSpacing:"0.06em",color:ac,textTransform:"uppercase",marginTop:1}}>
@@ -100,7 +101,7 @@ function SelectBecadoJuego({ becados, onPick, T }) {
                 minWidth:0,flex:1,fontSize:13.5,fontWeight:600,color:T.text,
                 overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
               }}>
-                {nombre}
+                {displayName(nombre)}
               </span>
             </button>
           ))}
@@ -288,7 +289,7 @@ function PanelModerador({ becados, T, modo = "moderador", nombreStaff }) {
                   flex:1,minWidth:0,fontSize:13.5,fontWeight:600,color:T.text,zIndex:1,
                   overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                 }}>
-                  {b.nombre}
+                  {displayName(b.nombre)}
                 </span>
                 <span style={{position:"relative",zIndex:1,flexShrink:0,minWidth:30,textAlign:"center"}}>
                   <span style={{
@@ -363,7 +364,7 @@ function VistaParticipante({ becado, T }) {
           <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.16em",color:T.accent,textTransform:"uppercase",marginBottom:2}}>
             Tu número
           </div>
-          <div style={{fontSize:12.5,color:T.muted,marginBottom:6}}>{becado.nombre}</div>
+          <div style={{fontSize:12.5,color:T.muted,marginBottom:6}}>{displayName(becado.nombre)}</div>
           <div style={{
             fontFamily:"'Bricolage Grotesque',sans-serif",
             fontSize:110,fontWeight:800,lineHeight:1,
@@ -436,7 +437,7 @@ function VistaParticipante({ becado, T }) {
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                       fontFamily:"'Bricolage Grotesque',sans-serif",
                     }}>
-                      {r.nombre}
+                      {displayName(r.nombre)}
                     </span>
                     {yo && <span style={{fontSize:10,fontWeight:700,color:mc,letterSpacing:"0.06em"}}>TÚ</span>}
                   </span>
@@ -472,7 +473,7 @@ function VistaParticipante({ becado, T }) {
                       color: yo ? T.accent : T.text,
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                     }}>
-                      {r.nombre}{yo && " · tú"}
+                      {displayName(r.nombre)}{yo && " · tú"}
                     </span>
                     <span style={{fontSize:14,fontWeight:800,color: yo ? T.accent : T.sub,fontFamily:"'Bricolage Grotesque',sans-serif"}}>
                       {r.puntos}

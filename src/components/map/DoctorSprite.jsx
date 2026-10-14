@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getRecoloredFrames, baseSrc, accSrc, accLayers, SEXO_DEFAULT } from "./recolorSprites.js";
+import { displayName } from "../../utils/displayName.js";
 
 // Devuelve los 4 data URLs recoloreados para un `look` (colores por parte),
 // o null mientras carga / cuando se usa el base sin cambios.
@@ -30,7 +31,7 @@ export function FloorAvatar({ av, isSel, sz, i, onSelect, look }) {
   const src = recolored?.[frame] || baseSrc(sexo, frame);
   return (
     <div style={{ position:"relative", width:sz, height:sz, flexShrink:0 }}>
-      <img src={src} alt={av.name} width={sz} height={sz}
+      <img src={src} alt={displayName(av.name)} width={sz} height={sz}
         style={{ imageRendering:"pixelated", display:"block", pointerEvents:"none",
           filter: isSel ? `drop-shadow(0 0 4px ${av.color}) brightness(1.1)` : "none" }}/>
       {accLayers(look).map((k) => (
@@ -45,7 +46,7 @@ export function FloorAvatar({ av, isSel, sz, i, onSelect, look }) {
           background:av.color, color:"#fff", fontSize:10, fontWeight:800, padding:"2px 8px",
           borderRadius:4, whiteSpace:"nowrap", fontFamily:"'JetBrains Mono',monospace",
           boxShadow:`0 2px 6px ${av.color}80` }}>
-          {av.name.split(" ").slice(-1)[0]}
+          {displayName(av.name.split(" ").slice(-1)[0])}
         </div>
       )}
     </div>
@@ -75,7 +76,7 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
         pointerEvents:"none", // el contenedor deja pasar los clicks; solo la franja captura
         zIndex: isSel ? 100 : Math.round(spot.y),
       }}>
-      <img src={src} alt={av.name}
+      <img src={src} alt={displayName(av.name)}
         width={sz} height={sz}
         style={{
           imageRendering:"pixelated", display:"block", pointerEvents:"none",
@@ -102,7 +103,7 @@ export function DoctorSprite({ av, spot, isSel, sz, i, onSelect, selected, look 
           fontFamily:"'JetBrains Mono',monospace",
           boxShadow:`0 2px 6px ${av.color}80`,
         }}>
-          {av.name.split(" ").slice(-1)[0]}
+          {displayName(av.name.split(" ").slice(-1)[0])}
         </div>
       )}
     </div>

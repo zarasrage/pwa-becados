@@ -2,6 +2,7 @@ import { useState } from "react";
 import { UNIVERSIDADES, UNIV_ORDER } from "../constants/universities.js";
 import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { SubirTabla } from "../components/settings/SubirTabla.jsx";
+import { displayName } from "../utils/displayName.js";
 
 export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, onShowSeminarioJuego, error, T }) {
   const [univ, setUniv] = useState("UNAB");
@@ -61,9 +62,9 @@ export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, 
                     onClick={() => onSelect(name)}
                   >
                     <span style={{width:30,height:30,borderRadius:8,background:`${grpCfg.color}18`,color:grpCfg.color,fontWeight:700,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Bricolage Grotesque',sans-serif"}}>
-                      {name.charAt(0).toUpperCase()}
+                      {displayName(name).charAt(0).toUpperCase()}
                     </span>
-                    <span style={{fontSize:13.5,fontWeight:500,color:T.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</span>
+                    <span style={{fontSize:13.5,fontWeight:500,color:T.text,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{displayName(name)}</span>
                   </button>
                 ))}
               </div>
