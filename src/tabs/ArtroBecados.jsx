@@ -10,6 +10,10 @@ const TONOS = [
   "#22C55E", "#0EA5E9", "#F472B6", "#EAB308", "#6366F1",
 ];
 
+// Personas que no son becados pero usan Artro de forma transitoria.
+// Solo aparecen acá (no en horarios, turnos ni el resto de la app).
+const INVITADOS_ARTRO = ["David Juarez"];
+
 function fmt(ms) {
   const t = Math.max(0, Math.floor(ms));
   return `${String(Math.floor(t/60000)).padStart(2,"0")}:${String(Math.floor((t%60000)/1000)).padStart(2,"0")}`;
@@ -25,7 +29,7 @@ export function ArtroBecados({ onPick, onBack, T }) {
   useEffect(() => {
     Promise.all([getSeminarioBecadosUNAB(), getArtroRegistros()])
       .then(([bs, regs]) => {
-        setBecados(bs.map(b => b.nombre));
+        setBecados([...bs.map(b => b.nombre), ...INVITADOS_ARTRO.filter(n => !bs.some(b => b.nombre === n))]);
         const acc = {};
         for (const r of regs) {
           const a = acc[r.becado] || (acc[r.becado] = { n: 0, mejor: null });
