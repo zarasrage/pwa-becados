@@ -14,6 +14,8 @@ registerSW({
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && navigator.onLine) reg.update().catch(() => {});
     });
+    // Y cada 30 min mientras esté abierta, por si nunca pasa a segundo plano.
+    setInterval(() => { if (navigator.onLine) reg.update().catch(() => {}); }, 30 * 60 * 1000);
   },
 });
 
