@@ -372,11 +372,12 @@ export function TabTurnos({ onBack, T }) {
               return (
                 <div key={iso} style={{animationDelay:`${(i%7)*20}ms`,background:has?`${turnoColor}15`:isToday?T.surface2:isFeriado(iso)?"#EF44440A":"transparent",border:`1px solid ${isToday?turnoColor+"60":has?turnoColor+"30":isFeriado(iso)?"#EF444450":T.border}`,borderRadius:6,padding:"3px 2px",minHeight:44,display:"flex",flexDirection:"column",gap:1,minWidth:0,overflow:"hidden"}}>
                   <div style={{fontSize:13,fontWeight:700,lineHeight:1,marginBottom:1,background:isToday?turnoColor:"transparent",color:isToday?"#fff":isFeriado(iso)?"#EF4444":has?turnoColor:T.muted,borderRadius:isToday?99:0,width:isToday?16:"auto",height:isToday?16:"auto",display:"flex",alignItems:"center",justifyContent:"center",alignSelf:isToday?"center":"flex-start",paddingLeft:isToday?0:1}}>{dayNum}</div>
-                  {names.slice(0,3).map((entry,ni) => {
+                  {/* Se muestran todos: la fila del calendario crece sola para
+                      que quepan, en vez de esconder gente tras un "+N". */}
+                  {names.map((entry,ni) => {
                     const isAM = sub === "P" && entry.isAM;
                     return <div key={ni} style={{fontSize:12,fontWeight:600,color:isAM?"#4F6EFF":turnoColor,background:`${turnoColor}22`,borderRadius:3,padding:"1px 2px",lineHeight:1.25,overflow:"hidden",textOverflow:"clip",whiteSpace:"nowrap",maxWidth:"100%"}}>{displayName(entry.name)}</div>;
                   })}
-                  {names.length > 3 && <div style={{fontSize:11,color:turnoColor,opacity:0.6,paddingLeft:1}}>+{names.length-3}</div>}
                 </div>
               );
             }}/>
