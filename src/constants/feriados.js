@@ -12,6 +12,9 @@ export const FERIADOS = new Set([
   "2026-10-12", // Encuentro de Dos Mundos
   "2026-10-31", // Iglesias Evangélicas
   "2026-11-01", // Todos los Santos
+  "2026-11-19", // SCHOT
+  "2026-11-20", // SCHOT
+  "2026-11-21", // SCHOT
   "2026-12-08", // Inmaculada Concepción
   "2026-12-25", // Navidad
 ]);
