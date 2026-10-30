@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { TIPOS_ACTIVOS } from "../constants/artro.js";
 import { agruparEnCiclos, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
 import { displayName } from "../utils/displayName.js";
+import { ArtroGraficos } from "../components/artro/Graficos.jsx";
 
 const MS_POR_CICLO = REPS_POR_CICLO * 2;   // 4 repeticiones × 2 manos
 
@@ -61,6 +62,7 @@ function Tarjeta({ valor, etiqueta, color, T }) {
 
 // Estadísticas de artroscopía: resumen, tabla de todos los becados y exportación.
 export function ArtroStats({ becados, registros, T }) {
+  const [vista, setVista] = useState("tabla");       // "tabla" | "graficos"
   const [metrica, setMetrica] = useState("ciclos");
   const [exportando, setExportando] = useState(false);
   const M = METRICAS.find(m => m.id === metrica);
@@ -192,6 +194,27 @@ export function ArtroStats({ becados, registros, T }) {
         <Tarjeta valor={resumen.personas}  etiqueta="con tiempos"      color={T.text}   T={T}/>
       </div>
 
+      <div style={{ display: "flex", gap: 5, marginBottom: 12, background: T.surface2, borderRadius: 10, padding: 3 }}>
+        {[{ id: "tabla", label: "Tabla" }, { id: "graficos", label: "Gráficos" }].map(v => (
+          <button key={v.id} className="press" onClick={() => setVista(v.id)}
+            style={{
+              flex: 1, height: 30, borderRadius: 8, border: "none",
+              background: vista === v.id ? T.accent : "transparent",
+              fontSize: 12.5, fontWeight: vista === v.id ? 700 : 500,
+              color: vista === v.id ? "#fff" : T.muted, cursor: "pointer",
+              fontFamily: "'Inter',sans-serif", transition: "background 0.15s",
+            }}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {vista === "graficos" ? (
+        <div style={{ margin: "0 -16px" }}>
+          <ArtroGraficos becados={becados} registros={registros} T={T}/>
+        </div>
+      ) : (
+      <>
       <div style={{ display: "flex", gap: 5, marginBottom: 10, background: T.surface2, borderRadius: 10, padding: 3 }}>
         {METRICAS.map(m => (
           <button key={m.id} className="press" onClick={() => setMetrica(m.id)}
@@ -272,6 +295,8 @@ export function ArtroStats({ becados, registros, T }) {
       <div style={{ fontSize: 11, color: T.muted, textAlign: "center", marginTop: 6, lineHeight: 1.45 }}>
         Dos hojas: el resumen con las cuatro métricas y todos los registros uno por uno.
       </div>
+      </>
+      )}
     </div>
   );
 }
