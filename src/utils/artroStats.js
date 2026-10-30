@@ -48,18 +48,39 @@ export function numeroDeIntento(registros) {
   return idx;
 }
 
-// Mediana del tiempo en cada número de intento, juntando a todos los becados.
-// Se corta donde queden pocos datos: con 3 o 4 observaciones la mediana salta
-// y el gráfico sugiere subidas y bajadas que no existen.
-export function curvaAprendizaje(registros, { minN = 8, maxIntentos = 12 } = {}) {
+// Curva de aprendizaje con COHORTE FIJA.
+//
+// Promediar a todos los que hay en cada intento exagera la mejora: a los
+// intentos altos solo llegan los que siguieron entrenando, que suelen ser los
+// más rápidos. Con los datos actuales, en Números la curva "de todos" baja de
+// 110 a 29 s, pero mirando solo a quienes llegaron al intento 8 baja de 50 a
+// 29: buena parte de la caída era gente lenta que dejó de aparecer.
+//
+// Entonces se fija primero la cohorte —las series (becado + mano) que llegaron
+// al intento K— y se grafica a esa misma gente de principio a fin. K es el
+// mayor número de intentos que alcanzan al menos `minSeries` series.
+export function curvaAprendizaje(registros, { minSeries = 6, maxIntentos = 12 } = {}) {
   const idx = numeroDeIntento(registros);
-  const puntos = [];
-  for (let k = 1; k <= maxIntentos; k++) {
-    const v = registros.filter(r => idx.get(r.id) === k).map(r => r.ms);
-    if (v.length < minN) break;
-    puntos.push({ intento: k, mediana: percentil([...v].sort((a, b) => a - b), 0.5), n: v.length });
+  const largo = {};
+  for (const r of registros) {
+    const k = `${r.becado}|${r.mano}`;
+    largo[k] = Math.max(largo[k] || 0, idx.get(r.id));
   }
-  return puntos;
+  const largos = Object.values(largo).sort((a, b) => b - a);
+  if (largos.length < minSeries) return { puntos: [], series: 0, intentos: 0 };
+
+  const K = Math.min(maxIntentos, largos[minSeries - 1]);
+  const cohorte = new Set(Object.keys(largo).filter(k => largo[k] >= K));
+
+  const puntos = [];
+  for (let k = 1; k <= K; k++) {
+    const v = registros
+      .filter(r => cohorte.has(`${r.becado}|${r.mano}`) && idx.get(r.id) === k)
+      .map(r => r.ms)
+      .sort((a, b) => a - b);
+    if (v.length) puntos.push({ intento: k, mediana: percentil(v, 0.5), n: v.length });
+  }
+  return { puntos, series: cohorte.size, intentos: K };
 }
 
 // Mediana por mano y cuánto más lenta es la izquierda, en porcentaje.

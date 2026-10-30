@@ -50,7 +50,7 @@ function Caja({ children, T }) {
 // ── 1. Curva de aprendizaje ──────────────────────────────────────────────────
 // Un panel chico por ejercicio: comparar cinco líneas sobre un mismo eje sería
 // ilegible en un teléfono, y además cada ejercicio tiene su propia escala.
-function PanelCurva({ tipo, puntos, P, T }) {
+function PanelCurva({ tipo, puntos, series, P, T }) {
   const W = 168, H = 62, ml = 4, mr = 4, mt = 6, mb = 2;
   if (puntos.length < 2) {
     return (
@@ -89,6 +89,7 @@ function PanelCurva({ tipo, puntos, P, T }) {
       </svg>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.muted, marginTop: 1 }}>
         <span>{mmss(ini.mediana)}</span>
+        <span style={{ opacity: 0.75 }}>{series} series</span>
         <span>{mmss(fin.mediana)}</span>
       </div>
     </div>
@@ -200,11 +201,50 @@ function Mejoras({ datos, P, T }) {
   );
 }
 
+// Lo que hay que saber antes de sacar conclusiones. Se calcula de los propios
+// datos para que no quede como un texto fijo que envejece.
+function Advertencias({ registros, P, T }) {
+  const avisos = useMemo(() => {
+    const out = [];
+    const estimadas = registros.filter(r => r.fecha === "2025-06-05").length;
+    if (estimadas) out.push(
+      `${estimadas} registros (${Math.round(estimadas / registros.length * 100)}%) quedaron con una fecha estimada al importarlos, porque la planilla no la traía. Son los más antiguos de la base, así que empujan el comienzo de las curvas.`);
+
+    const cond = {};
+    for (const r of registros) (cond[r.becado] ||= new Set()).add(!!r.conTapa);
+    const mixtos = Object.values(cond).filter(v => v.size > 1).length;
+    const conT = registros.filter(r => r.conTapa).length;
+    if (conT && conT < registros.length) out.push(
+      `Los tiempos mezclan las dos condiciones viejas: ${Math.round(conT / registros.length * 100)}% se hicieron con tapa, que es más lento, y ${mixtos} becados tienen unos ejercicios en una condición y otros en la otra. Comparar tiempos absolutos entre personas arrastra esa diferencia.`);
+
+    out.push("«Derecha» e «izquierda» son la mano, no la dominante: si alguien es zurdo, su brecha aparece al revés.");
+    return out;
+  }, [registros]);
+
+  if (!avisos.length) return null;
+  return (
+    <div style={{
+      background: `${P.s2}0E`, border: `1px solid ${P.s2}40`, borderRadius: 14,
+      padding: "12px 14px", marginBottom: 12,
+    }}>
+      <div style={{
+        fontSize: 11, fontWeight: 800, letterSpacing: "0.07em", color: P.s2,
+        textTransform: "uppercase", marginBottom: 7,
+      }}>Antes de sacar conclusiones</div>
+      <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+        {avisos.map((a, i) => (
+          <li key={i} style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>{a}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ArtroGraficos({ becados, registros, T }) {
   const P = paleta(T.bg);
 
   const curvas = useMemo(() => TIPOS_ACTIVOS.map(t => ({
-    tipo: t, puntos: curvaAprendizaje(registros.filter(r => r.tipo === t.id)),
+    tipo: t, ...curvaAprendizaje(registros.filter(r => r.tipo === t.id)),
   })), [registros]);
 
   const manos = useMemo(() => TIPOS_ACTIVOS.map(t => ({
@@ -227,12 +267,14 @@ export function ArtroGraficos({ becados, registros, T }) {
 
   return (
     <div style={{ padding: "0 16px", position: "relative", zIndex: 1 }}>
+      <Advertencias registros={registros} P={P} T={T}/>
+
       <Caja T={T}>
-        <Titulo T={T} nota="Mediana de todos los becados en cada intento. El % compara el primer intento con el último que tiene datos suficientes.">
+        <Titulo T={T} nota="Se sigue a la misma gente de principio a fin: solo las series (becado + mano) que llegaron al último intento del gráfico. Promediar a todos exageraría la mejora, porque a los intentos altos solo llegan los más constantes.">
           Curva de aprendizaje
         </Titulo>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "14px 16px" }}>
-          {curvas.map(c => <PanelCurva key={c.tipo.id} tipo={c.tipo} puntos={c.puntos} P={P} T={T}/>)}
+          {curvas.map(c => <PanelCurva key={c.tipo.id} tipo={c.tipo} puntos={c.puntos} series={c.series} P={P} T={T}/>)}
         </div>
       </Caja>
 
