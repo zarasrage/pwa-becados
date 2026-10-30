@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { todayISO } from "../utils/dates.js";
 import { getArtroRegistros, addArtroRegistro, deleteArtroRegistro } from "../lib/supabaseApi.js";
 import { ciclosConPendiente, agruparEnCiclos, siguiente, recomendacion, llenasDe, REPS_POR_CICLO } from "../utils/artroCiclos.js";
+import { TIPOS } from "../constants/artro.js";
 import { displayName } from "../utils/displayName.js";
 
 // Los ids quedan guardados dentro de cada registro: no cambiarlos a la ligera
@@ -19,20 +20,6 @@ function Mano({ izq, size = 12 }) {
     </svg>
   );
 }
-
-const TIPOS = [
-  // El orden es el orden en que se deben hacer: de izquierda a derecha.
-  { id: "Lineas",    label: "Líneas",    img: "/artro/lineas.webp" },
-  { id: "Circulos",  label: "Círculos",  img: "/artro/circulos.webp" },
-  { id: "Numeros",   label: "Números",   img: "/artro/numeros.webp" },
-  { id: "Laberinto", label: "Laberinto", img: "/artro/laberinto.webp" },
-  // Tubos 1 son los cilindros verticales; Tubos 2, los horizontales.
-  { id: "Tubos1",    label: "Tubos 1",   img: "/artro/tubos-1.webp" },
-  // Bloqueados: todavía no les toca a estos becados.
-  { id: "Tubos2",    label: "Tubos 2",   img: "/artro/tubos-2.webp", bloqueado: true },
-  { id: "Manguito",  label: "Manguito",  img: "/artro/manguito.webp", bloqueado: true },
-  { id: "Meniscos",  label: "Meniscos",  img: "/artro/meniscos.webp", bloqueado: true },
-];
 
 // Ícono de mano; el izquierdo es el mismo espejado.
 function IconoMano({ espejo }) {

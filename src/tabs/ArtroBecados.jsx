@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArtroStats } from "./ArtroStats.jsx";
 import { getSeminarioBecadosUNAB } from "../lib/supabaseApi.js";
 import { getArtroRegistros } from "../lib/supabaseApi.js";
 import { displayName } from "../utils/displayName.js";
@@ -23,13 +24,16 @@ function fmt(ms) {
 // Muestra de paso cuántos tiempos lleva cada uno y su mejor marca.
 export function ArtroBecados({ onPick, onBack, T }) {
   const [becados, setBecados] = useState([]);
+  const [registros, setRegistros] = useState([]);
   const [resumen, setResumen] = useState({});
   const [cargando, setCargando] = useState(true);
+  const [vista, setVista] = useState("becados");   // "becados" | "stats"
 
   useEffect(() => {
     Promise.all([getSeminarioBecadosUNAB(), getArtroRegistros()])
       .then(([bs, regs]) => {
         setBecados([...bs.map(b => b.nombre), ...INVITADOS_ARTRO.filter(n => !bs.some(b => b.nombre === n))]);
+        setRegistros(regs);
         const acc = {};
         for (const r of regs) {
           const a = acc[r.becado] || (acc[r.becado] = { n: 0, mejor: null });
@@ -58,14 +62,36 @@ export function ArtroBecados({ onPick, onBack, T }) {
           Registro de tiempos
         </div>
         <div className="anim" style={{fontSize:13,color:T.muted,marginTop:3}}>
-          Elige un becado para ver o cargar sus tiempos
+          {vista === "becados"
+            ? "Elige un becado para ver o cargar sus tiempos"
+            : "Cómo va cada uno, y la tabla completa para exportar"}
         </div>
       </div>
 
+      <div style={{padding:"0 16px 12px",position:"relative",zIndex:1}}>
+        <div style={{display:"flex",gap:5,background:T.surface2,borderRadius:10,padding:3}}>
+          {[{id:"becados",label:"Becados"},{id:"stats",label:"Estadísticas"}].map(v => (
+            <button key={v.id} className="press" onClick={() => setVista(v.id)}
+              style={{
+                flex:1,height:32,borderRadius:8,border:"none",
+                background: vista === v.id ? T.accent : "transparent",
+                fontSize:13,fontWeight: vista === v.id ? 700 : 500,
+                color: vista === v.id ? "#fff" : T.muted,cursor:"pointer",
+                fontFamily:"'Inter',sans-serif",transition:"background 0.15s",
+              }}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {cargando ? (
+        <div style={{textAlign:"center",padding:50,color:T.muted,fontSize:13}}>Cargando…</div>
+      ) : vista === "stats" ? (
+        <ArtroStats becados={becados} registros={registros} T={T}/>
+      ) : (
       <div style={{padding:"0 16px",position:"relative",zIndex:1}}>
-        {cargando ? (
-          <div style={{textAlign:"center",padding:50,color:T.muted,fontSize:13}}>Cargando…</div>
-        ) : (
+        {(
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {becados.map((n, i) => {
               const c = TONOS[i % TONOS.length];
@@ -111,6 +137,7 @@ export function ArtroBecados({ onPick, onBack, T }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
