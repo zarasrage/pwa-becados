@@ -252,7 +252,7 @@ function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaHoy, d
 }
 
 // ── Contadores ────────────────────────────────────────────────────────────────
-function Contadores({ turnos, dates, tipo, elegibles = [], T }) {
+function Contadores({ turnos, dates, tipo, elegibles = [], choques = {}, T }) {
   const COLOR = { P:"#06B6D4", D:"#F59E0B", N:"#4F6EFF", A:"#72FF00" };
   const byBecado = {};
   // Parte con todos los que podrían tener turno en el período, para que los
@@ -290,12 +290,22 @@ function Contadores({ turnos, dates, tipo, elegibles = [], T }) {
       <div style={{padding:"6px 0"}}>
         {entries.map(([nombre, fechas]) => {
           const warn = gapWarning(fechas);
+          // Días en que esta persona tiene Día y Poli a la vez.
+          const choque = choques[nombre] || [];
           return (
             <div key={nombre} style={{display:"flex",alignItems:"center",
               justifyContent:"space-between",padding:"6px 14px",
               borderBottom:`1px solid ${T.border}20`}}>
-              <span style={{fontSize:12,color:warn?"#EF4444":fechas.length?T.text:T.muted,fontWeight:warn?700:400}}>{displayName(nombre)}</span>
+              <span style={{fontSize:12,color:(warn||choque.length)?"#EF4444":fechas.length?T.text:T.muted,fontWeight:(warn||choque.length)?700:400}}>{displayName(nombre)}</span>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
+                {choque.length > 0 && (
+                  <span title={`Día y Poli el mismo día: ${choque.map(d=>d.slice(8)+"/"+d.slice(5,7)).join(", ")}`}
+                    style={{fontSize:11.5,color:"#EF4444",fontWeight:800,
+                      background:"#EF444418",border:"1px solid #EF444440",
+                      borderRadius:99,padding:"1px 7px",whiteSpace:"nowrap"}}>
+                    ⚠ Día+Poli {choque.map(d=>Number(d.slice(8))).join(", ")}
+                  </span>
+                )}
                 {warn && <span style={{fontSize:12,color:"#EF4444",fontWeight:700}}>⚠ &lt;6d</span>}
                 <span style={{fontSize:12,fontWeight:700,
                   color: fechas.length ? COLOR[tipo] : T.muted,
@@ -1174,6 +1184,21 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     return [...set];
   }, [dates, tipo, becados, rotMap]);
 
+  // Quién tiene Día y Poli el mismo día dentro del período. Solo se muestra en
+  // esas dos pestañas, que son donde se puede hacer algo al respecto.
+  // semanaMap trae los Día y poliMap los Poli, los dos ya cargados.
+  const choquesDiaPoli = useMemo(() => {
+    if (tipo !== "P" && tipo !== "D") return {};
+    const out = {};
+    for (const d of dates) {
+      const conPoli = new Set(poliMap[d] || []);
+      for (const n of semanaMap[d] || []) {
+        if (conPoli.has(n)) (out[n] ||= []).push(d);
+      }
+    }
+    return out;
+  }, [dates, tipo, semanaMap, poliMap]);
+
   const color = TURNO_TABS.find(t=>t.id===tipo)?.color || T.accent;
   const weekdayOnly = tipo !== "N" && tipo !== "AC";
   const COL_LABELS = weekdayOnly ? COL_LABELS_5 : COL_LABELS_7;
@@ -1595,7 +1620,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
               );
             })}
 
-            <Contadores turnos={turnos} dates={dates} tipo={tipo} elegibles={elegiblesDelPeriodo} T={T}/>
+            <Contadores turnos={turnos} dates={dates} tipo={tipo} elegibles={elegiblesDelPeriodo}
+              choques={choquesDiaPoli} T={T}/>
           </>
         )}
       </div>
