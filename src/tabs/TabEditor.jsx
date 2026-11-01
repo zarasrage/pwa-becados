@@ -55,18 +55,27 @@ function getMondayOfWeek(iso) {
   return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
 }
 
-function get4Weeks(monday) {
+// Semanas completas que cubren el mes: arranca el lunes de la semana del día 1
+// y termina el domingo de la semana del último día, así que incluye los días
+// del mes anterior y del siguiente que caen en esas semanas.
+function semanasDelMes(mes) {
+  const [y, m] = mes.split("-").map(Number);
+  const ultimoDia = new Date(y, m, 0).getDate();
+  const fin = offsetDate(getMondayOfWeek(`${mes}-${String(ultimoDia).padStart(2,"0")}`), 6);
   const dates = [];
-  for (let i = 0; i < 28; i++) dates.push(offsetDate(monday, i));
+  for (let d = getMondayOfWeek(`${mes}-01`); d <= fin; d = offsetDate(d, 1)) dates.push(d);
   return dates;
 }
 
-function periodLabel(dates) {
-  const months = [...new Set(dates.map(d => d.substring(0,7)))];
-  return months.map(m => {
-    const [y,mo] = m.split("-").map(Number);
-    return new Date(y,mo-1,1).toLocaleDateString("es-CL",{month:"long",year:"numeric"});
-  }).join(" / ");
+function mesVecino(mes, delta) {
+  const [y, m] = mes.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+}
+
+function periodLabel(mes) {
+  const [y, mo] = mes.split("-").map(Number);
+  return new Date(y, mo-1, 1).toLocaleDateString("es-CL", { month:"long", year:"numeric" });
 }
 
 function isWeekend(iso) {
@@ -662,7 +671,7 @@ function ActividadPicker({ existing, becados, nombrePriority, onSave, onDelete, 
 // ── TabEditor ─────────────────────────────────────────────────────────────────
 export function TabEditor({ onBack, allowedTipos, T }) {
   const today  = useMemo(() => todayISO(), []);
-  const [monday, setMonday]   = useState(() => getMondayOfWeek(today));
+  const [mes, setMes]         = useState(() => today.substring(0,7));
   const visibleTabs = allowedTipos?.length ? TURNO_TABS.filter(t => allowedTipos.includes(t.id)) : TURNO_TABS;
   const [tipo, setTipo]       = useState(() => visibleTabs[0]?.id || "N");
   const [picker, setPicker]     = useState(null); // { date }
@@ -702,7 +711,9 @@ export function TabEditor({ onBack, allowedTipos, T }) {
     setPkReseteando(false);
   };
 
-  const dates = useMemo(() => get4Weeks(monday), [monday]);
+  const dates  = useMemo(() => semanasDelMes(mes), [mes]);
+  // Varios efectos dependen del inicio del período; se mantiene como derivado.
+  const monday = dates[0];
   const start = dates[0];
   const end   = dates[dates.length-1];
   const endPlus5 = offsetDate(end, 5); // para chequeo "Noche <6d" hacia adelante
@@ -1163,10 +1174,12 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   const COL_LABELS = weekdayOnly ? COL_LABELS_5 : COL_LABELS_7;
   const gridCols   = weekdayOnly ? "repeat(5,1fr)" : "repeat(7,1fr)";
 
-  // Dividir en 4 semanas; para tipos sin finde filtrar Sáb/Dom
+  // Dividir en semanas; para tipos sin finde filtrar Sáb/Dom.
+  // El largo depende del mes: son 4, 5 o 6 semanas según dónde caigan el día 1
+  // y el último.
   const weeks = useMemo(() => {
     const ws = [];
-    for (let i = 0; i < 28; i += 7) {
+    for (let i = 0; i < dates.length; i += 7) {
       const week = dates.slice(i, i+7);
       ws.push(weekdayOnly ? week.filter(d => !isWeekend(d)) : week);
     }
@@ -1196,7 +1209,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           <div style={{flex:1}}>
             <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.1em",color:T.muted,textTransform:"uppercase"}}>{tipo==="S"?"Editor de seminarios":"Editor de turnos"}</div>
             <div style={{fontSize:12,fontWeight:600,color:T.sub,textTransform:"capitalize"}}>
-              {periodLabel(dates)}
+              {periodLabel(mes)}
             </div>
           </div>
           <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
@@ -1237,19 +1250,19 @@ export function TabEditor({ onBack, allowedTipos, T }) {
 
         {/* Nav período */}
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
-          <button className="press" onClick={()=>{ setHistorial([]); setMonday(d=>offsetDate(d,-28)); }}
+          <button className="press" onClick={()=>{ setHistorial([]); setMes(m=>mesVecino(m,-1)); }}
             style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.border}`,
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,color:T.sub,flexShrink:0}}>‹</button>
-          {getMondayOfWeek(today) !== monday && (
-            <button className="press" onClick={()=>setMonday(getMondayOfWeek(today))}
+          {today.substring(0,7) !== mes && (
+            <button className="press" onClick={()=>{ setHistorial([]); setMes(today.substring(0,7)); }}
               style={{height:28,padding:"0 10px",borderRadius:7,border:`1px solid ${color}60`,
                 background:`${color}14`,fontSize:12,fontWeight:700,color,flexShrink:0}}>
               HOY
             </button>
           )}
           <div style={{flex:1}}/>
-          <button className="press" onClick={()=>{ setHistorial([]); setMonday(d=>offsetDate(d,28)); }}
+          <button className="press" onClick={()=>{ setHistorial([]); setMes(m=>mesVecino(m,1)); }}
             style={{width:28,height:28,borderRadius:7,border:`1px solid ${T.border}`,
               background:T.surface2,display:"flex",alignItems:"center",justifyContent:"center",
               fontSize:14,color:T.sub,flexShrink:0}}>›</button>
@@ -1298,6 +1311,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
+                      const otroMes = date.substring(0,7) !== mes;
                       const weekend = isWeekend(date);
                       const isToday = date === today;
                       return (
@@ -1306,7 +1320,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                           color:isToday?"#fff":isFeriado(date)?"#EF4444":weekend?T.muted:T.text,
                           background:isToday?"#E879F9":isFeriado(date)?"#EF44440A":weekend?T.surface2:T.surface,
                           borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif",
-                          border:isFeriado(date)?"1px solid #EF444430":"none"}}>
+                          border:isFeriado(date)?"1px solid #EF444430":"none",
+                          opacity:otroMes?0.4:1}}>
                           {dayNum}
                         </div>
                       );
@@ -1389,6 +1404,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
+                      const otroMes = date.substring(0,7) !== mes;
                       const weekend = isWeekend(date);
                       const isToday = date === today;
                       return (
@@ -1397,7 +1413,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                           color:isToday?"#fff":isFeriado(date)?"#EF4444":weekend?T.muted:T.text,
                           background:isToday?"#8B73FF":isFeriado(date)?"#EF44440A":weekend?T.surface2:T.surface,
                           borderRadius:"4px 4px 0 0",fontFamily:"'Bricolage Grotesque',sans-serif",
-                          border:isFeriado(date)?"1px solid #EF444430":"none"}}>
+                          border:isFeriado(date)?"1px solid #EF444430":"none",
+                          opacity:otroMes?0.4:1}}>
                           {dayNum}
                         </div>
                       );
@@ -1472,6 +1489,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                   <div style={{display:"grid",gridTemplateColumns:gridCols,gap:1,marginBottom:1}}>
                     {week.map(date => {
                       const dayNum = Number(date.split("-")[2]);
+                      const otroMes = date.substring(0,7) !== mes;
                       const weekend = isWeekend(date);
                       const feriado = isFeriado(date);
                       const isToday = date === today;
@@ -1485,6 +1503,8 @@ export function TabEditor({ onBack, allowedTipos, T }) {
                           borderRadius:"4px 4px 0 0",
                           fontFamily:"'Bricolage Grotesque',sans-serif",
                           borderTop: feriado ? "2px solid #EF4444" : "none",
+                          // Los días del mes vecino se ven, pero apagados.
+                          opacity: otroMes ? 0.4 : 1,
                         }}>
                           {dayNum}
                         </div>
