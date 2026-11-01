@@ -127,11 +127,13 @@ function colorPorDiasNoche(dias) {
 }
 
 // ── BecadoPicker ─────────────────────────────────────────────────────────────
-function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaOPoliManana, nocheReciente, turnoEstaSemana, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
+function BecadoPicker({ elegibles, nombrePriority, nocheAyer, poliHoy, diaHoy, diaOPoliManana, nocheReciente, turnoEstaSemana, diasDesdeUltimaNoche, diasDesdeUltimoFindeNoche, turnoType, onSelect, onClose, T }) {
   const [poliSub, setPoliSub] = useState(null); // null | "P" | "p"
   function conflictLabel(n) {
     if ((turnoType==="P"||turnoType==="D") && nocheAyer.includes(n)) return "Noche ayer";
     if (turnoType==="D" && poliHoy.includes(n)) return "Poli hoy";
+    // El inverso del anterior: no puede ir a Poli si ese mismo día tiene Día.
+    if (turnoType==="P" && diaHoy.includes(n)) return "Día hoy";
     if (turnoType==="D" && turnoEstaSemana.includes(n)) return "Turno esta semana";
     if (turnoType==="N" && diaOPoliManana.includes(n)) return "Día/Poli mañana";
     if (turnoType==="N" && nocheReciente.includes(n)) return "Noche <6d";
@@ -807,6 +809,9 @@ export function TabEditor({ onBack, allowedTipos, T }) {
   }, [monday]);
 
   function poliMismoDia(date) { return poliMap[date] || []; }
+  // semanaMap guarda quién tiene turno Día por fecha; se carga en todas las
+  // pestañas, así que sirve también para el chequeo cruzado desde Poli.
+  function diaMismoDia(date) { return semanaMap[date] || []; }
   function diaOPoliSiguiente(date) { return diaPoliSigMap[offsetDate(date,1)] || []; }
   // Nombres con otro turno Día en la misma semana (lun-dom) que `date`
   function turnoEstaSemana(date) {
@@ -1632,6 +1637,7 @@ export function TabEditor({ onBack, allowedTipos, T }) {
           nombrePriority={nombrePriority}
           nocheAyer={nocheAyer(picker.date)}
           poliHoy={poliMismoDia(picker.date)}
+          diaHoy={diaMismoDia(picker.date)}
           diaOPoliManana={diaOPoliSiguiente(picker.date)}
           nocheReciente={nocheMenosDe6Dias(picker.date)}
           turnoEstaSemana={turnoEstaSemana(picker.date)}
