@@ -11,6 +11,7 @@ import { FloorAvatar } from "./DoctorSprite.jsx";
 import { UNAB_BECADOS } from "../../data/cursoCPQ.js";
 import { AVATAR_IDENTITY, AVATAR_SCALE, SHARED_COLOR_PARTS } from "../../constants/avatarIdentity.js";
 import { getAvatares, saveAvatares } from "../../lib/supabaseApi.js";
+import { SpriteBecado as SpritePreview } from "./SpriteBecado.jsx";
 import { PART_LABELS, SEXO_DEFAULT, baseSrc, accSrc, accLayers, ACC_SECTIONS, getRecoloredFrames } from "./recolorSprites.js";
 import { displayName } from "../../utils/displayName.js";
 
@@ -21,23 +22,6 @@ const PART_PRESETS = {
 };
 
 // Preview estático (frame 0) del muñeco con los colores elegidos
-function SpritePreview({ look, size = 44 }) {
-  const fallback = baseSrc(look?.sexo || SEXO_DEFAULT, 0);
-  const [src, setSrc] = useState(fallback);
-  const key = look ? JSON.stringify(look) : "";
-  useEffect(() => {
-    let alive = true;
-    getRecoloredFrames(look)
-      .then((urls) => { if (alive) setSrc(urls?.[0] || fallback); })
-      .catch(() => {});
-  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
-      <img src={src} width={size} height={size} alt="preview" style={{imageRendering:"pixelated",display:"block"}}/>
-      {accLayers(look).map(k => <img key={k} src={accSrc(k,0)} width={size} height={size} alt="" style={{position:"absolute",top:0,left:0,imageRendering:"pixelated"}}/>)}
-    </div>
-  );
-}
 
 function getBecadoColor(name, allBecados) {
   const idx = allBecados.indexOf(name);
