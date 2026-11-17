@@ -35,6 +35,8 @@ import { TabEditor } from "./tabs/TabEditor.jsx";
 import { TabPabellones } from "./tabs/TabPabellones.jsx";
 import { TabSeminarioJuego } from "./tabs/TabSeminarioJuego.jsx";
 import { TabArtro } from "./tabs/TabArtro.jsx";
+import { TabSchot } from "./tabs/TabSchot.jsx";
+import { enFechasSchot } from "./constants/schot.js";
 import { ArtroBecados } from "./tabs/ArtroBecados.jsx";
 import { TabFellows } from "./tabs/TabFellows.jsx";
 import { useSplash } from "./hooks/useSplash.js";
@@ -72,6 +74,10 @@ export default function App() {
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showConfig, setShowConfig]         = useState(false);
   const [showPabellonK, setShowPabellonK]   = useState(false);
+  // Modo congreso: solo existe durante el SCHOT, y la preferencia es del
+  // dispositivo para que cada uno lo prenda y apague cuando quiera.
+  const schotDisponible = enFechasSchot(todayISO());
+  const [modoSchot, setModoSchot] = useState(() => safeStorage.get("modoSchot") === "1");
 
   const ACCENT = ACCENT_MAP[theme] || "#348FFF";
   const T = { ...THEMES[theme], accent: ACCENT };
@@ -237,7 +243,14 @@ export default function App() {
             onPreviewSplash={()=>{setShowConfig(false);setPreviewSplash(true);setTimeout(()=>setPreviewSplash(false),2700);}}
             onBack={() => setShowConfig(false)} T={T}/>
       : !becado ? (
-          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa} onShowPabellones={() => setShowPabellones(true)} onShowSeminarioJuego={() => setShowSeminarioJuego(true)} error={initError} T={T}/>
+          <SelectScreen becados={becados} onSelect={handleSelect} onShowMapa={handleShowMapa}
+            onShowPabellones={() => setShowPabellones(true)}
+            onShowSeminarioJuego={() => setShowSeminarioJuego(true)}
+            schotDisponible={schotDisponible} modoSchot={modoSchot && schotDisponible}
+            onToggleSchot={() => setModoSchot(v => { safeStorage.set("modoSchot", v ? "0" : "1"); return !v; })}
+            error={initError} T={T}/>
+      ) : (modoSchot && schotDisponible) ? (
+        <TabSchot becado={becado} onChangeBecado={handleChange} T={T}/>
       ) : (
         <>
           <div className={activeTab==="horario"?"tab-in":""} style={{display:activeTab==="horario"?"block":"none"}}><TabDia becado={becado} onChangeBecado={handleChange} quickLinks={quickLinks} onArtro={abrirArtro} onPabellonK={()=>setShowPabellonK(true)} T={T}/></div>

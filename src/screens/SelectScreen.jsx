@@ -4,7 +4,8 @@ import { ErrorBox } from "../components/ui/ErrorBox.jsx";
 import { SubirTabla } from "../components/settings/SubirTabla.jsx";
 import { displayName } from "../utils/displayName.js";
 
-export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, onShowSeminarioJuego, error, T }) {
+export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, onShowSeminarioJuego,
+  modoSchot, onToggleSchot, schotDisponible, error, T }) {
   const [univ, setUniv] = useState("UNAB");
   const [showSubirTabla, setShowSubirTabla] = useState(false);
   const univCfg  = UNIVERSIDADES[univ];
@@ -21,6 +22,37 @@ export function SelectScreen({ becados, onSelect, onShowMapa, onShowPabellones, 
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:22,fontWeight:800,color:T.text,lineHeight:1.1,marginBottom:12}}>
           ¿Quién eres?
         </div>
+
+        {/* Interruptor del modo congreso: al entrar a un becado se abre la
+            grilla del SCHOT en vez del menú de siempre. */}
+        {schotDisponible && (
+          <button className="press" onClick={onToggleSchot}
+            style={{
+              width:"100%",display:"flex",alignItems:"center",gap:10,marginBottom:14,
+              background: modoSchot ? "#2a78d612" : T.surface,
+              border:`1.5px solid ${modoSchot ? "#2a78d6" : T.border}`,
+              borderRadius:14,padding:"11px 13px",cursor:"pointer",
+              textAlign:"left",fontFamily:"'Inter',sans-serif",
+            }}>
+            <span style={{fontSize:18,flexShrink:0}}>🎓</span>
+            <span style={{flex:1,minWidth:0}}>
+              <span style={{display:"block",fontSize:14,fontWeight:700,color:modoSchot?"#2a78d6":T.text}}>
+                Modo SCHOT
+              </span>
+              <span style={{display:"block",fontSize:11.5,color:T.muted,marginTop:1}}>
+                {modoSchot ? "Al entrar verás la grilla del congreso" : "Ver el horario del congreso"}
+              </span>
+            </span>
+            <span aria-hidden style={{
+              width:44,height:26,borderRadius:99,flexShrink:0,position:"relative",
+              background: modoSchot ? "#2a78d6" : T.border,transition:"background 0.18s",
+            }}>
+              <span style={{position:"absolute",top:3,left:modoSchot?21:3,width:20,height:20,
+                borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,0.3)",
+                transition:"left 0.18s"}}/>
+            </span>
+          </button>
+        )}
 
         <div style={{display:"flex",gap:6,marginBottom:14,background:T.surface2,borderRadius:12,padding:4}}>
           {UNIV_ORDER.map(u => (

@@ -228,6 +228,31 @@ export async function borrarPushSub(endpoint) {
   return await setConfigJSON("push_subs", lista.filter(s => s.endpoint !== endpoint));
 }
 
+// ── Congreso SCHOT: a qué charla va cada uno ─────────────────────────────────
+// config.schot_asistencia = { becado: [idCharla, ...] }
+export async function getSchotAsistencia() {
+  const m = await getConfigJSON("schot_asistencia", {});
+  return m && typeof m === "object" ? m : {};
+}
+
+// Marca o desmarca una charla. Varios becados eligen a la vez sobre el mismo
+// JSON, así que se relee, se mezcla y se confirma que el cambio propio quedó.
+export async function marcarSchot(becado, idCharla, va) {
+  for (let intento = 0; intento < 4; intento++) {
+    const m = await getSchotAsistencia();
+    const mias = new Set(m[becado] || []);
+    if (va) mias.add(idCharla); else mias.delete(idCharla);
+    const next = { ...m, [becado]: [...mias] };
+
+    await setConfigJSON("schot_asistencia", next);
+
+    const confirmado = await getSchotAsistencia();
+    if (!!(confirmado[becado] || []).includes(idCharla) === !!va) return confirmado;
+    await new Promise(r => setTimeout(r, 120 * (intento + 1)));
+  }
+  return null;
+}
+
 // ── Pabellón K (llamado de una vez al día, para todos) ────────────────────────
 // Se guarda en config.pabellon_k como { fecha, por, ts }. El candado es por
 // fecha: si ya hay un registro de hoy, nadie más puede disparar el llamado.
