@@ -13,6 +13,15 @@ const HORA_W = 44;   // columna de la hora, fija a la izquierda
 
 const m2 = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
 
+const PANEL_COLOR  = "#0EA5E9";
+const BECADO_COLOR = "#A855F7";
+
+// Color de la barra de una charla. En el PDF los paneles y las charlas de
+// becado no llevan color de especialidad: llevan su propio destacado (celeste
+// y lila), así que acá se pintan igual.
+const colorDe = (c, T) =>
+  c.panel ? PANEL_COLOR : c.becado ? BECADO_COLOR : (SCHOT_ESP[c.esp] || T.muted);
+
 // Cuándo dos charlas no se pueden ver las dos.
 //
 // En la MISMA sala nunca chocan: van una después de otra, por eso están
@@ -229,12 +238,12 @@ export function TabSchot({ becado, onChangeBecado, T }) {
                         const voy = mias.has(c.id);
                         const bloq = choca(c);
                         const gente = porCharla[c.id] || [];
-                        const ce = SCHOT_ESP[c.esp] || T.muted;
+                        const ce = colorDe(c, T);
                         return (
                           <button key={c.id} className="press" onClick={() => setAbierta(c)}
                             style={{
                               width:"100%",textAlign:"left",cursor:"pointer",
-                              background: voy ? `${T.accent}18` : c.panel ? "#0EA5E90E" : c.becado ? "#A855F70E" : T.surface,
+                              background: voy ? `${T.accent}18` : c.panel ? `${PANEL_COLOR}0E` : c.becado ? `${BECADO_COLOR}0E` : T.surface,
                               border:`1px solid ${voy ? T.accent : T.border}`,
                               borderLeft:`3px solid ${ce}`,borderRadius:5,
                               padding:"4px 5px",opacity: bloq ? 0.42 : 1,
@@ -248,7 +257,7 @@ export function TabSchot({ becado, onChangeBecado, T }) {
                             </span>
                             {(c.panel || c.becado) && (
                               <span style={{fontSize:8.5,fontWeight:800,letterSpacing:"0.05em",
-                                color: c.panel ? "#0EA5E9" : "#A855F7"}}>
+                                color: c.panel ? PANEL_COLOR : BECADO_COLOR}}>
                                 {c.panel ? "PANEL" : "BECADO"}
                               </span>
                             )}
@@ -292,7 +301,7 @@ export function TabSchot({ becado, onChangeBecado, T }) {
 // desde acá evita hacerlo sin querer al desplazar la grilla.
 function Detalle({ charla: c, voy, conflicto, gente, looks, guardando, onAlternar, onClose, T }) {
   const bloqueada = !!conflicto;
-  const ce = SCHOT_ESP[c.esp] || T.muted;
+  const ce = colorDe(c, T);
   return (
     <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",
       background:"rgba(0,0,0,0.5)"}} onClick={onClose}>
@@ -303,9 +312,9 @@ function Detalle({ charla: c, voy, conflicto, gente, looks, guardando, onAlterna
       }}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9,flexWrap:"wrap"}}>
           <span style={{width:10,height:10,borderRadius:3,background:ce}}/>
-          <span style={{fontSize:11.5,fontWeight:700,color:ce}}>{c.esp}</span>
-          {c.panel  && <span style={{fontSize:10,fontWeight:800,color:"#0EA5E9"}}>PANEL</span>}
-          {c.becado && <span style={{fontSize:10,fontWeight:800,color:"#A855F7"}}>BECADO</span>}
+          {c.esp && <span style={{fontSize:11.5,fontWeight:700,color:ce}}>{c.esp}</span>}
+          {c.panel  && <span style={{fontSize:10,fontWeight:800,color:PANEL_COLOR}}>PANEL</span>}
+          {c.becado && <span style={{fontSize:10,fontWeight:800,color:BECADO_COLOR}}>BECADO</span>}
         </div>
 
         <div style={{fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:19,fontWeight:800,

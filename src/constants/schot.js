@@ -33,7 +33,7 @@ export const SCHOT_DIAS = [
     ],
     "charlas": [
       {
-        "id": "1118-0840-Bombal",
+        "id": "1118-0840-BombalAB",
         "hora": "08:40",
         "slot": "08:30",
         "sala": "Bombal AB",
@@ -45,7 +45,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1118-1135-Bombal",
+        "id": "1118-1135-BombalAB",
         "hora": "11:35",
         "slot": "11:30",
         "sala": "Bombal AB",
@@ -57,7 +57,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1118-1145-Bombal",
+        "id": "1118-1145-BombalAB",
         "hora": "11:45",
         "slot": "11:45",
         "sala": "Bombal AB",
@@ -69,7 +69,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1118-1655-Bombal",
+        "id": "1118-1655-BombalAB",
         "hora": "16:55",
         "slot": "16:45",
         "sala": "Bombal AB",
@@ -148,7 +148,7 @@ export const SCHOT_DIAS = [
     ],
     "charlas": [
       {
-        "id": "1119-0818-Caraco",
+        "id": "1119-0818-Caracola",
         "hora": "08:18",
         "slot": "08:15",
         "sala": "Caracola",
@@ -160,7 +160,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1119-0822-Pacifi",
+        "id": "1119-0822-Pacifico",
         "hora": "08:22",
         "slot": "08:15",
         "sala": "Pacífico",
@@ -169,10 +169,10 @@ export const SCHOT_DIAS = [
         "titulo": "Panel trauma (08:22 y 08:52)",
         "panel": true,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": null
       },
       {
-        "id": "1119-0828-Bombal",
+        "id": "1119-0828-BombalA",
         "hora": "08:28",
         "slot": "08:15",
         "sala": "Bombal A",
@@ -184,7 +184,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-0842-Estrel",
+        "id": "1119-0842-Estrella2",
         "hora": "08:42",
         "slot": "08:30",
         "sala": "Estrella 2",
@@ -196,7 +196,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1119-0852-Caraco",
+        "id": "1119-0852-Caracola",
         "hora": "08:52",
         "slot": "08:45",
         "sala": "Caracola",
@@ -208,7 +208,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1119-0857-Caraco",
+        "id": "1119-0857-Caracola",
         "hora": "08:57",
         "slot": "08:45",
         "sala": "Caracola",
@@ -220,7 +220,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1119-0901-Vergar",
+        "id": "1119-0901-VergaraA",
         "hora": "09:01",
         "slot": "09:00",
         "sala": "Vergara A",
@@ -232,7 +232,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1119-0902-Caraco",
+        "id": "1119-0902-Caracola",
         "hora": "09:02",
         "slot": "09:00",
         "sala": "Caracola",
@@ -244,7 +244,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1119-0912-Pacifi",
+        "id": "1119-0912-Pacifico",
         "hora": "09:12",
         "slot": "09:00",
         "sala": "Pacífico",
@@ -256,7 +256,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1119-0915-Vergar",
+        "id": "1119-0915-VergaraC",
         "hora": "09:15",
         "slot": "09:15",
         "sala": "Vergara C",
@@ -265,22 +265,10 @@ export const SCHOT_DIAS = [
         "titulo": "OTS tras transporte óseo",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-0917-Pacifi",
-        "hora": "09:17",
-        "slot": "09:15",
-        "sala": "Pacífico",
-        "hotel": "Sheraton",
-        "presentador": "N. Franulic",
-        "titulo": "Lesión arterial platillos",
-        "panel": false,
-        "becado": false,
-        "esp": "Mano"
-      },
-      {
-        "id": "1119-0917-Vergar",
+        "id": "1119-0917-VergaraA",
         "hora": "09:17",
         "slot": "09:15",
         "sala": "Vergara A",
@@ -292,7 +280,19 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1119-0934-Caraco",
+        "id": "1119-0917-Pacifico",
+        "hora": "09:17",
+        "slot": "09:15",
+        "sala": "Pacífico",
+        "hotel": "Sheraton",
+        "presentador": "N. Franulic",
+        "titulo": "Lesión arterial platillos",
+        "panel": false,
+        "becado": false,
+        "esp": "Rodilla"
+      },
+      {
+        "id": "1119-0934-Caracola",
         "hora": "09:34",
         "slot": "09:30",
         "sala": "Caracola",
@@ -301,10 +301,10 @@ export const SCHOT_DIAS = [
         "titulo": "Tethering en escoliosis",
         "panel": false,
         "becado": true,
-        "esp": "Columna"
+        "esp": null
       },
       {
-        "id": "1119-1030-Esmera",
+        "id": "1119-1030-Esmeralda",
         "hora": "10:30",
         "slot": "10:30",
         "sala": "Esmeralda",
@@ -316,7 +316,7 @@ export const SCHOT_DIAS = [
         "esp": "Cadera y pelvis"
       },
       {
-        "id": "1119-1030-Estrel",
+        "id": "1119-1030-Estrella2",
         "hora": "10:30",
         "slot": "10:30",
         "sala": "Estrella 2",
@@ -325,10 +325,10 @@ export const SCHOT_DIAS = [
         "titulo": "Fellowship mano",
         "panel": false,
         "becado": false,
-        "esp": "Cadera y pelvis"
+        "esp": "Mano"
       },
       {
-        "id": "1119-1040-Esmera",
+        "id": "1119-1040-Esmeralda",
         "hora": "10:40",
         "slot": "10:30",
         "sala": "Esmeralda",
@@ -340,7 +340,7 @@ export const SCHOT_DIAS = [
         "esp": "Cadera y pelvis"
       },
       {
-        "id": "1119-1045-Vergar",
+        "id": "1119-1045-VergaraC",
         "hora": "10:45",
         "slot": "10:45",
         "sala": "Vergara C",
@@ -349,10 +349,10 @@ export const SCHOT_DIAS = [
         "titulo": "Artrodesis TTC aloinjerto",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1050-Esmera",
+        "id": "1119-1050-Esmeralda",
         "hora": "10:50",
         "slot": "10:45",
         "sala": "Esmeralda",
@@ -364,7 +364,7 @@ export const SCHOT_DIAS = [
         "esp": "Cadera y pelvis"
       },
       {
-        "id": "1119-1100-Vergar",
+        "id": "1119-1100-VergaraC",
         "hora": "11:00",
         "slot": "11:00",
         "sala": "Vergara C",
@@ -373,10 +373,10 @@ export const SCHOT_DIAS = [
         "titulo": "Artrodesis tibiocalcánea",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1102-Vergar",
+        "id": "1119-1102-VergaraA",
         "hora": "11:02",
         "slot": "11:00",
         "sala": "Vergara A",
@@ -388,7 +388,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1119-1115-Vergar",
+        "id": "1119-1115-VergaraC",
         "hora": "11:15",
         "slot": "11:15",
         "sala": "Vergara C",
@@ -397,10 +397,10 @@ export const SCHOT_DIAS = [
         "titulo": "Modelos 3D retro/mediopié",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1130-Vergar",
+        "id": "1119-1130-VergaraC",
         "hora": "11:30",
         "slot": "11:30",
         "sala": "Vergara C",
@@ -409,10 +409,10 @@ export const SCHOT_DIAS = [
         "titulo": "OMC calcáneo",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1206-Bombal",
+        "id": "1119-1206-BombalA",
         "hora": "12:06",
         "slot": "12:00",
         "sala": "Bombal A",
@@ -424,7 +424,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1221-Bombal",
+        "id": "1119-1221-BombalA",
         "hora": "12:21",
         "slot": "12:15",
         "sala": "Bombal A",
@@ -436,7 +436,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1500-Bombal",
+        "id": "1119-1500-BombalA",
         "hora": "15:00",
         "slot": "15:00",
         "sala": "Bombal A",
@@ -448,7 +448,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1545-Vergar",
+        "id": "1119-1545-VergaraC",
         "hora": "15:45",
         "slot": "15:45",
         "sala": "Vergara C",
@@ -460,19 +460,7 @@ export const SCHOT_DIAS = [
         "esp": "Reconstrucción"
       },
       {
-        "id": "1119-1700-Caraco",
-        "hora": "17:00",
-        "slot": "17:00",
-        "sala": "Caracola",
-        "hotel": "Enjoy",
-        "presentador": "J.G. Fleiderman",
-        "titulo": "Termodiscoplastía",
-        "panel": false,
-        "becado": false,
-        "esp": "Reconstrucción"
-      },
-      {
-        "id": "1119-1700-Vergar",
+        "id": "1119-1700-VergaraC",
         "hora": "17:00",
         "slot": "17:00",
         "sala": "Vergara C",
@@ -484,7 +472,19 @@ export const SCHOT_DIAS = [
         "esp": "Reconstrucción"
       },
       {
-        "id": "1119-1714-Estrel",
+        "id": "1119-1700-Caracola",
+        "hora": "17:00",
+        "slot": "17:00",
+        "sala": "Caracola",
+        "hotel": "Enjoy",
+        "presentador": "J.G. Fleiderman",
+        "titulo": "Termodiscoplastía",
+        "panel": false,
+        "becado": false,
+        "esp": "Columna"
+      },
+      {
+        "id": "1119-1714-Estrella2",
         "hora": "17:14",
         "slot": "17:00",
         "sala": "Estrella 2",
@@ -496,7 +496,7 @@ export const SCHOT_DIAS = [
         "esp": "Reconstrucción"
       },
       {
-        "id": "1119-1720-Pacifi",
+        "id": "1119-1720-Pacifico",
         "hora": "17:20",
         "slot": "17:15",
         "sala": "Pacífico",
@@ -505,10 +505,10 @@ export const SCHOT_DIAS = [
         "titulo": "Panel osteotomías (17:20/17:47)",
         "panel": true,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": null
       },
       {
-        "id": "1119-1730-Vergar",
+        "id": "1119-1730-VergaraA",
         "hora": "17:30",
         "slot": "17:30",
         "sala": "Vergara A",
@@ -517,7 +517,7 @@ export const SCHOT_DIAS = [
         "titulo": "Caso clínico 1",
         "panel": false,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": "Mano"
       },
       {
         "id": "1119-1735-OVO",
@@ -529,10 +529,10 @@ export const SCHOT_DIAS = [
         "titulo": "OCD juvenil rodilla",
         "panel": false,
         "becado": true,
-        "esp": "Columna"
+        "esp": null
       },
       {
-        "id": "1119-1737-Pacifi",
+        "id": "1119-1737-Pacifico",
         "hora": "17:37",
         "slot": "17:30",
         "sala": "Pacífico",
@@ -544,7 +544,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1119-1742-Estrel",
+        "id": "1119-1742-Estrella2",
         "hora": "17:42",
         "slot": "17:30",
         "sala": "Estrella 2",
@@ -556,7 +556,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1745-Vergar",
+        "id": "1119-1745-VergaraC",
         "hora": "17:45",
         "slot": "17:45",
         "sala": "Vergara C",
@@ -568,7 +568,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1119-1746-Bombal",
+        "id": "1119-1746-BombalB",
         "hora": "17:46",
         "slot": "17:45",
         "sala": "Bombal B",
@@ -580,19 +580,19 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1119-1756-Bombal",
+        "id": "1119-1756-BombalB",
         "hora": "17:56",
         "slot": "17:45",
         "sala": "Bombal B",
         "hotel": "Sheraton",
         "presentador": "J.M. Breyer",
-        "titulo": "Mesa redonda IA tobillo Columna la hora exacta va",
+        "titulo": "Mesa redonda IA",
         "panel": true,
         "becado": false,
-        "esp": "Rodilla"
+        "esp": null
       },
       {
-        "id": "1119-1800-Vergar",
+        "id": "1119-1800-VergaraC",
         "hora": "18:00",
         "slot": "18:00",
         "sala": "Vergara C",
@@ -604,7 +604,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1119-1817-Bombal",
+        "id": "1119-1817-BombalA",
         "hora": "18:17",
         "slot": "18:15",
         "sala": "Bombal A",
@@ -613,7 +613,7 @@ export const SCHOT_DIAS = [
         "titulo": "Platillo tibial zona dadora",
         "panel": false,
         "becado": true,
-        "esp": "Columna"
+        "esp": null
       }
     ]
   },
@@ -677,7 +677,7 @@ export const SCHOT_DIAS = [
     ],
     "charlas": [
       {
-        "id": "1120-0810-Caraco",
+        "id": "1120-0810-Caracola",
         "hora": "08:10",
         "slot": "08:00",
         "sala": "Caracola",
@@ -689,7 +689,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1120-0817-Bombal",
+        "id": "1120-0817-BombalA",
         "hora": "08:17",
         "slot": "08:15",
         "sala": "Bombal A",
@@ -701,7 +701,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1120-0830-Sausal",
+        "id": "1120-0830-Sausalito",
         "hora": "08:30",
         "slot": "08:30",
         "sala": "Sausalito",
@@ -725,7 +725,7 @@ export const SCHOT_DIAS = [
         "esp": "Hombro y codo"
       },
       {
-        "id": "1120-0843-Esmera",
+        "id": "1120-0843-Esmeralda",
         "hora": "08:43",
         "slot": "08:30",
         "sala": "Esmeralda",
@@ -737,7 +737,7 @@ export const SCHOT_DIAS = [
         "esp": "Hombro y codo"
       },
       {
-        "id": "1120-0852-Bombal",
+        "id": "1120-0852-BombalA",
         "hora": "08:52",
         "slot": "08:45",
         "sala": "Bombal A",
@@ -749,7 +749,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1120-0855-Pacifi",
+        "id": "1120-0855-Pacifico",
         "hora": "08:55",
         "slot": "08:45",
         "sala": "Pacífico",
@@ -761,7 +761,7 @@ export const SCHOT_DIAS = [
         "esp": "Reconstrucción"
       },
       {
-        "id": "1120-0902-Bombal",
+        "id": "1120-0902-BombalA",
         "hora": "09:02",
         "slot": "09:00",
         "sala": "Bombal A",
@@ -773,7 +773,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1120-0907-Bombal",
+        "id": "1120-0907-BombalA",
         "hora": "09:07",
         "slot": "09:00",
         "sala": "Bombal A",
@@ -782,7 +782,7 @@ export const SCHOT_DIAS = [
         "titulo": "Fallo LCA: HTH vs STG",
         "panel": false,
         "becado": true,
-        "esp": "Rodilla"
+        "esp": null
       },
       {
         "id": "1120-0915-OVO",
@@ -794,10 +794,10 @@ export const SCHOT_DIAS = [
         "titulo": "Caso: fx expuesta húmero",
         "panel": false,
         "becado": false,
-        "esp": "Pie y tobillo"
+        "esp": "Mano"
       },
       {
-        "id": "1120-0925-Pacifi",
+        "id": "1120-0925-Pacifico",
         "hora": "09:25",
         "slot": "09:15",
         "sala": "Pacífico",
@@ -818,10 +818,10 @@ export const SCHOT_DIAS = [
         "titulo": "No unión fx expuesta",
         "panel": false,
         "becado": false,
-        "esp": "Pie y tobillo"
+        "esp": "Mano"
       },
       {
-        "id": "1120-0935-Pacifi",
+        "id": "1120-0935-Pacifico",
         "hora": "09:35",
         "slot": "09:30",
         "sala": "Pacífico",
@@ -833,7 +833,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1045-Sausal",
+        "id": "1120-1045-Sausalito",
         "hora": "10:45",
         "slot": "10:45",
         "sala": "Sausalito",
@@ -845,7 +845,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1107-Pacifi",
+        "id": "1120-1107-Pacifico",
         "hora": "11:07",
         "slot": "11:00",
         "sala": "Pacífico",
@@ -857,19 +857,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1115-Caraco",
-        "hora": "11:15",
-        "slot": "11:15",
-        "sala": "Caracola",
-        "hotel": "Enjoy",
-        "presentador": "I. Cirillo",
-        "titulo": "Crossfire: ACDF",
-        "panel": false,
-        "becado": false,
-        "esp": "Pie y tobillo"
-      },
-      {
-        "id": "1120-1115-Sausal",
+        "id": "1120-1115-Sausalito",
         "hora": "11:15",
         "slot": "11:15",
         "sala": "Sausalito",
@@ -878,10 +866,22 @@ export const SCHOT_DIAS = [
         "titulo": "Osteointegración Chile",
         "panel": false,
         "becado": false,
-        "esp": "Pie y tobillo"
+        "esp": "Reconstrucción"
       },
       {
-        "id": "1120-1127-Vergar",
+        "id": "1120-1115-Caracola",
+        "hora": "11:15",
+        "slot": "11:15",
+        "sala": "Caracola",
+        "hotel": "Enjoy",
+        "presentador": "I. Cirillo",
+        "titulo": "Crossfire: ACDF",
+        "panel": false,
+        "becado": false,
+        "esp": "Columna"
+      },
+      {
+        "id": "1120-1127-VergaraA",
         "hora": "11:27",
         "slot": "11:15",
         "sala": "Vergara A",
@@ -905,7 +905,7 @@ export const SCHOT_DIAS = [
         "esp": "Cadera y pelvis"
       },
       {
-        "id": "1120-1137-Vergar",
+        "id": "1120-1137-VergaraA",
         "hora": "11:37",
         "slot": "11:30",
         "sala": "Vergara A",
@@ -941,7 +941,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1120-1505-Bombal",
+        "id": "1120-1505-BombalA",
         "hora": "15:05",
         "slot": "15:00",
         "sala": "Bombal A",
@@ -953,7 +953,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1120-1525-Vergar",
+        "id": "1120-1525-VergaraC",
         "hora": "15:25",
         "slot": "15:15",
         "sala": "Vergara C",
@@ -965,19 +965,7 @@ export const SCHOT_DIAS = [
         "esp": "Mano"
       },
       {
-        "id": "1120-1530-OVO",
-        "hora": "15:30",
-        "slot": "15:30",
-        "sala": "OVO",
-        "hotel": "Enjoy",
-        "presentador": "I. Cirillo",
-        "titulo": "Caso: fx cervical F3",
-        "panel": false,
-        "becado": false,
-        "esp": "Pie y tobillo"
-      },
-      {
-        "id": "1120-1530-Sausal",
+        "id": "1120-1530-Sausalito",
         "hora": "15:30",
         "slot": "15:30",
         "sala": "Sausalito",
@@ -987,6 +975,18 @@ export const SCHOT_DIAS = [
         "panel": false,
         "becado": false,
         "esp": "Pie y tobillo"
+      },
+      {
+        "id": "1120-1530-OVO",
+        "hora": "15:30",
+        "slot": "15:30",
+        "sala": "OVO",
+        "hotel": "Enjoy",
+        "presentador": "I. Cirillo",
+        "titulo": "Caso: fx cervical F3",
+        "panel": false,
+        "becado": false,
+        "esp": "Columna"
       },
       {
         "id": "1120-1535-OVO",
@@ -1013,7 +1013,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1120-1552-Vergar",
+        "id": "1120-1552-VergaraC",
         "hora": "15:52",
         "slot": "15:45",
         "sala": "Vergara C",
@@ -1025,7 +1025,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1620-Caraco",
+        "id": "1120-1620-Caracola",
         "hora": "16:20",
         "slot": "16:15",
         "sala": "Caracola",
@@ -1037,19 +1037,7 @@ export const SCHOT_DIAS = [
         "esp": "Columna"
       },
       {
-        "id": "1120-1700-Esmera",
-        "hora": "17:00",
-        "slot": "17:00",
-        "sala": "Esmeralda",
-        "hotel": "Enjoy",
-        "presentador": "R. Sanhueza",
-        "titulo": "Fx diáfisis humeral",
-        "panel": false,
-        "becado": false,
-        "esp": "Columna"
-      },
-      {
-        "id": "1120-1700-Vergar",
+        "id": "1120-1700-VergaraC",
         "hora": "17:00",
         "slot": "17:00",
         "sala": "Vergara C",
@@ -1058,7 +1046,19 @@ export const SCHOT_DIAS = [
         "titulo": "Infección endoprótesis ped.",
         "panel": false,
         "becado": true,
-        "esp": "Columna"
+        "esp": null
+      },
+      {
+        "id": "1120-1700-Esmeralda",
+        "hora": "17:00",
+        "slot": "17:00",
+        "sala": "Esmeralda",
+        "hotel": "Enjoy",
+        "presentador": "R. Sanhueza",
+        "titulo": "Fx diáfisis humeral",
+        "panel": false,
+        "becado": false,
+        "esp": "Hombro y codo"
       },
       {
         "id": "1120-1705-OVO",
@@ -1073,7 +1073,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1710-Pacifi",
+        "id": "1120-1710-Pacifico",
         "hora": "17:10",
         "slot": "17:00",
         "sala": "Pacífico",
@@ -1085,7 +1085,7 @@ export const SCHOT_DIAS = [
         "esp": "Pie y tobillo"
       },
       {
-        "id": "1120-1730-Bombal",
+        "id": "1120-1730-BombalA",
         "hora": "17:30",
         "slot": "17:30",
         "sala": "Bombal A",
@@ -1097,7 +1097,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1120-1735-Bombal",
+        "id": "1120-1735-BombalA",
         "hora": "17:35",
         "slot": "17:30",
         "sala": "Bombal A",
@@ -1106,10 +1106,10 @@ export const SCHOT_DIAS = [
         "titulo": "Panel patelofemoral",
         "panel": true,
         "becado": false,
-        "esp": "Pie y tobillo"
+        "esp": null
       },
       {
-        "id": "1120-1735-Pacifi",
+        "id": "1120-1735-Pacifico",
         "hora": "17:35",
         "slot": "17:30",
         "sala": "Pacífico",
@@ -1137,7 +1137,7 @@ export const SCHOT_DIAS = [
     ],
     "charlas": [
       {
-        "id": "1121-0900-Vergar",
+        "id": "1121-0900-VergaraA",
         "hora": "09:00",
         "slot": "09:00",
         "sala": "Vergara A",
@@ -1149,7 +1149,7 @@ export const SCHOT_DIAS = [
         "esp": "Rodilla"
       },
       {
-        "id": "1121-0940-Vergar",
+        "id": "1121-0940-VergaraA",
         "hora": "09:40",
         "slot": "09:30",
         "sala": "Vergara A",
