@@ -11,10 +11,24 @@ const HOTEL_COLOR = { Sheraton: "#36414d", Enjoy: "#8a6a56" };
 const COL_W = 132;   // ancho de cada sala
 const HORA_W = 44;   // columna de la hora, fija a la izquierda
 
-// Dos charlas chocan si empiezan a menos de 20 min una de otra: no se alcanza a
-// cambiar de sala, y menos de hotel.
-const MINUTOS_BLOQUE = 20;
 const m2 = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+
+// Cuándo dos charlas no se pueden ver las dos.
+//
+// En la MISMA sala nunca chocan: van una después de otra, por eso están
+// separadas 5, 10 o 15 minutos.
+//
+// En salas distintas sí, porque corren en paralelo. Las charlas duran unos 5
+// minutos, así que con menos de eso entre medio se pierde una; y si además hay
+// que cruzar de hotel, se necesita bastante más.
+const MIN_OTRA_SALA  = 5;
+const MIN_OTRO_HOTEL = 20;
+
+function chocanEntreSi(a, b) {
+  if (a.sala === b.sala) return false;
+  const dt = Math.abs(m2(a.hora) - m2(b.hora));
+  return dt < (a.hotel === b.hotel ? MIN_OTRA_SALA : MIN_OTRO_HOTEL);
+}
 
 // El mismo muñeco pixel art del mapa. `looks` trae la personalización
 // compartida; si alguien no la tiene, el sprite usa sus valores por defecto.
@@ -67,8 +81,10 @@ export function TabSchot({ becado, onChangeBecado, T }) {
     return m;
   }, [asistencia]);
 
-  const choca = (c) => !mias.has(c.id) && d.charlas.some(
-    o => o.id !== c.id && mias.has(o.id) && Math.abs(m2(o.hora) - m2(c.hora)) < MINUTOS_BLOQUE);
+  // Con cuál de las ya marcadas choca (null si con ninguna).
+  const chocaCon = (c) => mias.has(c.id) ? null
+    : d.charlas.find(o => o.id !== c.id && mias.has(o.id) && chocanEntreSi(o, c)) || null;
+  const choca = (c) => !!chocaCon(c);
 
   async function alternar(c) {
     if (guardando) return;
@@ -260,7 +276,7 @@ export function TabSchot({ becado, onChangeBecado, T }) {
       </div>
 
       {abierta && (
-        <Detalle charla={abierta} voy={mias.has(abierta.id)} bloqueada={choca(abierta)}
+        <Detalle charla={abierta} voy={mias.has(abierta.id)} conflicto={chocaCon(abierta)}
           gente={porCharla[abierta.id] || []} looks={looks} guardando={guardando === abierta.id}
           onAlternar={() => alternar(abierta)} onClose={() => setAbierta(null)} T={T}/>
       )}
@@ -270,7 +286,8 @@ export function TabSchot({ becado, onChangeBecado, T }) {
 
 // Al tocar una charla se abre el detalle: en la celda no cabe todo, y marcar
 // desde acá evita hacerlo sin querer al desplazar la grilla.
-function Detalle({ charla: c, voy, bloqueada, gente, looks, guardando, onAlternar, onClose, T }) {
+function Detalle({ charla: c, voy, conflicto, gente, looks, guardando, onAlternar, onClose, T }) {
+  const bloqueada = !!conflicto;
   const ce = SCHOT_ESP[c.esp] || T.muted;
   return (
     <div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"flex-end",
@@ -317,9 +334,16 @@ function Detalle({ charla: c, voy, bloqueada, gente, looks, guardando, onAlterna
             fontFamily:"'Inter',sans-serif",
           }}>
           {guardando ? "Guardando…"
-            : bloqueada ? "Choca con otra que ya marcaste"
+            : bloqueada ? "Choca con otra que marcaste"
             : voy ? "Ya no voy" : "Voy a esta"}
         </button>
+        {bloqueada && (
+          <div style={{fontSize:11.5,color:T.muted,textAlign:"center",marginTop:8,lineHeight:1.45}}>
+            A las {conflicto.hora} ya vas a «{conflicto.titulo}»
+            {conflicto.hotel !== c.hotel ? `, y es en el otro hotel (${conflicto.hotel}).`
+              : ` en ${conflicto.sala}.`}
+          </div>
+        )}
       </div>
     </div>
   );
