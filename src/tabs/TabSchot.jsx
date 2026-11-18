@@ -32,10 +32,14 @@ function chocanEntreSi(a, b) {
 
 // El mismo muñeco pixel art del mapa. `looks` trae la personalización
 // compartida; si alguien no la tiene, el sprite usa sus valores por defecto.
-function Ficha({ nombre, looks, size = 22 }) {
+function Ficha({ nombre, looks, size = 24 }) {
   return (
-    <span title={displayName(nombre)} style={{display:"block",flexShrink:0,lineHeight:0}}>
-      <SpriteBecado look={looks?.[nombre]} size={size} alt={displayName(nombre)}/>
+    <span title={displayName(nombre)} style={{
+      display:"block",flexShrink:0,lineHeight:0,
+      borderRadius:"50%",overflow:"hidden",
+      boxShadow:"0 0 0 1.5px rgba(255,255,255,0.9)",
+    }}>
+      <SpriteBecado look={looks?.[nombre]} size={size} alt={displayName(nombre)} busto/>
     </span>
   );
 }
@@ -251,7 +255,7 @@ export function TabSchot({ becado, onChangeBecado, T }) {
                             <span style={{fontSize:10,color:T.sub,lineHeight:1.25}}>{c.titulo}</span>
                             {gente.length > 0 && (
                               <span style={{display:"flex",gap:2,flexWrap:"wrap",marginTop:1}}>
-                                {gente.map(n => <Ficha key={n} nombre={n} looks={looks} size={22}/>)}
+                                {gente.map(n => <Ficha key={n} nombre={n} looks={looks} size={24}/>)}
                               </span>
                             )}
                           </button>
@@ -318,7 +322,7 @@ function Detalle({ charla: c, voy, conflicto, gente, looks, guardando, onAlterna
             {gente.map(n => (
               <span key={n} style={{display:"flex",alignItems:"center",gap:4,
                 background:T.surface2,borderRadius:99,padding:"2px 8px 2px 2px"}}>
-                <Ficha nombre={n} looks={looks} size={26}/>
+                <Ficha nombre={n} looks={looks} size={28}/>
                 <span style={{fontSize:11.5,color:T.sub}}>{displayName(n)}</span>
               </span>
             ))}
